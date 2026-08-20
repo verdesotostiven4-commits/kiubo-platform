@@ -1,0 +1,15 @@
+import type { Metadata } from "next";
+import "./globals.css";
+import "./operations.css";
+import "./inventory.css";
+import "./workspace.css";
+import "./security.css";
+import "./commerce.css";
+import "./sri.css";
+import "./marketing.css";
+import "./sales.css";
+import { PwaRegister } from "@/components/PwaRegister";
+import { SessionEnforcer } from "@/components/SessionEnforcer";
+import { BrandingRuntime } from "@/components/BrandingRuntime";
+export const metadata:Metadata={title:"KIUBO · Todo tu negocio, en orden",description:"Ventas, inventario, caja, clientes, compras, reportes y facturación para negocios que quieren control sin complicarse."};
+export default function RootLayout({children}:Readonly<{children:React.ReactNode}>){return <html lang="es"><body><SessionEnforcer/><BrandingRuntime/>{children}<PwaRegister/></body></html>}

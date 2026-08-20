@@ -1,0 +1,3 @@
+import { DemoRequestClient } from "@/components/DemoRequestClient";
+import { PublicHeader } from "@/components/PublicHeader";
+export default function DemoPage(){return <main className="marketing-shell"><PublicHeader/><section className="public-section public-pricing-head"><span className="public-kicker">DEMO KIUBO</span><h1>Cuéntanos cómo vendes hoy. Te mostramos lo que realmente te serviría.</h1><p>No necesitas preparar RUC, firma electrónica ni documentos para conocer KIUBO. Primero entendemos tu negocio; después vemos qué módulos necesitas.</p></section><section className="public-section"><DemoRequestClient/></section></main>}

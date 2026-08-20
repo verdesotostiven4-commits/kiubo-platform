@@ -1,0 +1,17 @@
+export type LeadStage="new"|"contacted"|"demo"|"trial"|"won"|"lost";
+export type LeadSource="web"|"instagram"|"facebook"|"tiktok"|"whatsapp"|"referral"|"direct"|"other";
+export type LeadPlan="Por definir"|"Start"|"Pro"|"Custom";
+export type OnboardingChecklist={discovery:boolean;businessData:boolean;branding:boolean;catalog:boolean;users:boolean;cash:boolean;training:boolean;sri:boolean;backup:boolean;goLive:boolean};
+export type LeadRecord={id:string;name:string;business:string;phone:string;email:string;city:string;businessType:string;source:LeadSource;stage:LeadStage;plan:LeadPlan;need:string;notes:string;followUpAt:string;tenantId?:string;onboarding:OnboardingChecklist;createdAt:string;updatedAt:string};
+const KEY="kiubo.sales.crm.v2";
+const LEGACY_KEY="kiubo.sales.crm.v1";
+const uid=()=>typeof crypto!=="undefined"&&"randomUUID" in crypto?crypto.randomUUID():`${Date.now()}-${Math.random().toString(16).slice(2)}`;
+export const emptyOnboarding=():OnboardingChecklist=>({discovery:false,businessData:false,branding:false,catalog:false,users:false,cash:false,training:false,sri:false,backup:false,goLive:false});
+function normalize(input:Partial<LeadRecord>):LeadRecord{const now=new Date().toISOString();return{id:String(input.id||`lead-${uid()}`),name:String(input.name||""),business:String(input.business||""),phone:String(input.phone||""),email:String(input.email||""),city:String(input.city||""),businessType:String(input.businessType||""),source:(input.source||"other") as LeadSource,stage:(input.stage||"new") as LeadStage,plan:(input.plan||"Por definir") as LeadPlan,need:String(input.need||""),notes:String(input.notes||""),followUpAt:String(input.followUpAt||""),tenantId:input.tenantId||undefined,onboarding:{...emptyOnboarding(),...(input.onboarding||{})},createdAt:String(input.createdAt||now),updatedAt:String(input.updatedAt||now)}}
+export function loadLeads():LeadRecord[]{if(typeof window==="undefined")return[];try{let raw=window.localStorage.getItem(KEY);if(!raw){raw=window.localStorage.getItem(LEGACY_KEY);if(raw)window.localStorage.setItem(KEY,raw)}const parsed=raw?JSON.parse(raw):[];return Array.isArray(parsed)?parsed.map(item=>normalize(item)):[]}catch{return[]}}
+export function saveLeads(leads:LeadRecord[]){if(typeof window!=="undefined")window.localStorage.setItem(KEY,JSON.stringify(leads.map(normalize)))}
+export function createLead(input:Omit<LeadRecord,"id"|"createdAt"|"updatedAt"|"onboarding">&{onboarding?:OnboardingChecklist}){const now=new Date().toISOString(),lead:LeadRecord=normalize({...input,id:`lead-${uid()}`,onboarding:input.onboarding??emptyOnboarding(),createdAt:now,updatedAt:now}),next=[lead,...loadLeads()];saveLeads(next);return next}
+export function patchLead(id:string,patch:Partial<LeadRecord>){const next=loadLeads().map(lead=>lead.id===id?normalize({...lead,...patch,id:lead.id,createdAt:lead.createdAt,updatedAt:new Date().toISOString()}):lead);saveLeads(next);return next}
+export function toggleOnboardingStep(id:string,key:keyof OnboardingChecklist,value:boolean){const lead=loadLeads().find(item=>item.id===id);if(!lead)return loadLeads();return patchLead(id,{onboarding:{...lead.onboarding,[key]:value}})}
+export function onboardingProgress(lead?:LeadRecord){if(!lead)return 0;const values=Object.values(lead.onboarding);return Math.round(values.filter(Boolean).length/values.length*100)}
+export function deleteLead(id:string){const next=loadLeads().filter(lead=>lead.id!==id);saveLeads(next);return next}
