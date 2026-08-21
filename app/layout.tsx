@@ -10,6 +10,7 @@ import "./marketing.css";
 import "./sales.css";
 import "./product.css";
 import "./premium.css";
+import "./command.css";
 import { PwaRegister } from "@/components/PwaRegister";
 import { SessionEnforcer } from "@/components/SessionEnforcer";
 import { BrandingRuntime } from "@/components/BrandingRuntime";
