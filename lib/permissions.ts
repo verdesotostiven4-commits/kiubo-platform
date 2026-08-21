@@ -1,6 +1,28 @@
 import type { UserRole } from "./local-store";
-export type Permission="control"|"leads"|"pos"|"inventory"|"purchases"|"catalog"|"customers"|"invoices"|"reports"|"branding"|"operations";
-const grants:Record<UserRole,Permission[]>={owner:["control","leads","pos","inventory","purchases","catalog","customers","invoices","reports","branding","operations"],admin:["control","leads","pos","inventory","purchases","catalog","customers","invoices","reports","branding","operations"],cashier:["pos","customers","invoices","reports"],inventory:["inventory","purchases","catalog","reports"],viewer:["reports"]};
+export type Permission="control"|"leads"|"dashboard"|"onboarding"|"upgrade"|"pos"|"inventory"|"purchases"|"catalog"|"customers"|"invoices"|"reports"|"branding"|"operations";
+const grants:Record<UserRole,Permission[]>={
+  owner:["control","leads","dashboard","onboarding","upgrade","pos","inventory","purchases","catalog","customers","invoices","reports","branding","operations"],
+  admin:["control","leads","dashboard","onboarding","upgrade","pos","inventory","purchases","catalog","customers","invoices","reports","branding","operations"],
+  cashier:["dashboard","upgrade","pos","customers","invoices","reports"],
+  inventory:["dashboard","upgrade","inventory","purchases","catalog","reports"],
+  viewer:["dashboard","upgrade","reports"]
+};
 export function canAccess(role:UserRole,permission:Permission){return grants[role].includes(permission)}
-export function permissionForPath(path:string):Permission|null{if(path.startsWith("/control"))return"control";if(path.startsWith("/leads"))return"leads";if(path.startsWith("/pos"))return"pos";if(path.startsWith("/inventory"))return"inventory";if(path.startsWith("/purchases"))return"purchases";if(path.startsWith("/catalog"))return"catalog";if(path.startsWith("/customers"))return"customers";if(path.startsWith("/invoices"))return"invoices";if(path.startsWith("/reports"))return"reports";if(path.startsWith("/branding"))return"branding";if(path.startsWith("/operations"))return"operations";return null}
-export function homeForRole(role:UserRole){if(role==="cashier")return"/pos";if(role==="inventory")return"/inventory";if(role==="viewer")return"/reports";return"/operations"}
+export function permissionForPath(path:string):Permission|null{
+  if(path.startsWith("/control"))return"control";
+  if(path.startsWith("/leads"))return"leads";
+  if(path.startsWith("/app"))return"dashboard";
+  if(path.startsWith("/onboarding"))return"onboarding";
+  if(path.startsWith("/upgrade"))return"upgrade";
+  if(path.startsWith("/pos"))return"pos";
+  if(path.startsWith("/inventory"))return"inventory";
+  if(path.startsWith("/purchases"))return"purchases";
+  if(path.startsWith("/catalog"))return"catalog";
+  if(path.startsWith("/customers"))return"customers";
+  if(path.startsWith("/invoices"))return"invoices";
+  if(path.startsWith("/reports"))return"reports";
+  if(path.startsWith("/branding"))return"branding";
+  if(path.startsWith("/operations"))return"operations";
+  return null;
+}
+export function homeForRole(role:UserRole){if(role==="cashier")return"/pos";if(role==="inventory")return"/inventory";if(role==="viewer")return"/reports";return"/app"}

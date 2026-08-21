@@ -8,8 +8,10 @@ import "./commerce.css";
 import "./sri.css";
 import "./marketing.css";
 import "./sales.css";
+import "./product.css";
 import { PwaRegister } from "@/components/PwaRegister";
 import { SessionEnforcer } from "@/components/SessionEnforcer";
 import { BrandingRuntime } from "@/components/BrandingRuntime";
+import { MobileNav } from "@/components/MobileNav";
 export const metadata:Metadata={title:"KIUBO · Todo tu negocio, en orden",description:"Ventas, inventario, caja, clientes, compras, reportes y facturación para negocios que quieren control sin complicarse."};
-export default function RootLayout({children}:Readonly<{children:React.ReactNode}>){return <html lang="es"><body><SessionEnforcer/><BrandingRuntime/>{children}<PwaRegister/></body></html>}
+export default function RootLayout({children}:Readonly<{children:React.ReactNode}>){return <html lang="es"><body><SessionEnforcer/><BrandingRuntime/>{children}<MobileNav/><PwaRegister/></body></html>}
