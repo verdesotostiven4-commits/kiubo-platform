@@ -1,6 +1,6 @@
 import type { SupabaseClient, User } from "@supabase/supabase-js";
 import {
-  getPrimaryBranch, loadLocalDatabase, saveLocalDatabase, saveLocalSession,
+  getPrimaryBranch, loadLocalDatabase, loadLocalSession, saveLocalDatabase, saveLocalSession,
   type BranchRecord, type LocalSession, type Plan, type TenantRecord, type UserRecord, type UserRole
 } from "./local-store";
 
@@ -29,9 +29,16 @@ export async function hydrateCloudIdentity(client:SupabaseClient,authUser:User){
   let tenantId=String(memberResult.data?.tenant_id||"");
 
   if(!tenantId&&platformAdmin){
-    const firstTenant=await client.from("tenants").select("id").neq("status","cancelled").order("created_at").limit(1).maybeSingle();
-    if(firstTenant.error)throw new Error(firstTenant.error.message);
-    tenantId=String(firstTenant.data?.id||"");
+    const preferred=loadLocalSession()?.activeTenantId;
+    if(preferred){
+      const preferredTenant=await client.from("tenants").select("id").eq("id",preferred).neq("status","cancelled").maybeSingle();
+      if(!preferredTenant.error&&preferredTenant.data)tenantId=String(preferredTenant.data.id);
+    }
+    if(!tenantId){
+      const firstTenant=await client.from("tenants").select("id").neq("status","cancelled").order("created_at").limit(1).maybeSingle();
+      if(firstTenant.error)throw new Error(firstTenant.error.message);
+      tenantId=String(firstTenant.data?.id||"");
+    }
     if(!tenantId)return platformOnlyIdentity(authUser);
   }
   if(!tenantId)throw new Error("Tu usuario todavía no está vinculado a un negocio KIUBO");
@@ -55,7 +62,7 @@ export async function hydrateCloudIdentity(client:SupabaseClient,authUser:User){
   upsertById(db.tenants,tenant);
   for(const branch of branches)upsertById(db.branches,branch);
   upsertById(db.users,user);
-  const primary=branches[0]??getPrimaryBranch(db,tenantId);
+  const primary=branches.find(branch=>branch.id===loadLocalSession()?.activeBranchId)??branches[0]??getPrimaryBranch(db,tenantId);
   saveLocalDatabase(db,{trackChanges:false});
   const session:LocalSession={userId:user.id,tenantId,activeTenantId:tenantId,activeBranchId:primary?.id,role:user.role,startedAt:new Date().toISOString()};
   saveLocalSession(session);
