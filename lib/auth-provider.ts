@@ -1,19 +1,13 @@
 import { clearLocalSession, getPrimaryBranch, loadLocalDatabase, loadLocalSession, saveLocalSession, type LocalSession, type UserRecord } from "./local-store";
 import { getSupabaseBrowserClient,isSupabaseConfigured } from "./supabase-browser";
 import { hydrateCloudIdentity } from "./cloud-auth";
+import { runSyncCycle } from "./sync-engine";
 
 export type AuthMode = "local" | "supabase";
 export type SignInInput = { email:string; pin?:string; password?:string };
 export type SignInResult = { ok:boolean; user?:UserRecord; session?:LocalSession; error?:string };
 
-export type KiuboAuthProvider = {
-  mode: AuthMode;
-  configured: boolean;
-  signIn(input:SignInInput): Promise<SignInResult>;
-  signOut(): Promise<void>;
-  getSession(): Promise<LocalSession|null>;
-  validateSession(session:LocalSession): Promise<{ok:boolean;user?:UserRecord}>;
-};
+export type KiuboAuthProvider = {mode:AuthMode;configured:boolean;signIn(input:SignInInput):Promise<SignInResult>;signOut():Promise<void>;getSession():Promise<LocalSession|null>;validateSession(session:LocalSession):Promise<{ok:boolean;user?:UserRecord}>};
 
 const localAuthProvider:KiuboAuthProvider={
   mode:"local",configured:true,
@@ -30,13 +24,11 @@ const cloudAuthProvider:KiuboAuthProvider={
     const password=String(input.password||"");if(!password)return{ok:false,error:"Ingresa tu contraseña"};
     const result=await client.auth.signInWithPassword({email:input.email.trim().toLowerCase(),password});
     if(result.error||!result.data.user)return{ok:false,error:result.error?.message||"No se pudo iniciar sesión"};
-    try{const identity=await hydrateCloudIdentity(client,result.data.user);return{ok:true,...identity}}catch(error){await client.auth.signOut();clearLocalSession();return{ok:false,error:error instanceof Error?error.message:"No se pudo preparar tu espacio KIUBO"}}
+    try{const identity=await hydrateCloudIdentity(client,result.data.user);await runSyncCycle().catch(()=>undefined);return{ok:true,...identity}}catch(error){await client.auth.signOut();clearLocalSession();return{ok:false,error:error instanceof Error?error.message:"No se pudo preparar tu espacio KIUBO"}}
   },
   async signOut(){const client=getSupabaseBrowserClient();if(client)await client.auth.signOut();clearLocalSession()},
   async getSession(){const client=getSupabaseBrowserClient();if(!client)return null;const result=await client.auth.getSession();const user=result.data.session?.user;if(!user)return null;try{return(await hydrateCloudIdentity(client,user)).session}catch{return null}},
   async validateSession(){const client=getSupabaseBrowserClient();if(!client)return{ok:false};const result=await client.auth.getUser();if(result.error||!result.data.user)return{ok:false};try{return{ok:true,user:(await hydrateCloudIdentity(client,result.data.user)).user}}catch{return{ok:false}}}
 };
 
-export function getAuthProvider():KiuboAuthProvider{
-  return process.env.NEXT_PUBLIC_KIUBO_AUTH_MODE==="supabase"?cloudAuthProvider:localAuthProvider;
-}
+export function getAuthProvider():KiuboAuthProvider{return process.env.NEXT_PUBLIC_KIUBO_AUTH_MODE==="supabase"?cloudAuthProvider:localAuthProvider}
