@@ -1,6 +1,6 @@
 "use client";
 import Link from "next/link";
-import { useEffect,useState } from "react";
+import { useEffect,useMemo,useState } from "react";
 import { usePathname,useRouter } from "next/navigation";
 import { KiuboMark } from "./Logo";
 import { WorkspaceSwitcher } from "./WorkspaceSwitcher";
@@ -9,29 +9,32 @@ import { TenantRecord,UserRecord,clearLocalSession,getWorkspaceContext,loadLocal
 import { Permission,canAccess } from "@/lib/permissions";
 import { ProductFeature,hasFeature } from "@/lib/entitlements";
 
-type NavItem={href:string;label:string;permission:Permission;platformOnly?:boolean;feature?:ProductFeature};
+type Group="platform"|"daily"|"management"|"account";
+type NavItem={href:string;label:string;glyph:string;group:Group;permission:Permission;platformOnly?:boolean;feature?:ProductFeature};
+const groupLabel:Record<Group,string>={platform:"PLATAFORMA",daily:"DÍA A DÍA",management:"GESTIÓN",account:"NEGOCIO"};
 const items:NavItem[]=[
-  {href:"/control",label:"KIUBO Control",permission:"control",platformOnly:true},
-  {href:"/leads",label:"Prospectos",permission:"leads",platformOnly:true},
-  {href:"/app",label:"Inicio",permission:"dashboard",feature:"dashboard"},
-  {href:"/onboarding",label:"Configurar negocio",permission:"onboarding",feature:"dashboard"},
-  {href:"/pos",label:"Ventas / POS",permission:"pos",feature:"pos"},
-  {href:"/catalog",label:"Productos",permission:"catalog",feature:"products"},
-  {href:"/inventory",label:"Inventario",permission:"inventory",feature:"inventory"},
-  {href:"/purchases",label:"Compras",permission:"purchases",feature:"purchases"},
-  {href:"/customers",label:"Clientes",permission:"customers",feature:"customers"},
-  {href:"/invoices",label:"Factura",permission:"invoices",feature:"invoices"},
-  {href:"/reports",label:"Reportes",permission:"reports",feature:"reports"},
-  {href:"/branding",label:"Marca",permission:"branding",feature:"branding"},
-  {href:"/operations",label:"Caja y equipo",permission:"operations",feature:"operations"},
-  {href:"/upgrade",label:"Plan y módulos",permission:"upgrade"}
+  {href:"/control",label:"KIUBO Control",glyph:"K",group:"platform",permission:"control",platformOnly:true},
+  {href:"/leads",label:"Prospectos",glyph:"✦",group:"platform",permission:"leads",platformOnly:true},
+  {href:"/app",label:"Inicio",glyph:"⌂",group:"daily",permission:"dashboard",feature:"dashboard"},
+  {href:"/pos",label:"Ventas / POS",glyph:"$",group:"daily",permission:"pos",feature:"pos"},
+  {href:"/customers",label:"Clientes",glyph:"◎",group:"daily",permission:"customers",feature:"customers"},
+  {href:"/catalog",label:"Productos",glyph:"▦",group:"management",permission:"catalog",feature:"products"},
+  {href:"/inventory",label:"Inventario",glyph:"▣",group:"management",permission:"inventory",feature:"inventory"},
+  {href:"/purchases",label:"Compras",glyph:"↓",group:"management",permission:"purchases",feature:"purchases"},
+  {href:"/reports",label:"Reportes",glyph:"↗",group:"management",permission:"reports",feature:"reports"},
+  {href:"/invoices",label:"Factura",glyph:"◇",group:"management",permission:"invoices",feature:"invoices"},
+  {href:"/operations",label:"Caja y equipo",glyph:"◫",group:"account",permission:"operations",feature:"operations"},
+  {href:"/branding",label:"Marca",glyph:"✎",group:"account",permission:"branding",feature:"branding"},
+  {href:"/onboarding",label:"Configurar negocio",glyph:"✓",group:"account",permission:"onboarding",feature:"dashboard"},
+  {href:"/upgrade",label:"Plan y módulos",glyph:"✧",group:"account",permission:"upgrade"}
 ];
 const roleLabel={owner:"Propietario",admin:"Administrador",cashier:"Cajero",inventory:"Inventario",viewer:"Consulta"} as const;
 export function Sidebar(){
   const router=useRouter(),pathname=usePathname();
   const[user,setUser]=useState<UserRecord|null>(null),[tenant,setTenant]=useState<TenantRecord|undefined>();
-  useEffect(()=>{const db=loadLocalDatabase(),ctx=getWorkspaceContext(db);setUser(ctx.user??null);setTenant(ctx.tenant)},[]);
+  useEffect(()=>{const db=loadLocalDatabase(),ctx=getWorkspaceContext(db);setUser(ctx.user??null);setTenant(ctx.tenant)},[pathname]);
   const logout=()=>{clearLocalSession();router.replace("/login")};
-  const visible=items.filter(item=>!user||canAccess(user.role,item.permission)).filter(item=>!item.platformOnly||user?.platformAdmin).filter(item=>user?.platformAdmin||!item.feature||hasFeature(tenant,item.feature));
-  return <aside className="sidebar"><div className="sidebar-top"><KiuboMark/></div><WorkspaceSwitcher/><nav className="sidebar-nav">{visible.map(item=><Link key={item.href} href={item.href} className={`nav-item ${pathname===item.href?"active":""}`}>{item.label}</Link>)}</nav><div className="sidebar-bottom"><SyncStatus/>{user&&<div className="session-card"><strong>{user.name}</strong><span>{roleLabel[user.role]}{user.platformAdmin?" · KIUBO Admin":tenant?` · ${tenant.plan}`:""}</span><button onClick={logout}>Cerrar sesión</button></div>}<div className="tiny-card"><strong>KIUBO Preview</strong><span>Foundation cloud-ready</span></div></div></aside>
+  const visible=useMemo(()=>items.filter(item=>!user||canAccess(user.role,item.permission)).filter(item=>!item.platformOnly||user?.platformAdmin).filter(item=>user?.platformAdmin||!item.feature||hasFeature(tenant,item.feature)),[tenant,user]);
+  const groups=(["platform","daily","management","account"] as Group[]).map(group=>({group,items:visible.filter(item=>item.group===group)})).filter(section=>section.items.length);
+  return <aside className="sidebar"><div className="sidebar-top"><KiuboMark/></div><WorkspaceSwitcher/><nav className="sidebar-nav" aria-label="Navegación principal">{groups.map(section=><div className="nav-group" key={section.group}><div className="nav-group-label">{groupLabel[section.group]}</div>{section.items.map(item=><Link key={item.href} href={item.href} className={`nav-item ${pathname===item.href?"active":""}`}><span className="nav-glyph" aria-hidden="true">{item.glyph}</span><span className="nav-label">{item.label}</span></Link>)}</div>)}</nav><div className="sidebar-bottom"><SyncStatus/>{user&&<div className="session-card"><strong>{user.name}</strong><span>{roleLabel[user.role]}{user.platformAdmin?" · KIUBO Admin":tenant?` · ${tenant.plan}`:""}</span><button onClick={logout}>Cerrar sesión</button></div>}<div className="tiny-card"><strong>KIUBO Preview</strong><span>Producto en construcción activa</span></div></div></aside>
 }
