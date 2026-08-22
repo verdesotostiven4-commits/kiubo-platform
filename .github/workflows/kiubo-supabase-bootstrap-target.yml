@@ -1,0 +1,42 @@
+name: KIUBO Supabase Bootstrap Target
+
+on:
+  pull_request_target:
+    branches:
+      - main
+    paths:
+      - docs/SUPABASE_TARGET_TRIGGER.txt
+
+permissions:
+  contents: read
+  issues: write
+  pull-requests: read
+
+jobs:
+  bootstrap:
+    if: github.actor == 'verdesotostiven4-commits'
+    runs-on: ubuntu-latest
+    env:
+      SUPABASE_DB_URL: ${{ secrets.KIUBO_SUPABASE_DB_URL }}
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - name: Checkout trusted main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - name: Ensure PostgreSQL client
+        run: command -v psql >/dev/null || (sudo apt-get update && sudo apt-get install -y postgresql-client)
+
+      - name: Run trusted KIUBO bootstrap
+        run: python3 scripts/supabase-bootstrap.py
+
+      - name: Publish safe result
+        if: always()
+        shell: bash
+        run: |
+          if [ -f docs/SUPABASE_RUN_RESULT.txt ]; then
+            gh issue comment 1 --repo "$GITHUB_REPOSITORY" --body-file docs/SUPABASE_RUN_RESULT.txt
+          else
+            gh issue comment 1 --repo "$GITHUB_REPOSITORY" --body "KIUBO Supabase bootstrap result\nstatus=FAILED_RUNNER_NO_RESULT"
+          fi
