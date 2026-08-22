@@ -6,6 +6,7 @@ import type { CommercialPlan } from "./entitlements";
 const planMap:Record<string,CommercialPlan>={start:"Start",pro:"Pro",custom:"Custom"};
 const roleMap=(role:string):UserRole=>role==="owner"||role==="admin"||role==="cashier"||role==="inventory"||role==="viewer"?role:"viewer";
 const statusMap=(status:string):TenantStatus=>status==="active"||status==="grace"||status==="suspended"?status:"trial";
+const KIUBO_SET_PASSWORD_URL="https://kiubo-platform.vercel.app/set-password";
 export const isCloudControlMode=()=>process.env.NEXT_PUBLIC_KIUBO_AUTH_MODE==="supabase"&&isSupabaseConfigured();
 
 export async function hydrateCloudControl():Promise<KiuboLocalDatabase>{
@@ -38,8 +39,7 @@ async function prepareOwnerAccess(ownerEmail:string,ownerName:string){
   const url=process.env.NEXT_PUBLIC_SUPABASE_URL,key=process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
   if(!url||!key)throw new Error("Cloud no configurado");
   const isolated=createClient(url,key,{auth:{persistSession:false,autoRefreshToken:false,detectSessionInUrl:false}});
-  const emailRedirectTo=typeof window!=="undefined"?`${window.location.origin}/set-password`:undefined;
-  const result=await isolated.auth.signInWithOtp({email:ownerEmail,options:{shouldCreateUser:true,data:{full_name:ownerName},emailRedirectTo}});
+  const result=await isolated.auth.signInWithOtp({email:ownerEmail,options:{shouldCreateUser:true,data:{full_name:ownerName},emailRedirectTo:KIUBO_SET_PASSWORD_URL}});
   if(result.error)throw new Error(result.error.message);
 }
 
