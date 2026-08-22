@@ -26,11 +26,14 @@ async function probeSupabaseAuth(url: string, publishableKey: string) {
 
 export async function GET() {
   const authMode = process.env.NEXT_PUBLIC_KIUBO_AUTH_MODE || "local";
-  const dataMode = process.env.NEXT_PUBLIC_KIUBO_DATA_MODE || "local";
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "";
   const publishableKey = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY || "";
-  const cloudRequested = authMode === "supabase" || dataMode === "supabase";
   const configured = Boolean(supabaseUrl && publishableKey);
+  const explicitDataMode = process.env.NEXT_PUBLIC_KIUBO_DATA_MODE || "local";
+  const dataMode = explicitDataMode === "supabase" || (authMode === "supabase" && configured)
+    ? "supabase"
+    : "local";
+  const cloudRequested = authMode === "supabase" || dataMode === "supabase";
   const probe = configured
     ? await probeSupabaseAuth(supabaseUrl, publishableKey)
     : { reachable: false, status: null as number | null };
