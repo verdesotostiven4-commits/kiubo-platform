@@ -35,4 +35,9 @@ const supabaseProvider:KiuboDataProvider={
   }
 };
 
-export function getDataProvider():KiuboDataProvider{return process.env.NEXT_PUBLIC_KIUBO_DATA_MODE==="supabase"?supabaseProvider:localProvider}
+function cloudDataEnabled(){
+  if(process.env.NEXT_PUBLIC_KIUBO_DATA_MODE==="supabase")return true;
+  return process.env.NEXT_PUBLIC_KIUBO_AUTH_MODE==="supabase"&&isSupabaseConfigured();
+}
+
+export function getDataProvider():KiuboDataProvider{return cloudDataEnabled()?supabaseProvider:localProvider}
