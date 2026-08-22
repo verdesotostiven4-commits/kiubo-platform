@@ -1,0 +1,49 @@
+import { readFileSync, existsSync } from "node:fs";
+import { join } from "node:path";
+
+const root = process.cwd();
+const checks = [
+  ["supabase/migrations/0001_core_multitenant.sql", ["platform_admins", "tenant_members", "subscriptions", "enable row level security"]],
+  ["supabase/migrations/0002_sync_substrate.sql", ["apply_sync_operations", "pull_sync_changes", "can_sync_entity", "sync_receipts"]],
+  ["supabase/migrations/0003_platform_provisioning.sql", ["platform_provision_tenant", "platform_set_tenant_plan", "platform_set_tenant_status"]],
+  ["supabase/migrations/0004_security_guardrails.sql", ["guard_last_active_owner", "branch_belongs_to_tenant", "can_assign_tenant_role"]],
+  ["supabase/functions/provision-tenant/index.ts", ["is_platform_admin", "platform_provision_tenant"]],
+  ["supabase/functions/provision-member/index.ts", ["can_manage_tenant_users", "branch_belongs_to_tenant", "can_assign_tenant_role"]],
+];
+
+let failed = false;
+for (const [relative, needles] of checks) {
+  const path = join(root, relative);
+  if (!existsSync(path)) {
+    console.error(`✗ Missing ${relative}`);
+    failed = true;
+    continue;
+  }
+  const text = readFileSync(path, "utf8").toLowerCase();
+  for (const needle of needles) {
+    if (!text.includes(String(needle).toLowerCase())) {
+      console.error(`✗ ${relative} missing guard: ${needle}`);
+      failed = true;
+    }
+  }
+  if (!failed) console.log(`✓ ${relative}`);
+}
+
+const env = readFileSync(join(root, ".env.example"), "utf8");
+for (const key of [
+  "NEXT_PUBLIC_KIUBO_AUTH_MODE",
+  "NEXT_PUBLIC_KIUBO_DATA_MODE",
+  "NEXT_PUBLIC_SUPABASE_URL",
+  "NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY",
+]) {
+  if (!env.includes(key)) {
+    console.error(`✗ .env.example missing ${key}`);
+    failed = true;
+  }
+}
+
+if (failed) {
+  console.error("KIUBO cloud verification failed.");
+  process.exit(1);
+}
+console.log("✓ KIUBO cloud foundation verification passed.");
