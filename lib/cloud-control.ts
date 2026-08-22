@@ -2,6 +2,7 @@ import { createClient } from "@supabase/supabase-js";
 import { getSupabaseBrowserClient,isSupabaseConfigured } from "./supabase-browser";
 import { loadLocalDatabase,saveLocalDatabase,type BranchRecord,type KiuboLocalDatabase,type TenantRecord,type TenantStatus,type UserRecord,type UserRole } from "./local-store";
 import type { CommercialPlan } from "./entitlements";
+import { explainAuthEmailError } from "./auth-email";
 
 const planMap:Record<string,CommercialPlan>={start:"Start",pro:"Pro",custom:"Custom"};
 const roleMap=(role:string):UserRole=>role==="owner"||role==="admin"||role==="cashier"||role==="inventory"||role==="viewer"?role:"viewer";
@@ -40,7 +41,7 @@ async function prepareOwnerAccess(ownerEmail:string,ownerName:string){
   if(!url||!key)throw new Error("Cloud no configurado");
   const isolated=createClient(url,key,{auth:{persistSession:false,autoRefreshToken:false,detectSessionInUrl:false}});
   const result=await isolated.auth.signInWithOtp({email:ownerEmail,options:{shouldCreateUser:true,data:{full_name:ownerName},emailRedirectTo:KIUBO_SET_PASSWORD_URL}});
-  if(result.error)throw new Error(result.error.message);
+  if(result.error)throw new Error(explainAuthEmailError(result.error.message));
 }
 
 export async function provisionCloudTenant(input:{businessName:string;ownerName:string;ownerEmail:string;plan:CommercialPlan}){
