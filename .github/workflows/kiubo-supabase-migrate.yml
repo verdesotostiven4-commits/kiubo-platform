@@ -1,9 +1,7 @@
 name: KIUBO Supabase Migrate Once
 
 on:
-  push:
-    branches:
-      - supabase-migrate-once
+  workflow_dispatch:
 
 permissions:
   contents: read
