@@ -1,0 +1,40 @@
+name: KIUBO Supabase Diagnostic Comment
+
+on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - docs/SUPABASE_DIAG_TRIGGER.txt
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  diagnose:
+    runs-on: ubuntu-latest
+    env:
+      SUPABASE_DB_URL: ${{ secrets.KIUBO_SUPABASE_DB_URL }}
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - name: Checkout trusted main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - name: Ensure PostgreSQL client
+        run: command -v psql >/dev/null || (sudo apt-get update && sudo apt-get install -y postgresql-client)
+
+      - name: Run safe diagnostic/bootstrap
+        run: python3 scripts/supabase-bootstrap.py
+
+      - name: Publish safe diagnostic to PR
+        if: always()
+        shell: bash
+        run: |
+          if [ -f docs/SUPABASE_RUN_RESULT.txt ]; then
+            gh pr comment "${{ github.event.pull_request.number }}" --repo "$GITHUB_REPOSITORY" --body-file docs/SUPABASE_RUN_RESULT.txt
+          else
+            gh pr comment "${{ github.event.pull_request.number }}" --repo "$GITHUB_REPOSITORY" --body "KIUBO Supabase bootstrap result\nstatus=FAILED_RUNNER_NO_RESULT"
+          fi
