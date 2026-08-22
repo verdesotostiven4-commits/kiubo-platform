@@ -1,0 +1,68 @@
+name: KIUBO Supabase Migrate Once
+
+on:
+  push:
+    branches:
+      - supabase-migrate-once
+
+permissions:
+  contents: read
+
+jobs:
+  migrate:
+    runs-on: ubuntu-latest
+    env:
+      SUPABASE_DB_URL: ${{ secrets.KIUBO_SUPABASE_DB_URL }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Check database secret
+        id: secret
+        shell: bash
+        run: |
+          if [ -z "$SUPABASE_DB_URL" ]; then
+            echo "ready=false" >> "$GITHUB_OUTPUT"
+            echo "KIUBO_SUPABASE_DB_URL is not configured yet. Migration skipped safely."
+          else
+            echo "ready=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Install PostgreSQL client
+        if: steps.secret.outputs.ready == 'true'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y postgresql-client
+
+      - name: Apply KIUBO migrations 0001-0005
+        if: steps.secret.outputs.ready == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          for f in \
+            supabase/migrations/0001_core_multitenant.sql \
+            supabase/migrations/0002_sync_substrate.sql \
+            supabase/migrations/0003_platform_provisioning.sql \
+            supabase/migrations/0004_security_guardrails.sql \
+            supabase/migrations/0005_sync_payload_guardrails.sql
+          do
+            echo "Applying $f"
+            psql "$SUPABASE_DB_URL" -v ON_ERROR_STOP=1 -f "$f"
+          done
+
+      - name: Verify expected public tables
+        if: steps.secret.outputs.ready == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          psql "$SUPABASE_DB_URL" -v ON_ERROR_STOP=1 -Atc "
+            select table_name
+            from information_schema.tables
+            where table_schema='public'
+              and table_name in (
+                'platform_admins','tenants','tenant_members','branches','tenant_member_branches',
+                'plans','plan_features','subscriptions','tenant_feature_overrides','tenant_settings',
+                'tenant_branding','sync_entities','sync_receipts'
+              )
+            order by table_name;
+          "
