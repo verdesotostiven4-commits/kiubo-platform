@@ -1,0 +1,2 @@
+Trigger KIUBO Supabase one-shot migration after KIUBO_SUPABASE_DB_URL was configured.
+2026-08-22
