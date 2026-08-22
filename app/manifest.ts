@@ -1,2 +1,2 @@
 import type { MetadataRoute } from "next";
-export default function manifest():MetadataRoute.Manifest{return{name:"KIUBO",short_name:"KIUBO",description:"Todo tu negocio, en orden.",start_url:"/app",display:"standalone",background_color:"#fff6e8",theme_color:"#ff5b55",icons:[{src:"/icon.svg",sizes:"any",type:"image/svg+xml"}]}}
+export default function manifest():MetadataRoute.Manifest{return{name:"KIUBO · Todo tu negocio, en orden",short_name:"KIUBO",description:"Ventas, inventario, caja, clientes y control en un solo lugar.",start_url:"/app",display:"standalone",background_color:"#f7faff",theme_color:"#0b2748",icons:[{src:"https://cdn.phototourl.com/free/2026-08-22-d66f0865-834f-4fad-aba9-d7d2de485042.jpg",sizes:"1536x1536",type:"image/jpeg",purpose:"any"}]}}

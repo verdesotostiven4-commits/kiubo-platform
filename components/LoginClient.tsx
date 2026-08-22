@@ -16,6 +16,7 @@ export function LoginClient(){
   const[busy,setBusy]=useState(false);
   const[email,setEmail]=useState("");
   const[cooldown,setCooldown]=useState(0);
+  const[showPassword,setShowPassword]=useState(false);
   const cloud=process.env.NEXT_PUBLIC_KIUBO_AUTH_MODE==="supabase";
 
   useEffect(()=>{
@@ -37,7 +38,7 @@ export function LoginClient(){
 
   const resendAccess=async()=>{
     const normalized=email.trim().toLowerCase();
-    if(!normalized){setError("Escribe primero el correo de acceso");return}
+    if(!normalized){setError("Escribe primero el correo de tu cuenta KIUBO.");return}
     const remaining=getAuthEmailCooldownSeconds(normalized);
     if(remaining>0){setCooldown(remaining);setError(`Espera ${remaining} s antes de pedir otro enlace.`);return}
     setBusy(true);setError("");setMessage("");
@@ -48,7 +49,7 @@ export function LoginClient(){
       if(result.error)throw result.error;
       startAuthEmailCooldown(normalized);
       setCooldown(getAuthEmailCooldownSeconds(normalized));
-      setMessage("Enlace enviado. Revisa tu correo; no necesitas pedir otro mientras este siga vigente.");
+      setMessage("Listo. Te enviamos un enlace seguro para activar o recuperar tu acceso.");
     }catch(err){
       const raw=err instanceof Error?err.message:"No se pudo enviar el enlace";
       const friendly=explainAuthEmailError(raw);
@@ -60,5 +61,24 @@ export function LoginClient(){
     }finally{setBusy(false)}
   };
 
-  return <main className="ref-login-shell"><section className="ref-login-brand"><KiuboMark/><div className="ref-login-copy"><span className="public-kicker">TU NEGOCIO, SIMPLE</span><h1>Todo<br/><em>en orden.</em></h1><p>Ventas, inventario, clientes y control en una plataforma pensada para que tu equipo pueda empezar sin complicaciones.</p></div><div className="ref-login-benefits"><article><i className="blue">◎</i><div><b>Fácil de usar</b><span>Interfaz clara desde el primer día.</span></div></article><article><i className="orange">⌘</i><div><b>Todo en uno</b><span>Vende, controla y revisa tu negocio.</span></div></article><article><i className="coral">↗</i><div><b>Información al instante</b><span>Datos del negocio en un solo lugar.</span></div></article><article><i className="navy">◇</i><div><b>Seguro por diseño</b><span>{cloud?"Acceso protegido con Auth y aislamiento por negocio.":"La versión productiva usará Auth y RLS cloud."}</span></div></article></div></section><section className="ref-login-area"><div className="ref-login-shape s1"/><div className="ref-login-shape s2"/><form className="ref-login-card" onSubmit={submit}><KiuboMark/><div><span className="eyebrow">¡BIENVENIDO!</span><h2>Inicia sesión para continuar</h2><p>Entra con el acceso asignado a tu negocio.</p></div>{error&&<div className="login-error">{error}</div>}{message&&<div className="pos-message">{message}</div>}<label>Correo electrónico<input name="email" type="email" autoComplete="email" placeholder="tu@negocio.com" required autoFocus value={email} onChange={e=>setEmail(e.target.value)}/></label>{cloud?<label>Contraseña<input name="password" type="password" autoComplete="current-password" minLength={8} placeholder="Tu contraseña" required/></label>:<label>PIN<input name="pin" type="password" inputMode="numeric" pattern="[0-9]{4}" maxLength={4} autoComplete="current-password" placeholder="••••" required/></label>}<button className="button ref-blue-button" type="submit" disabled={busy}>{busy?"Procesando…":"Iniciar sesión"}</button>{cloud&&<button className="button" type="button" disabled={busy||cooldown>0} onClick={()=>void resendAccess()}>{cooldown>0?`Reenviar en ${cooldown} s`:"Primera vez / recuperar acceso"}</button>}{!cloud&&<small className="ref-login-demo">Preview: admin@kiubo.local / caja@kiubo.local · PIN 1234</small>}{cloud&&<small className="ref-login-demo">El correo se usa solo para activar o recuperar el acceso; después entras normalmente con contraseña.</small>}</form></section></main>
+  return <main className="ref-login-shell auth-login-shell">
+    <section className="ref-login-brand auth-brand-panel">
+      <KiuboMark/>
+      <div className="ref-login-copy"><span className="public-kicker">TODO TU NEGOCIO, EN ORDEN</span><h1>Menos vueltas.<br/><em>Más control.</em></h1><p>Ventas, inventario, clientes, caja y operación conectados en un solo espacio diseñado para trabajar rápido.</p></div>
+      <div className="ref-login-benefits"><article><i className="blue">◎</i><div><b>Simple desde el primer día</b><span>Flujos claros para vender y administrar sin perder tiempo.</span></div></article><article><i className="orange">⌘</i><div><b>Todo conectado</b><span>Tu negocio y tu equipo trabajando sobre la misma información.</span></div></article><article><i className="coral">↗</i><div><b>Información al instante</b><span>Lo importante visible cuando lo necesitas.</span></div></article><article><i className="navy">◇</i><div><b>Seguro por diseño</b><span>{cloud?"Acceso protegido y datos aislados por negocio.":"Entorno de demostración local."}</span></div></article></div>
+    </section>
+    <section className="ref-login-area auth-login-area"><div className="auth-orb auth-orb-one"/><div className="auth-orb auth-orb-two"/>
+      <form className="ref-login-card auth-login-card" onSubmit={submit}>
+        <div className="auth-card-brand"><KiuboMark/><span className="auth-secure-pill">CLOUD</span></div>
+        <div><span className="eyebrow">BIENVENIDO</span><h2>Entra a KIUBO</h2><p>Usa el acceso asignado a tu negocio.</p></div>
+        {error&&<div className="login-error">{error}</div>}{message&&<div className="auth-success">✓ {message}</div>}
+        <label>Correo electrónico<input name="email" type="email" autoComplete="email" placeholder="tu@negocio.com" required autoFocus value={email} onChange={e=>setEmail(e.target.value)}/></label>
+        {cloud?<label>Contraseña<div className="auth-input-wrap"><input name="password" type={showPassword?"text":"password"} autoComplete="current-password" minLength={8} placeholder="Tu contraseña" required/><button type="button" className="auth-eye" onClick={()=>setShowPassword(v=>!v)}>{showPassword?"Ocultar":"Ver"}</button></div></label>:<label>PIN<input name="pin" type="password" inputMode="numeric" pattern="[0-9]{4}" maxLength={4} autoComplete="current-password" placeholder="••••" required/></label>}
+        <button className="button ref-blue-button auth-primary" type="submit" disabled={busy}>{busy?"Entrando…":"Iniciar sesión"}</button>
+        {cloud&&<div className="auth-recovery"><span>¿Primera vez o perdiste tu contraseña?</span><button type="button" disabled={busy||cooldown>0} onClick={()=>void resendAccess()}>{cooldown>0?`Podrás reenviar en ${cooldown} s`:"Enviar enlace seguro"}</button></div>}
+        {!cloud&&<small className="ref-login-demo">Preview: admin@kiubo.local / caja@kiubo.local · PIN 1234</small>}
+        <small className="auth-footnote">KIUBO · Todo tu negocio, en orden.</small>
+      </form>
+    </section>
+  </main>
 }
