@@ -14,7 +14,7 @@ permissions:
 
 jobs:
   bootstrap:
-    if: github.actor == 'verdesotostiven4-commits'
+    if: github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-latest
     env:
       SUPABASE_DB_URL: ${{ secrets.KIUBO_SUPABASE_DB_URL }}
