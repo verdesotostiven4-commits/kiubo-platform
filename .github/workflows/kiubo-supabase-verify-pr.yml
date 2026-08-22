@@ -9,91 +9,101 @@ on:
 
 permissions:
   contents: read
-  pull-requests: write
-  issues: write
 
 jobs:
-  verify:
-    if: github.actor == 'verdesotostiven4-commits'
+  connection:
+    runs-on: ubuntu-latest
+    env:
+      SUPABASE_DB_URL: ${{ secrets.KIUBO_SUPABASE_DB_URL }}
+    steps:
+      - name: Ensure PostgreSQL client
+        run: command -v psql >/dev/null || (sudo apt-get update && sudo apt-get install -y postgresql-client)
+      - name: Test database connection
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "$SUPABASE_DB_URL"
+          psql "$SUPABASE_DB_URL" -v ON_ERROR_STOP=1 -Atc "select 1;" >/dev/null
+
+  schema_state:
+    needs: connection
+    runs-on: ubuntu-latest
+    outputs:
+      count: ${{ steps.tables.outputs.count }}
+    env:
+      SUPABASE_DB_URL: ${{ secrets.KIUBO_SUPABASE_DB_URL }}
+    steps:
+      - name: Ensure PostgreSQL client
+        run: command -v psql >/dev/null || (sudo apt-get update && sudo apt-get install -y postgresql-client)
+      - name: Count KIUBO tables
+        id: tables
+        shell: bash
+        run: |
+          set -euo pipefail
+          COUNT=$(psql "$SUPABASE_DB_URL" -v ON_ERROR_STOP=1 -Atc "
+            select count(*)
+            from information_schema.tables
+            where table_schema='public'
+              and table_name in (
+                'platform_admins','tenants','tenant_members','branches','tenant_member_branches',
+                'plans','plan_features','subscriptions','tenant_feature_overrides','tenant_settings',
+                'tenant_branding','sync_entities','sync_receipts'
+              );
+          ")
+          echo "count=$COUNT" >> "$GITHUB_OUTPUT"
+          echo "KIUBO tables found: $COUNT/13"
+          if [ "$COUNT" != "0" ] && [ "$COUNT" != "13" ]; then
+            echo "Partial schema detected; refusing automatic migration."
+            exit 3
+          fi
+
+  bootstrap:
+    needs: [connection, schema_state]
+    if: needs.schema_state.outputs.count == '0'
     runs-on: ubuntu-latest
     env:
       SUPABASE_DB_URL: ${{ secrets.KIUBO_SUPABASE_DB_URL }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-
-      - name: Install PostgreSQL client
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y postgresql-client
-
-      - name: Bootstrap or verify KIUBO Supabase
-        id: bootstrap
+      - name: Ensure PostgreSQL client
+        run: command -v psql >/dev/null || (sudo apt-get update && sudo apt-get install -y postgresql-client)
+      - name: Apply KIUBO migrations 0001-0005
         shell: bash
         run: |
-          set +e
-          RESULT=/tmp/kiubo_result.md
-          : > "$RESULT"
+          set -euo pipefail
+          for f in \
+            supabase/migrations/0001_core_multitenant.sql \
+            supabase/migrations/0002_sync_substrate.sql \
+            supabase/migrations/0003_platform_provisioning.sql \
+            supabase/migrations/0004_security_guardrails.sql \
+            supabase/migrations/0005_sync_payload_guardrails.sql
+          do
+            echo "Applying $f"
+            psql "$SUPABASE_DB_URL" -v ON_ERROR_STOP=1 -1 -f "$f"
+          done
 
-          EXPECTED="'platform_admins','tenants','tenant_members','branches','tenant_member_branches','plans','plan_features','subscriptions','tenant_feature_overrides','tenant_settings','tenant_branding','sync_entities','sync_receipts'"
-
-          if [ -z "$SUPABASE_DB_URL" ]; then
-            printf '## KIUBO Supabase\n\n❌ Falta el secret `KIUBO_SUPABASE_DB_URL`.\n' > "$RESULT"
-            echo "ok=false" >> "$GITHUB_OUTPUT"
-            exit 0
-          fi
-
-          psql "$SUPABASE_DB_URL" -v ON_ERROR_STOP=1 -Atc "select 1;" >/tmp/kiubo_connect.out 2>/tmp/kiubo_connect.err
-          if [ $? -ne 0 ]; then
-            printf '## KIUBO Supabase\n\n❌ No se pudo conectar a PostgreSQL con `KIUBO_SUPABASE_DB_URL`.\n\nLa base no fue modificada. Revisa que la cadena sea **Session pooler** y que la contraseña esté incluida/correcta.\n' > "$RESULT"
-            echo "ok=false" >> "$GITHUB_OUTPUT"
-            exit 0
-          fi
-
-          count_tables() {
-            psql "$SUPABASE_DB_URL" -v ON_ERROR_STOP=1 -Atc "select count(*) from information_schema.tables where table_schema='public' and table_name in ($EXPECTED);" 2>/dev/null
-          }
-
-          list_tables() {
-            psql "$SUPABASE_DB_URL" -v ON_ERROR_STOP=1 -Atc "select table_name from information_schema.tables where table_schema='public' and table_name in ($EXPECTED) order by table_name;" 2>/dev/null
-          }
-
-          COUNT=$(count_tables)
-          printf '## KIUBO Supabase\n\n✅ Conexión PostgreSQL correcta.\n\n' > "$RESULT"
-          printf 'Tablas KIUBO encontradas antes del bootstrap: **%s/13**.\n\n' "$COUNT" >> "$RESULT"
-
-          if [ "$COUNT" = "0" ]; then
-            echo 'No había esquema KIUBO. Aplicando migraciones `0001` → `0005` de forma controlada...' >> "$RESULT"
-            for f in \
-              supabase/migrations/0001_core_multitenant.sql \
-              supabase/migrations/0002_sync_substrate.sql \
-              supabase/migrations/0003_platform_provisioning.sql \
-              supabase/migrations/0004_security_guardrails.sql \
-              supabase/migrations/0005_sync_payload_guardrails.sql
-            do
-              psql "$SUPABASE_DB_URL" -v ON_ERROR_STOP=1 -1 -f "$f" >/tmp/kiubo_migration.log 2>&1
-              RC=$?
-              if [ $RC -ne 0 ]; then
-                printf '\n\n❌ Falló `%s`. No se ejecutaron migraciones posteriores.\n\n```text\n' "$f" >> "$RESULT"
-                tail -n 14 /tmp/kiubo_migration.log | sed -E 's#postgres(ql)?://[^ ]+#<redacted-db-url>#g' >> "$RESULT"
-                printf '\n```\n' >> "$RESULT"
-                echo "ok=false" >> "$GITHUB_OUTPUT"
-                exit 0
-              fi
-              printf '\n- ✅ `%s`' "$f" >> "$RESULT"
-            done
-            printf '\n\n' >> "$RESULT"
-          elif [ "$COUNT" != "13" ]; then
-            printf '⚠️ La base está en estado parcial; por seguridad no se ejecutó nada encima.\n\nTablas presentes:\n```text\n' >> "$RESULT"
-            list_tables >> "$RESULT"
-            printf '\n```\n' >> "$RESULT"
-            echo "ok=false" >> "$GITHUB_OUTPUT"
-            exit 0
-          else
-            echo 'El esquema base ya estaba completo; no se reaplicaron migraciones.' >> "$RESULT"
-          fi
-
-          COUNT_AFTER=$(count_tables)
+  verify:
+    needs: [connection, schema_state, bootstrap]
+    if: always() && needs.connection.result == 'success' && needs.schema_state.result == 'success' && (needs.bootstrap.result == 'success' || needs.bootstrap.result == 'skipped')
+    runs-on: ubuntu-latest
+    env:
+      SUPABASE_DB_URL: ${{ secrets.KIUBO_SUPABASE_DB_URL }}
+    steps:
+      - name: Ensure PostgreSQL client
+        run: command -v psql >/dev/null || (sudo apt-get update && sudo apt-get install -y postgresql-client)
+      - name: Verify tables, functions and RLS
+        shell: bash
+        run: |
+          set -euo pipefail
+          TABLES=$(psql "$SUPABASE_DB_URL" -v ON_ERROR_STOP=1 -Atc "
+            select count(*) from information_schema.tables
+            where table_schema='public' and table_name in (
+              'platform_admins','tenants','tenant_members','branches','tenant_member_branches',
+              'plans','plan_features','subscriptions','tenant_feature_overrides','tenant_settings',
+              'tenant_branding','sync_entities','sync_receipts'
+            );
+          ")
           FUNCTIONS=$(psql "$SUPABASE_DB_URL" -v ON_ERROR_STOP=1 -Atc "
             select count(distinct proname)
             from pg_proc p join pg_namespace n on n.oid=p.pronamespace
@@ -104,33 +114,17 @@ jobs:
               'platform_set_tenant_plan','platform_set_tenant_status','can_assign_tenant_role',
               'branch_belongs_to_tenant','normalize_sync_payload'
             );
-          " 2>/dev/null)
+          ")
           RLS=$(psql "$SUPABASE_DB_URL" -v ON_ERROR_STOP=1 -Atc "
-            select count(*) from pg_class c join pg_namespace n on n.oid=c.relnamespace
+            select count(*)
+            from pg_class c join pg_namespace n on n.oid=c.relnamespace
             where n.nspname='public' and c.relname in (
               'platform_admins','tenants','tenant_members','branches','tenant_member_branches',
               'plans','plan_features','subscriptions','tenant_feature_overrides','tenant_settings',
               'tenant_branding','sync_entities','sync_receipts'
             ) and c.relrowsecurity;
-          " 2>/dev/null)
-
-          printf '\n### Verificación final\n\n- Tablas: **%s/13**\n- Funciones críticas: **%s/16**\n- Tablas con RLS: **%s/13**\n' "$COUNT_AFTER" "$FUNCTIONS" "$RLS" >> "$RESULT"
-
-          if [ "$COUNT_AFTER" = "13" ] && [ "$FUNCTIONS" = "16" ] && [ "$RLS" = "13" ]; then
-            printf '\n✅ **Foundation cloud de KIUBO lista.**\n' >> "$RESULT"
-            echo "ok=true" >> "$GITHUB_OUTPUT"
-          else
-            printf '\n⚠️ El esquema necesita revisión antes de activar cloud.\n' >> "$RESULT"
-            echo "ok=false" >> "$GITHUB_OUTPUT"
-          fi
-
-      - name: Comment result on PR
-        if: always()
-        env:
-          GH_TOKEN: ${{ github.token }}
-          PR_NUMBER: ${{ github.event.pull_request.number }}
-        run: gh pr comment "$PR_NUMBER" --body-file /tmp/kiubo_result.md
-
-      - name: Fail if verification did not pass
-        if: steps.bootstrap.outputs.ok != 'true'
-        run: exit 1
+          ")
+          echo "tables=$TABLES/13 functions=$FUNCTIONS/16 rls=$RLS/13"
+          test "$TABLES" = "13"
+          test "$FUNCTIONS" = "16"
+          test "$RLS" = "13"
