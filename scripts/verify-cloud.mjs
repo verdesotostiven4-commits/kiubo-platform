@@ -8,8 +8,9 @@ const checks = [
   ["supabase/migrations/0003_platform_provisioning.sql", ["platform_provision_tenant", "platform_set_tenant_plan", "platform_set_tenant_status"]],
   ["supabase/migrations/0004_security_guardrails.sql", ["guard_last_active_owner", "branch_belongs_to_tenant", "can_assign_tenant_role"]],
   ["supabase/migrations/0005_sync_payload_guardrails.sql", ["normalize_sync_payload", "payload tenant mismatch", "branch does not belong to tenant", "sync payload too large"]],
-  ["supabase/functions/provision-tenant/index.ts", ["is_platform_admin", "platform_provision_tenant"]],
-  ["supabase/functions/provision-member/index.ts", ["can_manage_tenant_users", "branch_belongs_to_tenant", "can_assign_tenant_role"]],
+  ["supabase/migrations/0006_email_owner_provisioning.sql", ["platform_provision_tenant_by_email", "platform admin required", "owner auth user not found"]],
+  ["lib/cloud-control.ts", ["signInWithOtp", "platform_provision_tenant_by_email", "/set-password"]],
+  ["components/SetPasswordClient.tsx", ["updateUser", "new-password", "Guardar y entrar"]],
   ["app/api/health/route.ts", ["auth/v1/health", "next_public_kiubo_auth_mode", "next_public_kiubo_data_mode"]],
 ];
 
