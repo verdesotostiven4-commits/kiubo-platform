@@ -1,0 +1,14 @@
+"use client";
+import { FormEvent,useEffect,useState } from "react";
+import { useRouter } from "next/navigation";
+import { KiuboMark } from "./Logo";
+import { getSupabaseBrowserClient } from "@/lib/supabase-browser";
+import { getAuthProvider } from "@/lib/auth-provider";
+
+export function SetPasswordClient(){
+  const router=useRouter();
+  const[ready,setReady]=useState(false),[busy,setBusy]=useState(false),[error,setError]=useState("");
+  useEffect(()=>{let active=true;void(async()=>{const client=getSupabaseBrowserClient();if(!client){if(active)setError("KIUBO Cloud no está configurado");return}const result=await client.auth.getSession();if(!active)return;if(!result.data.session)setError("El enlace de acceso no es válido o ya venció. Pide una nueva invitación.");else setReady(true)})();return()=>{active=false}},[]);
+  const submit=async(e:FormEvent<HTMLFormElement>)=>{e.preventDefault();if(busy)return;setBusy(true);setError("");const f=new FormData(e.currentTarget),password=String(f.get("password")||""),confirm=String(f.get("confirm")||"");if(password.length<8){setError("La contraseña debe tener al menos 8 caracteres");setBusy(false);return}if(password!==confirm){setError("Las contraseñas no coinciden");setBusy(false);return}const client=getSupabaseBrowserClient();if(!client){setError("KIUBO Cloud no está configurado");setBusy(false);return}const update=await client.auth.updateUser({password});if(update.error){setError(update.error.message);setBusy(false);return}const session=await getAuthProvider().getSession();setBusy(false);if(!session){setError("La contraseña se guardó, pero no se pudo abrir tu negocio. Vuelve a iniciar sesión.");return}router.replace("/app")};
+  return <main className="ref-login-shell"><section className="ref-login-brand"><KiuboMark/><div className="ref-login-copy"><span className="public-kicker">ACTIVA TU ACCESO</span><h1>Tu negocio,<br/><em>listo para entrar.</em></h1><p>Define una contraseña personal para acceder a tu espacio KIUBO.</p></div></section><section className="ref-login-area"><form className="ref-login-card" onSubmit={submit}><KiuboMark/><div><span className="eyebrow">PRIMER ACCESO</span><h2>Crea tu contraseña</h2><p>Esta contraseña será tu acceso habitual a KIUBO.</p></div>{error&&<div className="login-error">{error}</div>}<label>Nueva contraseña<input name="password" type="password" autoComplete="new-password" minLength={8} required disabled={!ready||busy}/></label><label>Confirmar contraseña<input name="confirm" type="password" autoComplete="new-password" minLength={8} required disabled={!ready||busy}/></label><button className="button ref-blue-button" type="submit" disabled={!ready||busy}>{busy?"Guardando…":"Guardar y entrar"}</button>{!ready&&!error&&<small className="ref-login-demo">Validando tu invitación…</small>}</form></section></main>;
+}
