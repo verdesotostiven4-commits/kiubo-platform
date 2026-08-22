@@ -1,3 +1,4 @@
+import { createClient } from "@supabase/supabase-js";
 import { getSupabaseBrowserClient,isSupabaseConfigured } from "./supabase-browser";
 import { loadLocalDatabase,saveLocalDatabase,type BranchRecord,type KiuboLocalDatabase,type TenantRecord,type TenantStatus,type UserRecord,type UserRole } from "./local-store";
 import type { CommercialPlan } from "./entitlements";
@@ -33,7 +34,25 @@ export async function hydrateCloudControl():Promise<KiuboLocalDatabase>{
   saveLocalDatabase(db,{trackChanges:false});return loadLocalDatabase();
 }
 
-export async function provisionCloudTenant(input:{businessName:string;ownerName:string;ownerEmail:string;plan:CommercialPlan}){const client=getSupabaseBrowserClient();if(!client)throw new Error("Cloud no configurado");const slug=input.businessName.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/[^a-z0-9]+/g,"-").replace(/^-|-$/g,"").slice(0,55)+`-${Math.random().toString(36).slice(2,6)}`;const result=await client.functions.invoke("provision-tenant",{body:{businessName:input.businessName,ownerName:input.ownerName,ownerEmail:input.ownerEmail,plan:input.plan.toLowerCase(),slug}});if(result.error)throw new Error(result.error.message);if(result.data?.error)throw new Error(String(result.data.error));return result.data}
+async function prepareOwnerAccess(ownerEmail:string,ownerName:string){
+  const url=process.env.NEXT_PUBLIC_SUPABASE_URL,key=process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
+  if(!url||!key)throw new Error("Cloud no configurado");
+  const isolated=createClient(url,key,{auth:{persistSession:false,autoRefreshToken:false,detectSessionInUrl:false}});
+  const emailRedirectTo=typeof window!=="undefined"?`${window.location.origin}/set-password`:undefined;
+  const result=await isolated.auth.signInWithOtp({email:ownerEmail,options:{shouldCreateUser:true,data:{full_name:ownerName},emailRedirectTo}});
+  if(result.error)throw new Error(result.error.message);
+}
+
+export async function provisionCloudTenant(input:{businessName:string;ownerName:string;ownerEmail:string;plan:CommercialPlan}){
+  const client=getSupabaseBrowserClient();if(!client)throw new Error("Cloud no configurado");
+  const slug=input.businessName.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/[^a-z0-9]+/g,"-").replace(/^-|-$/g,"").slice(0,55)+`-${Math.random().toString(36).slice(2,6)}`;
+  await prepareOwnerAccess(input.ownerEmail,input.ownerName);
+  const result=await client.rpc("platform_provision_tenant_by_email",{p_owner_email:input.ownerEmail,p_display_name:input.businessName,p_slug:slug,p_plan_code:input.plan.toLowerCase()});
+  if(result.error)throw new Error(result.error.message);
+  const row=Array.isArray(result.data)?result.data[0]:result.data;
+  if(!row?.tenant_id||!row?.branch_id)throw new Error("KIUBO no confirmó la creación del negocio");
+  return{ok:true,tenantId:row.tenant_id,branchId:row.branch_id,invitedEmail:input.ownerEmail};
+}
 export async function setCloudTenantPlan(tenantId:string,plan:CommercialPlan){const client=getSupabaseBrowserClient();if(!client)throw new Error("Cloud no configurado");const result=await client.rpc("platform_set_tenant_plan",{p_tenant:tenantId,p_plan_code:plan.toLowerCase()});if(result.error)throw new Error(result.error.message)}
 export async function setCloudTenantStatus(tenantId:string,status:TenantStatus){const client=getSupabaseBrowserClient();if(!client)throw new Error("Cloud no configurado");const result=await client.rpc("platform_set_tenant_status",{p_tenant:tenantId,p_status:status});if(result.error)throw new Error(result.error.message)}
 export async function setCloudTenantFeature(tenantId:string,featureKey:string,enabled:boolean){const client=getSupabaseBrowserClient();if(!client)throw new Error("Cloud no configurado");const result=await client.from("tenant_feature_overrides").upsert({tenant_id:tenantId,feature_key:featureKey,enabled,limits:{},reason:"KIUBO Control"},{onConflict:"tenant_id,feature_key"});if(result.error)throw new Error(result.error.message)}
