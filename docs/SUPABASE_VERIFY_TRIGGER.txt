@@ -1,0 +1,2 @@
+diagnose KIUBO Supabase connection v3
+2026-08-22T18:55:00Z
