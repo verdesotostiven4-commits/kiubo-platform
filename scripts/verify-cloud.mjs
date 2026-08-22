@@ -7,8 +7,10 @@ const checks = [
   ["supabase/migrations/0002_sync_substrate.sql", ["apply_sync_operations", "pull_sync_changes", "can_sync_entity", "sync_receipts"]],
   ["supabase/migrations/0003_platform_provisioning.sql", ["platform_provision_tenant", "platform_set_tenant_plan", "platform_set_tenant_status"]],
   ["supabase/migrations/0004_security_guardrails.sql", ["guard_last_active_owner", "branch_belongs_to_tenant", "can_assign_tenant_role"]],
+  ["supabase/migrations/0005_sync_payload_guardrails.sql", ["normalize_sync_payload", "payload tenant mismatch", "branch does not belong to tenant", "sync payload too large"]],
   ["supabase/functions/provision-tenant/index.ts", ["is_platform_admin", "platform_provision_tenant"]],
   ["supabase/functions/provision-member/index.ts", ["can_manage_tenant_users", "branch_belongs_to_tenant", "can_assign_tenant_role"]],
+  ["app/api/health/route.ts", ["auth/v1/health", "next_public_kiubo_auth_mode", "next_public_kiubo_data_mode"]],
 ];
 
 let failed = false;
@@ -20,13 +22,15 @@ for (const [relative, needles] of checks) {
     continue;
   }
   const text = readFileSync(path, "utf8").toLowerCase();
+  let fileFailed = false;
   for (const needle of needles) {
     if (!text.includes(String(needle).toLowerCase())) {
       console.error(`✗ ${relative} missing guard: ${needle}`);
+      fileFailed = true;
       failed = true;
     }
   }
-  if (!failed) console.log(`✓ ${relative}`);
+  if (!fileFailed) console.log(`✓ ${relative}`);
 }
 
 const env = readFileSync(join(root, ".env.example"), "utf8");
