@@ -9,7 +9,8 @@
     "lint": "next lint",
     "typecheck": "tsc --noEmit",
     "verify:sri": "node scripts/verify-sri.mjs",
-    "verify": "npm run typecheck && npm run verify:sri"
+    "verify:cloud": "node scripts/verify-cloud.mjs",
+    "verify": "npm run typecheck && npm run verify:cloud && npm run verify:sri"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.57.4",
