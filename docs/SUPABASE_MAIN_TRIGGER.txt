@@ -1,0 +1,2 @@
+run trusted KIUBO Supabase bootstrap
+2026-08-22T18:20:00Z
