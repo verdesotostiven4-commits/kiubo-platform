@@ -12,7 +12,7 @@ import {
 export type CashTransactionPayload =
   | { kind:"open"; session:CashSessionRecord }
   | { kind:"movement"; movement:CashMovementRecord }
-  | { kind:"close"; sessionId:string; closingAmount:number; closedAt:string };
+  | { kind:"close"; session:CashSessionRecord };
 
 export type CreditPaymentTransactionPayload = {
   payment:CreditPaymentRecord;
@@ -81,11 +81,11 @@ function enqueueCommand(
 }
 
 export function enqueueCashTransaction(db:KiuboLocalDatabase,payload:CashTransactionPayload){
-  const session=payload.kind==="open"?payload.session:undefined;
+  const session=payload.kind==="movement"?undefined:payload.session;
   const movement=payload.kind==="movement"?payload.movement:undefined;
-  const tenantId=session?.tenantId||movement?.tenantId||db.cashSessions.find(item=>item.id===(payload.kind==="close"?payload.sessionId:""))?.tenantId||"";
-  const branchId=session?.branchId||movement?.branchId||db.cashSessions.find(item=>item.id===(payload.kind==="close"?payload.sessionId:""))?.branchId||"";
-  const entityId=payload.kind==="open"?payload.session.id:payload.kind==="movement"?payload.movement.id:`close:${payload.sessionId}`;
+  const tenantId=session?.tenantId||movement?.tenantId||"";
+  const branchId=session?.branchId||movement?.branchId||"";
+  const entityId=payload.kind==="movement"?payload.movement.id:`${payload.kind}:${payload.session.id}`;
   return enqueueCommand(db,{
     entityType:"cashTransactions",
     entityId,
