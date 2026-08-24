@@ -7,7 +7,6 @@ export type SyncEntity =
   | "tenantProducts"
   | "customers"
   | "sales"
-  | "saleTransactions"
   | "users"
   | "cashSessions"
   | "cashMovements"
@@ -20,12 +19,14 @@ export type SyncEntity =
   | "supplierPayments"
   | "stockMovements";
 
+export type SyncCommandEntity = "saleTransactions";
+
 export type SyncQueueRecord = {
   id: string;
   operationId: string;
   tenantId: string;
   branchId?: string;
-  entityType: SyncEntity;
+  entityType: SyncEntity | SyncCommandEntity;
   entityId: string;
   action: SyncAction;
   payload: unknown;
@@ -42,7 +43,7 @@ export type AuditLogRecord = {
   branchId?: string;
   actorUserId?: string;
   action: string;
-  entityType: SyncEntity | "system";
+  entityType: SyncEntity | SyncCommandEntity | "system";
   entityId?: string;
   metadata: Record<string, unknown>;
   createdAt: string;
