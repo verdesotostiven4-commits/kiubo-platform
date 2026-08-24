@@ -1,78 +1,50 @@
-import {
-  getLocalDeviceId,
-  loadLocalSession,
-  makeId,
-  type CashMovementRecord,
-  type CashSessionRecord,
-  type CreditPaymentRecord,
-  type CreditRecord,
-  type KiuboLocalDatabase,
-  type PurchaseRecord,
-  type SaleRecord,
-  type StockMovementRecord,
-  type SupplierPaymentRecord,
-  type TenantProduct,
-} from "./local-store";
-import type { SyncQueueRecord } from "./sync-types";
+import {getLocalDeviceId,loadLocalSession,makeId,type CashMovementRecord,type CashSessionRecord,type CreditPaymentRecord,type CreditRecord,type KiuboLocalDatabase,type PurchaseRecord,type SaleRecord,type StockMovementRecord,type SupplierPaymentRecord,type TenantProduct} from "./local-store";
+import type {SyncQueueRecord} from "./sync-types";
 
-type SaleTransactionPayload={sale?:SaleRecord;stockMovements?:StockMovementRecord[];credit?:CreditRecord};
-type CashTransactionPayload=| {kind:"open"|"close";session?:CashSessionRecord}| {kind:"movement";movement?:CashMovementRecord};
-type CreditPaymentTransactionPayload={payment?:CreditPaymentRecord;creditSnapshot?:CreditRecord;cashMovement?:CashMovementRecord};
-type PurchaseTransactionPayload={purchase?:PurchaseRecord;productBeforeSnapshots?:TenantProduct[];productSnapshots?:TenantProduct[];stockMovements?:StockMovementRecord[];initialPayment?:SupplierPaymentRecord};
-type SupplierPaymentTransactionPayload={payment?:SupplierPaymentRecord;purchaseBefore?:PurchaseRecord;purchaseAfter?:PurchaseRecord};
-type InventoryAdjustmentPayload={productBefore?:TenantProduct;productAfter?:TenantProduct;movement?:StockMovementRecord};
+type SalePayload={sale?:SaleRecord;stockMovements?:StockMovementRecord[];credit?:CreditRecord};
+type CashPayload=|{kind:"open"|"close";session?:CashSessionRecord}|{kind:"movement";movement?:CashMovementRecord};
+type CreditPayload={payment?:CreditPaymentRecord;creditSnapshot?:CreditRecord;cashMovement?:CashMovementRecord};
+type PurchasePayload={purchase?:PurchaseRecord;productBeforeSnapshots?:TenantProduct[];productSnapshots?:TenantProduct[];stockMovements?:StockMovementRecord[];initialPayment?:SupplierPaymentRecord;initialCashMovement?:CashMovementRecord};
+type SupplierPaymentPayload={payment?:SupplierPaymentRecord;purchaseBefore?:PurchaseRecord;purchaseAfter?:PurchaseRecord;cashMovement?:CashMovementRecord};
+type AdjustmentPayload={productBefore?:TenantProduct;productAfter?:TenantProduct;movement?:StockMovementRecord};
 
 const COMMAND_TYPES=new Set(["saleTransactions","cashTransactions","creditPaymentTransactions","purchaseTransactions","supplierPaymentTransactions","inventoryAdjustmentTransactions"]);
-const TERMINAL_ERROR_HINTS=[
-  "insufficient stock","stock_nonnegative","negative stock","product not found","product is inactive","customer not found","credit not found","credit already paid",
-  "cash session already open","cash session already closed","cash session is not open","cash session not found","branch denied","branch mismatch","branch does not belong",
-  "role denied","tenant is not allowed","tenant mismatch","sale id mismatch","invalid sale","invalid product","invalid payment","invalid cash","invalid credit","invalid finance",
-  "supplier not found","purchase not found","purchase already paid","duplicate purchase document","payment exceeds purchase balance","supplier payment","invalid purchase","purchase id mismatch",
-  "inventory adjustment","invalid inventory","requires customer","must contain","must be positive","cannot be negative","already open","already closed","violates check constraint",
-];
-function nearlyEqual(a:number,b:number){return Math.abs(a-b)<0.000001}
-function trimError(error:string){return error.replace(/\s+/g," ").trim().slice(0,500)}
-export function shouldRecoverRejectedCommand(item:SyncQueueRecord,error:string){if(!COMMAND_TYPES.has(item.entityType))return false;const lower=error.toLowerCase();return TERMINAL_ERROR_HINTS.some(hint=>lower.includes(hint))}
-function auditRecovery(db:KiuboLocalDatabase,item:SyncQueueRecord,error:string,changed:boolean,needsCanonicalPull:boolean){const session=loadLocalSession();db.auditLogs.push({id:makeId("audit"),tenantId:item.tenantId,branchId:item.branchId,actorUserId:session?.userId,action:"system.command_recovered",entityType:"system",entityId:item.entityId,metadata:{deviceId:getLocalDeviceId(),commandType:item.entityType,operationId:item.operationId,changed,needsCanonicalPull,error:trimError(error)},createdAt:new Date().toISOString()});db.auditLogs=db.auditLogs.slice(-1500)}
+const TERMINAL_ERROR_HINTS=["insufficient stock","stock_nonnegative","negative stock","product not found","product is inactive","customer not found","credit not found","credit already paid","cash session already open","cash session already closed","cash session is not open","cash session not found","branch denied","branch mismatch","branch does not belong","role denied","tenant is not allowed","tenant mismatch","sale id mismatch","invalid sale","invalid product","invalid payment","invalid cash","invalid credit","invalid finance","supplier not found","purchase not found","purchase already paid","duplicate purchase document","payment exceeds purchase balance","supplier payment","invalid purchase","purchase id mismatch","inventory adjustment","invalid inventory","requires customer","must contain","must be positive","cannot be negative","already open","already closed","violates check constraint"];
+const eq=(a:number,b:number)=>Math.abs(a-b)<.000001;
+const clean=(error:string)=>error.replace(/\s+/g," ").trim().slice(0,500);
+export function shouldRecoverRejectedCommand(item:SyncQueueRecord,error:string){return COMMAND_TYPES.has(item.entityType)&&TERMINAL_ERROR_HINTS.some(x=>error.toLowerCase().includes(x))}
+function removeById<T extends {id:string}>(items:T[],id?:string){if(!id)return{items,changed:false};const next=items.filter(x=>x.id!==id);return{items:next,changed:next.length!==items.length}}
+function audit(db:KiuboLocalDatabase,item:SyncQueueRecord,error:string,changed:boolean,needsCanonicalPull:boolean){const session=loadLocalSession();db.auditLogs.push({id:makeId("audit"),tenantId:item.tenantId,branchId:item.branchId,actorUserId:session?.userId,action:"system.command_recovered",entityType:"system",entityId:item.entityId,metadata:{deviceId:getLocalDeviceId(),commandType:item.entityType,operationId:item.operationId,changed,needsCanonicalPull,error:clean(error)},createdAt:new Date().toISOString()});db.auditLogs=db.auditLogs.slice(-1500)}
 
 export function recoverRejectedCommand(db:KiuboLocalDatabase,item:SyncQueueRecord,error:string){
   let changed=false,needsCanonicalPull=false;
   if(item.entityType==="saleTransactions"&&item.payload&&typeof item.payload==="object"){
-    const payload=item.payload as SaleTransactionPayload;
-    if(payload.sale?.id){const before=db.sales.length;db.sales=db.sales.filter(sale=>sale.id!==payload.sale?.id);changed=changed||before!==db.sales.length}
-    const movementIds=new Set((payload.stockMovements||[]).map(movement=>movement.id));if(movementIds.size){const before=db.stockMovements.length;db.stockMovements=db.stockMovements.filter(movement=>!movementIds.has(movement.id));changed=changed||before!==db.stockMovements.length}
-    if(payload.credit?.id){const before=db.credits.length;db.credits=db.credits.filter(credit=>credit.id!==payload.credit?.id);changed=changed||before!==db.credits.length}
-    for(const movement of payload.stockMovements||[]){const product=db.tenantProducts.find(candidate=>candidate.id===movement.productId&&candidate.tenantId===item.tenantId);if(!product){needsCanonicalPull=true;continue}if(nearlyEqual(product.stock,movement.newStock)){product.stock=Math.max(0,movement.previousStock);changed=true}else needsCanonicalPull=true}
+    const p=item.payload as SalePayload,r=removeById(db.sales,p.sale?.id);db.sales=r.items;changed||=r.changed;
+    const ids=new Set((p.stockMovements||[]).map(x=>x.id));if(ids.size){const n=db.stockMovements.filter(x=>!ids.has(x.id));changed||=n.length!==db.stockMovements.length;db.stockMovements=n}
+    const cr=removeById(db.credits,p.credit?.id);db.credits=cr.items;changed||=cr.changed;
+    for(const m of p.stockMovements||[]){const product=db.tenantProducts.find(x=>x.id===m.productId&&x.tenantId===item.tenantId);if(product&&eq(product.stock,m.newStock)){product.stock=Math.max(0,m.previousStock);changed=true}else needsCanonicalPull=true}
   }
   if(item.entityType==="cashTransactions"&&item.payload&&typeof item.payload==="object"){
-    const payload=item.payload as CashTransactionPayload;
-    if(payload.kind==="open"&&payload.session?.id){const before=db.cashSessions.length;db.cashSessions=db.cashSessions.filter(session=>session.id!==payload.session?.id);changed=changed||before!==db.cashSessions.length}
-    else if(payload.kind==="movement"&&payload.movement?.id){const before=db.cashMovements.length;db.cashMovements=db.cashMovements.filter(movement=>movement.id!==payload.movement?.id);changed=changed||before!==db.cashMovements.length}
-    else if(payload.kind==="close"&&payload.session?.id){const current=db.cashSessions.find(session=>session.id===payload.session?.id);if(current&&current.status==="closed"){current.status="open";delete current.closingAmount;delete current.closedAt;changed=true}else needsCanonicalPull=true}
+    const p=item.payload as CashPayload;
+    if(p.kind==="open"){const r=removeById(db.cashSessions,p.session?.id);db.cashSessions=r.items;changed||=r.changed}
+    else if(p.kind==="movement"){const r=removeById(db.cashMovements,p.movement?.id);db.cashMovements=r.items;changed||=r.changed}
+    else if(p.kind==="close"&&p.session?.id){const current=db.cashSessions.find(x=>x.id===p.session?.id);if(current&&current.status==="closed"){current.status="open";delete current.closingAmount;delete current.closedAt;changed=true}else needsCanonicalPull=true}
   }
   if(item.entityType==="creditPaymentTransactions"&&item.payload&&typeof item.payload==="object"){
-    const payload=item.payload as CreditPaymentTransactionPayload;
-    if(payload.payment?.id){const before=db.creditPayments.length;db.creditPayments=db.creditPayments.filter(payment=>payment.id!==payload.payment?.id);changed=changed||before!==db.creditPayments.length}
-    if(payload.cashMovement?.id){const before=db.cashMovements.length;db.cashMovements=db.cashMovements.filter(movement=>movement.id!==payload.cashMovement?.id);changed=changed||before!==db.cashMovements.length}
-    if(payload.payment&&payload.creditSnapshot){const current=db.credits.find(credit=>credit.id===payload.creditSnapshot?.id);if(current&&nearlyEqual(current.balance,payload.creditSnapshot.balance)){current.balance=Math.min(current.originalAmount,Number((payload.creditSnapshot.balance+payload.payment.amount).toFixed(2)));current.status="open";changed=true}else needsCanonicalPull=true}
+    const p=item.payload as CreditPayload,pr=removeById(db.creditPayments,p.payment?.id);db.creditPayments=pr.items;changed||=pr.changed;const mr=removeById(db.cashMovements,p.cashMovement?.id);db.cashMovements=mr.items;changed||=mr.changed;
+    if(p.payment&&p.creditSnapshot){const current=db.credits.find(x=>x.id===p.creditSnapshot?.id);if(current&&eq(current.balance,p.creditSnapshot.balance)){current.balance=Math.min(current.originalAmount,Number((p.creditSnapshot.balance+p.payment.amount).toFixed(2)));current.status="open";changed=true}else needsCanonicalPull=true}
   }
   if(item.entityType==="purchaseTransactions"&&item.payload&&typeof item.payload==="object"){
-    const payload=item.payload as PurchaseTransactionPayload;
-    if(payload.purchase?.id){const before=db.purchases.length;db.purchases=db.purchases.filter(purchase=>purchase.id!==payload.purchase?.id);changed=changed||before!==db.purchases.length}
-    if(payload.initialPayment?.id){const before=db.supplierPayments.length;db.supplierPayments=db.supplierPayments.filter(payment=>payment.id!==payload.initialPayment?.id);changed=changed||before!==db.supplierPayments.length}
-    const movementIds=new Set((payload.stockMovements||[]).map(movement=>movement.id));if(movementIds.size){const before=db.stockMovements.length;db.stockMovements=db.stockMovements.filter(movement=>!movementIds.has(movement.id));changed=changed||before!==db.stockMovements.length}
-    const beforeById=new Map((payload.productBeforeSnapshots||[]).map(product=>[product.id,product])),afterById=new Map((payload.productSnapshots||[]).map(product=>[product.id,product]));
-    for(const [productId,before] of beforeById){const after=afterById.get(productId),current=db.tenantProducts.find(product=>product.id===productId&&product.tenantId===item.tenantId);if(!after||!current){needsCanonicalPull=true;continue}if(nearlyEqual(current.stock,after.stock)&&nearlyEqual(current.cost,after.cost)){current.stock=before.stock;current.cost=before.cost;changed=true}else needsCanonicalPull=true}
+    const p=item.payload as PurchasePayload,pu=removeById(db.purchases,p.purchase?.id);db.purchases=pu.items;changed||=pu.changed;const sp=removeById(db.supplierPayments,p.initialPayment?.id);db.supplierPayments=sp.items;changed||=sp.changed;const cm=removeById(db.cashMovements,p.initialCashMovement?.id);db.cashMovements=cm.items;changed||=cm.changed;
+    const ids=new Set((p.stockMovements||[]).map(x=>x.id));if(ids.size){const n=db.stockMovements.filter(x=>!ids.has(x.id));changed||=n.length!==db.stockMovements.length;db.stockMovements=n}
+    const before=new Map((p.productBeforeSnapshots||[]).map(x=>[x.id,x])),after=new Map((p.productSnapshots||[]).map(x=>[x.id,x]));for(const [id,b] of before){const a=after.get(id),current=db.tenantProducts.find(x=>x.id===id&&x.tenantId===item.tenantId);if(a&&current&&eq(current.stock,a.stock)&&eq(current.cost,a.cost)){current.stock=b.stock;current.cost=b.cost;changed=true}else needsCanonicalPull=true}
   }
   if(item.entityType==="supplierPaymentTransactions"&&item.payload&&typeof item.payload==="object"){
-    const payload=item.payload as SupplierPaymentTransactionPayload;
-    if(payload.payment?.id){const before=db.supplierPayments.length;db.supplierPayments=db.supplierPayments.filter(payment=>payment.id!==payload.payment?.id);changed=changed||before!==db.supplierPayments.length}
-    if(payload.purchaseBefore&&payload.purchaseAfter){const current=db.purchases.find(purchase=>purchase.id===payload.purchaseAfter?.id),currentPaid=current?.paidAmount??0,afterPaid=payload.purchaseAfter.paidAmount??0;if(current&&nearlyEqual(currentPaid,afterPaid)&&current.paymentStatus===payload.purchaseAfter.paymentStatus){current.paidAmount=payload.purchaseBefore.paidAmount;current.paymentStatus=payload.purchaseBefore.paymentStatus;changed=true}else needsCanonicalPull=true}
+    const p=item.payload as SupplierPaymentPayload,sp=removeById(db.supplierPayments,p.payment?.id);db.supplierPayments=sp.items;changed||=sp.changed;const cm=removeById(db.cashMovements,p.cashMovement?.id);db.cashMovements=cm.items;changed||=cm.changed;
+    if(p.purchaseBefore&&p.purchaseAfter){const current=db.purchases.find(x=>x.id===p.purchaseAfter?.id),paid=current?.paidAmount??0,after=p.purchaseAfter.paidAmount??0;if(current&&eq(paid,after)&&current.paymentStatus===p.purchaseAfter.paymentStatus){current.paidAmount=p.purchaseBefore.paidAmount;current.paymentStatus=p.purchaseBefore.paymentStatus;changed=true}else needsCanonicalPull=true}
   }
   if(item.entityType==="inventoryAdjustmentTransactions"&&item.payload&&typeof item.payload==="object"){
-    const payload=item.payload as InventoryAdjustmentPayload;
-    if(payload.movement?.id){const before=db.stockMovements.length;db.stockMovements=db.stockMovements.filter(movement=>movement.id!==payload.movement?.id);changed=changed||before!==db.stockMovements.length}
-    if(payload.productBefore&&payload.productAfter){const current=db.tenantProducts.find(product=>product.id===payload.productAfter?.id&&product.tenantId===item.tenantId);if(current&&nearlyEqual(current.stock,payload.productAfter.stock)){current.stock=payload.productBefore.stock;changed=true}else needsCanonicalPull=true}
+    const p=item.payload as AdjustmentPayload,mr=removeById(db.stockMovements,p.movement?.id);db.stockMovements=mr.items;changed||=mr.changed;if(p.productBefore&&p.productAfter){const current=db.tenantProducts.find(x=>x.id===p.productAfter?.id&&x.tenantId===item.tenantId);if(current&&eq(current.stock,p.productAfter.stock)){current.stock=p.productBefore.stock;changed=true}else needsCanonicalPull=true}
   }
-  auditRecovery(db,item,error,changed,needsCanonicalPull);return{changed,needsCanonicalPull};
+  audit(db,item,error,changed,needsCanonicalPull);return{changed,needsCanonicalPull};
 }

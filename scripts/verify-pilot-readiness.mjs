@@ -12,6 +12,7 @@ requireText("components/Sidebar.tsx",["platformOnly:true","canAccess(user.role,i
 requireText("components/MobileNav.tsx",["platformOnly:true","canAccess(user.role,item.permission,Boolean(user.platformAdmin))","href:\"/cash\""]);
 requireText("app/cash/page.tsx",["CashClient","Sidebar"]);
 requireText("components/CashClient.tsx",["enqueueCashTransaction","enqueueCreditPaymentTransaction","Caja y fiados, sin perder el control."]);
+requireText("components/PosClient.tsx",['const paymentOptions:Payment[]=["cash","transfer","credit"]','if(payment==="mixed")']);
 requireText("app/operations/page.tsx",["NEXT_PUBLIC_KIUBO_AUTH_MODE===\"supabase\"","BusinessAdminClient","TeamAdminClient","OperationsClient"]);
 requireText("components/BusinessAdminClient.tsx",["Reglas generales del negocio","saveLocalDatabase(next)","Exigir caja abierta"]);
 requireText("components/TeamAdminClient.tsx",["Usuarios, roles y sucursales","inviteCloudTeamMember","updateCloudTeamMember","Todas las sucursales disponibles","Solo un propietario puede modificar propietarios o administradores."]);
@@ -21,10 +22,11 @@ requireText("supabase/migrations/0004_security_guardrails.sql",["guard_last_acti
 requireText("supabase/migrations/0013_pilot_readiness_branch_scope.sql",["guard_sync_entity_branch_scope","sync branch belongs to another tenant","branch is inactive","open'","closed'","branch_can_operate"]);
 requireText("supabase/migrations/0014_team_management_v1.sql",["list_tenant_team_v1","tenant_invite_preflight_v1","upsert_tenant_member_by_email_v1","update_tenant_member_v1","admin cannot modify owner or admin access","cannot modify your own access here"]);
 requireText("supabase/migrations/0015_purchase_transaction_v2.sql",["apply_purchase_transactions_v2","v_new_stock=v_stock+v_qty","v_new_cost","supplier payment exceeds purchase balance"]);
-requireText("components/PurchasesClient.tsx",["enqueuePurchaseTransaction","enqueueSupplierPaymentTransaction","trackChanges:false","costo promedio"]);
+requireText("supabase/migrations/0017_supplier_cash_outflow_v1.sql",["apply_purchase_transactions_v3","cash supplier payment requires register movement","cash session is not open"]);
+requireText("components/PurchasesClient.tsx",["enqueuePurchaseTransaction","enqueueSupplierPaymentTransaction","trackChanges:false","costo promedio","getOpenCashSession","salida de caja"]);
 requireText("supabase/migrations/0016_inventory_adjustment_v2.sql",["apply_inventory_adjustments_v2","v_new_stock=v_stock+v_delta","insufficient stock for adjustment"]);
 requireText("components/InventoryClient.tsx",["enqueueInventoryAdjustment","Ir a Compras","un solo flujo oficial","trackChanges:false"]);
 requireText("lib/sync-engine.ts",["isActiveQueueItem(item,activeTenantId)","recoverRejectedCommand","navigator.locks"]);
 requireText("lib/offline-durability.ts",["recoverInterruptedSyncQueue","snapshotOfflineDatabase","navigator.storage?.persist"]);
 
-console.log("✓ Pilot Readiness V5 passed: cloud team roles, branch revocation, atomic sales/cash/purchases/inventory, offline recovery, session reconciliation and tenant-safe sync are guarded.");
+console.log("✓ Pilot Readiness V6 passed: truthful payments, cloud team roles, branch revocation, atomic sales/cash/purchases/inventory, supplier cash outflows, offline recovery and tenant-safe sync are guarded.");

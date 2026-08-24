@@ -2,6 +2,7 @@ import {
   getLocalDeviceId,
   loadLocalSession,
   makeId,
+  type CashMovementRecord,
   type KiuboLocalDatabase,
   type PurchaseRecord,
   type StockMovementRecord,
@@ -15,12 +16,14 @@ export type PurchaseTransactionPayload={
   productSnapshots:TenantProduct[];
   stockMovements:StockMovementRecord[];
   initialPayment?:SupplierPaymentRecord;
+  initialCashMovement?:CashMovementRecord;
 };
 
 export type SupplierPaymentTransactionPayload={
   payment:SupplierPaymentRecord;
   purchaseBefore:PurchaseRecord;
   purchaseAfter:PurchaseRecord;
+  cashMovement?:CashMovementRecord;
 };
 
 function enqueue(db:KiuboLocalDatabase,input:{entityType:"purchaseTransactions"|"supplierPaymentTransactions";entityId:string;tenantId:string;branchId:string;payload:PurchaseTransactionPayload|SupplierPaymentTransactionPayload;auditAction:string;metadata:Record<string,unknown>}){
@@ -36,9 +39,9 @@ function enqueue(db:KiuboLocalDatabase,input:{entityType:"purchaseTransactions"|
 }
 
 export function enqueuePurchaseTransaction(db:KiuboLocalDatabase,payload:PurchaseTransactionPayload){
-  return enqueue(db,{entityType:"purchaseTransactions",entityId:payload.purchase.id,tenantId:payload.purchase.tenantId,branchId:payload.purchase.branchId,payload,auditAction:"purchases.transaction_queued",metadata:{items:payload.purchase.items.length,total:payload.purchase.total,initialPayment:payload.initialPayment?.amount||0}});
+  return enqueue(db,{entityType:"purchaseTransactions",entityId:payload.purchase.id,tenantId:payload.purchase.tenantId,branchId:payload.purchase.branchId,payload,auditAction:"purchases.transaction_queued",metadata:{items:payload.purchase.items.length,total:payload.purchase.total,initialPayment:payload.initialPayment?.amount||0,cashOutflow:payload.initialCashMovement?.amount||0}});
 }
 
 export function enqueueSupplierPaymentTransaction(db:KiuboLocalDatabase,payload:SupplierPaymentTransactionPayload){
-  return enqueue(db,{entityType:"supplierPaymentTransactions",entityId:payload.payment.id,tenantId:payload.payment.tenantId,branchId:payload.payment.branchId,payload,auditAction:"supplier.payment_transaction_queued",metadata:{purchaseId:payload.payment.purchaseId,amount:payload.payment.amount,method:payload.payment.method}});
+  return enqueue(db,{entityType:"supplierPaymentTransactions",entityId:payload.payment.id,tenantId:payload.payment.tenantId,branchId:payload.payment.branchId,payload,auditAction:"supplier.payment_transaction_queued",metadata:{purchaseId:payload.payment.purchaseId,amount:payload.payment.amount,method:payload.payment.method,cashOutflow:payload.cashMovement?.amount||0}});
 }

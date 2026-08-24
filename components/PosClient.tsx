@@ -18,6 +18,8 @@ import { enqueueSaleTransaction } from "@/lib/sales-transaction";
 type CartLine=TenantProduct&{qty:number};
 type Payment=SaleRecord["payment"];
 const paymentLabel:Record<Payment,string>={cash:"Efectivo",transfer:"Transferencia",mixed:"Mixto",credit:"Fiado"};
+// Mixed payment stays readable for historical records, but is not offered until KIUBO stores an explicit cash/transfer split.
+const paymentOptions:Payment[]=["cash","transfer","credit"];
 
 export function PosClient(){
   const[db,setDb]=useState<ReturnType<typeof loadLocalDatabase>|null>(null);
@@ -53,12 +55,13 @@ export function PosClient(){
 
   const checkout=()=>{
     if(!cart.length){setMessage("Agrega al menos un producto");return}
+    if(payment==="mixed"){setMessage("El pago mixto se habilitará cuando KIUBO pueda guardar el reparto exacto entre efectivo y transferencia");return}
     const next=loadLocalDatabase(),workspace=getWorkspaceContext(next),settings=getTenantSettings(next,workspace.tenantId);
     if(workspace.tenant?.status==="suspended"){setMessage("La licencia está suspendida");return}
     if(!workspace.branchId){setMessage("Selecciona una sucursal");return}
     if(payment==="credit"&&!settings.allowCredit){setMessage("El fiado está desactivado");return}
     if(payment==="credit"&&!customerId){setMessage("Selecciona un cliente para registrar el fiado");return}
-    if((payment==="cash"||payment==="mixed")&&settings.requireCashSession&&!getOpenCashSession(next,workspace.tenantId,workspace.branchId)){
+    if(payment==="cash"&&settings.requireCashSession&&!getOpenCashSession(next,workspace.tenantId,workspace.branchId)){
       setMessage("Debes abrir caja en esta sucursal antes de cobrar");return;
     }
     for(const line of cart){
@@ -152,7 +155,7 @@ export function PosClient(){
           {cart.length===0?<p className="empty-cart">Escanea o toca un producto para comenzar.</p>:cart.map(line=><div className="cart-line interactive" key={line.id}><div><strong>{line.name}</strong><span>${line.price.toFixed(2)} c/u</span></div><div className="qty"><button onClick={()=>changeQty(line.id,-1)}>−</button><b>{line.qty}</b><button onClick={()=>changeQty(line.id,1)}>+</button></div><strong>${(line.price*line.qty).toFixed(2)}</strong></div>)}
         </div>
         <div className="cart-total"><span>Total</span><strong>${total.toFixed(2)}</strong></div>
-        <div className="payment-grid">{(Object.keys(paymentLabel) as Payment[]).map(method=><button key={method} className={payment===method?"selected":""} onClick={()=>setPayment(method)}>{paymentLabel[method]}</button>)}</div>
+        <div className="payment-grid">{paymentOptions.map(method=><button key={method} className={payment===method?"selected":""} onClick={()=>setPayment(method)}>{paymentLabel[method]}</button>)}</div>
         <button className="button primary checkout" onClick={checkout}>Cobrar ${total.toFixed(2)}</button>
         <p className="cart-note">La venta se guarda primero en este dispositivo y KIUBO Cloud la procesa como una sola transacción para mantener stock, kardex y fiado coherentes entre cajas.</p>
       </aside>

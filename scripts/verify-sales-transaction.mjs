@@ -4,7 +4,7 @@ import { join } from "node:path";
 const root=process.cwd();
 const migration=readFileSync(join(root,"supabase/migrations/0010_sales_stock_transaction_v2.sql"),"utf8").toLowerCase();
 const provider=readFileSync(join(root,"lib/data-provider.ts"),"utf8").toLowerCase();
-const pos=readFileSync(join(root,"components/PosClient.tsx"),"utf8").toLowerCase();
+const pos=readFileSync(join(root,"components/PosClient.tsx"),"utf8");
 const helper=readFileSync(join(root,"lib/sales-transaction.ts"),"utf8").toLowerCase();
 
 const checks=[
@@ -17,8 +17,10 @@ const checks=[
   [provider,"saletransactions","transaction command routing"],
   [provider,"apply_sale_transactions_v2","transaction rpc client"],
   [provider,"fallbacksaleoperations","legacy compatibility fallback"],
-  [pos,"enqueuesaletransaction","pos transaction queue"],
-  [pos,"trackchanges:false","no duplicate generic sale queue"],
+  [pos,"enqueueSaleTransaction","pos transaction queue"],
+  [pos,"trackChanges:false","no duplicate generic sale queue"],
+  [pos,'const paymentOptions:Payment[]=["cash","transfer","credit"]',"truthful POS payment options"],
+  [pos,'if(payment==="mixed")',"mixed payment defensive guard"],
   [helper,"sales.transaction_queued","transaction audit trail"],
 ];
 
@@ -29,9 +31,13 @@ for(const [text,needle,label] of checks){
     failed=true;
   }
 }
+if(pos.includes("(Object.keys(paymentLabel)")){
+  console.error("✗ POS must not expose unsupported mixed payment from paymentLabel keys");
+  failed=true;
+}
 
 if(failed){
   console.error("KIUBO sales transaction reliability verification failed.");
   process.exit(1);
 }
-console.log("✓ Sales Transaction V2 guard passed: idempotent sale, row-locked delta stock and legacy fallback are wired.");
+console.log("✓ Sales Transaction V2 guard passed: idempotent sales, locked stock, legacy fallback and truthful payment options are wired.");
