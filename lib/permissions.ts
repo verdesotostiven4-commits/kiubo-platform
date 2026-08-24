@@ -1,15 +1,13 @@
 import type { UserRole } from "./local-store";
-export type Permission="control"|"leads"|"dashboard"|"onboarding"|"upgrade"|"pos"|"inventory"|"purchases"|"catalog"|"customers"|"invoices"|"reports"|"branding"|"operations";
+export type Permission="control"|"leads"|"dashboard"|"onboarding"|"upgrade"|"pos"|"cash"|"inventory"|"purchases"|"catalog"|"customers"|"invoices"|"reports"|"branding"|"operations";
 const grants:Record<UserRole,Permission[]>={
-  owner:["control","leads","dashboard","onboarding","upgrade","pos","inventory","purchases","catalog","customers","invoices","reports","branding","operations"],
-  admin:["dashboard","onboarding","upgrade","pos","inventory","purchases","catalog","customers","invoices","reports","branding","operations"],
-  cashier:["dashboard","upgrade","pos","customers","invoices","reports"],
+  owner:["control","leads","dashboard","onboarding","upgrade","pos","cash","inventory","purchases","catalog","customers","invoices","reports","branding","operations"],
+  admin:["dashboard","onboarding","upgrade","pos","cash","inventory","purchases","catalog","customers","invoices","reports","branding","operations"],
+  cashier:["dashboard","upgrade","pos","cash","customers","invoices","reports"],
   inventory:["dashboard","upgrade","inventory","purchases","catalog","reports"],
   viewer:["dashboard","upgrade","reports"]
 };
 export function canAccess(role:UserRole,permission:Permission,platformAdmin=false){
-  // Platform routes are never granted by a tenant role alone. A browser-side role bug
-  // must not make KIUBO Control or Leads visible/accessible to a business user.
   if(permission==="control"||permission==="leads")return platformAdmin;
   return grants[role].includes(permission);
 }
@@ -20,6 +18,7 @@ export function permissionForPath(path:string):Permission|null{
   if(path.startsWith("/onboarding"))return"onboarding";
   if(path.startsWith("/upgrade"))return"upgrade";
   if(path.startsWith("/pos"))return"pos";
+  if(path.startsWith("/cash"))return"cash";
   if(path.startsWith("/inventory"))return"inventory";
   if(path.startsWith("/purchases"))return"purchases";
   if(path.startsWith("/catalog"))return"catalog";

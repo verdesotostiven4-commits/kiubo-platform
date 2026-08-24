@@ -24,11 +24,17 @@ const checks=[
     "cashTransactions",
     "creditPaymentTransactions",
   ]],
-  ["components/OperationsClient.tsx",[
+  ["components/CashClient.tsx",[
     "enqueueCashTransaction",
     "enqueueCreditPaymentTransaction",
     "trackChanges:false",
     "Transferencia",
+    "kind:\"open\"",
+    "kind:\"close\"",
+  ]],
+  ["app/cash/page.tsx",[
+    "CashClient",
+    "content-shell",
   ]],
 ];
 
@@ -45,4 +51,4 @@ for(const [relative,needles] of checks){
 }
 
 if(failed){console.error("KIUBO finance transaction verification failed.");process.exit(1)}
-console.log("✓ Finance Transaction V2 guard passed: cash lifecycle, credit payments and fallback are wired.");
+console.log("✓ Finance Transaction V2 guard passed: cashier-safe cash lifecycle, credit payments and cloud fallback are wired.");

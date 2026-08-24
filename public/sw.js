@@ -1,6 +1,6 @@
-const SHELL_CACHE="kiubo-shell-v2";
+const SHELL_CACHE="kiubo-shell-v3";
 const DATA_CACHE_PREFIX="kiubo-data-";
-const SHELL=["/","/login","/app","/onboarding","/upgrade","/pos","/catalog","/inventory","/customers","/reports","/operations","/icon.svg"];
+const SHELL=["/","/login","/app","/onboarding","/upgrade","/pos","/cash","/catalog","/inventory","/customers","/reports","/operations","/icon.svg"];
 
 self.addEventListener("install",event=>{
   event.waitUntil((async()=>{

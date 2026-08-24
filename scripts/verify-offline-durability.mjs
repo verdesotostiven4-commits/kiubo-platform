@@ -33,8 +33,9 @@ requireText("lib/sync-engine.ts",[
   "isActiveQueueItem(item,activeTenantId)",
 ]);
 requireText("public/sw.js",[
-  "kiubo-shell-v2",
+  "kiubo-shell-v3",
   "kiubo-data-",
+  "\"/cash\"",
   "url.origin!==self.location.origin",
   "url.pathname.startsWith(\"/api/\")",
   "networkFirstNavigation",
@@ -45,4 +46,4 @@ requireText("app/layout.tsx",[
   "<DurabilityRuntime/>",
 ]);
 
-console.log("✓ Offline Durability V2 passed: crash recovery, protected retry, cross-tab sync locking, persistent shadow storage and offline shell are wired.");
+console.log("✓ Offline Durability V2 passed: crash recovery, protected retry, cross-tab sync locking, persistent shadow storage and cashier offline shell are wired.");
