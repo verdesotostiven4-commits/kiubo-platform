@@ -18,6 +18,7 @@ const checks = [
   ["supabase/migrations/0013_pilot_readiness_branch_scope.sql", ["guard_sync_entity_branch_scope", "sync branch belongs to another tenant", "branch is inactive", "branch_can_operate"]],
   ["supabase/migrations/0014_team_management_v1.sql", ["list_tenant_team_v1", "tenant_invite_preflight_v1", "upsert_tenant_member_by_email_v1", "update_tenant_member_v1", "auth.users", "admin cannot modify owner or admin access"]],
   ["supabase/migrations/0015_purchase_transaction_v2.sql", ["apply_purchase_transactions_v2", "purchaseTransactions", "supplierPaymentTransactions", "v_new_cost", "supplier payment exceeds purchase balance", "sync_receipts"]],
+  ["supabase/migrations/0016_inventory_adjustment_v2.sql", ["apply_inventory_adjustments_v2", "inventoryAdjustmentTransactions", "for update", "insufficient stock for adjustment", "sync_receipts"]],
   ["lib/cloud-control.ts", ["signInWithOtp", "platform_provision_tenant_by_email", "/set-password"]],
   ["lib/team-cloud.ts", ["list_tenant_team_v1", "tenant_invite_preflight_v1", "signInWithOtp", "upsert_tenant_member_by_email_v1", "update_tenant_member_v1"]],
   ["components/SetPasswordClient.tsx", ["updateUser", "new-password", "Guardar y entrar"]],

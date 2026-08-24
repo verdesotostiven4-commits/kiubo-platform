@@ -24,7 +24,8 @@ export type SyncCommandEntity =
   | "cashTransactions"
   | "creditPaymentTransactions"
   | "purchaseTransactions"
-  | "supplierPaymentTransactions";
+  | "supplierPaymentTransactions"
+  | "inventoryAdjustmentTransactions";
 
 export type SyncQueueRecord = {
   id: string;

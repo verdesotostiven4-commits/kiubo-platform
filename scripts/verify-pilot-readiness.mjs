@@ -22,7 +22,9 @@ requireText("supabase/migrations/0013_pilot_readiness_branch_scope.sql",["guard_
 requireText("supabase/migrations/0014_team_management_v1.sql",["list_tenant_team_v1","tenant_invite_preflight_v1","upsert_tenant_member_by_email_v1","update_tenant_member_v1","admin cannot modify owner or admin access","cannot modify your own access here"]);
 requireText("supabase/migrations/0015_purchase_transaction_v2.sql",["apply_purchase_transactions_v2","v_new_stock=v_stock+v_qty","v_new_cost","supplier payment exceeds purchase balance"]);
 requireText("components/PurchasesClient.tsx",["enqueuePurchaseTransaction","enqueueSupplierPaymentTransaction","trackChanges:false","costo promedio"]);
+requireText("supabase/migrations/0016_inventory_adjustment_v2.sql",["apply_inventory_adjustments_v2","v_new_stock=v_stock+v_delta","insufficient stock for adjustment"]);
+requireText("components/InventoryClient.tsx",["enqueueInventoryAdjustment","Ir a Compras","un solo flujo oficial","trackChanges:false"]);
 requireText("lib/sync-engine.ts",["isActiveQueueItem(item,activeTenantId)","recoverRejectedCommand","navigator.locks"]);
 requireText("lib/offline-durability.ts",["recoverInterruptedSyncQueue","snapshotOfflineDatabase","navigator.storage?.persist"]);
 
-console.log("✓ Pilot Readiness V4 passed: cloud team roles, branch-scoped revocation, atomic sales/cash/purchases/payables, offline recovery, session reconciliation and tenant-safe sync are guarded.");
+console.log("✓ Pilot Readiness V5 passed: cloud team roles, branch revocation, atomic sales/cash/purchases/inventory, offline recovery, session reconciliation and tenant-safe sync are guarded.");
