@@ -1,15 +1,7 @@
-name: KIUBO Quality Gate
+name: KIUBO Quality Gate (manual)
 
 on:
-  push:
-    branches: [main]
-  pull_request:
-    branches: [main]
   workflow_dispatch:
-
-concurrency:
-  group: kiubo-quality-${{ github.ref }}
-  cancel-in-progress: true
 
 jobs:
   quality:
