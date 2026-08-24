@@ -46,6 +46,16 @@ requireText("components/BusinessAdminClient.tsx",[
   "saveLocalDatabase(next)",
   "Exigir caja abierta",
 ]);
+requireText("lib/cloud-auth.ts",[
+  "purgeRevokedCloudData",
+  "allowedBranchIds",
+  "db.tenantProducts=db.tenantProducts.filter",
+  "db.syncQueue=db.syncQueue.filter",
+  "db.auditLogs=db.auditLogs.filter",
+  "clearTenantCursors(tenantId)",
+  "clearDurabilityShadow()",
+  "Tu usuario no tiene una sucursal activa asignada en KIUBO",
+]);
 requireText("supabase/migrations/0004_security_guardrails.sql",[
   "guard_last_active_owner",
   "branch does not belong to member tenant",
@@ -70,4 +80,4 @@ requireText("lib/offline-durability.ts",[
   "navigator.storage?.persist",
 ]);
 
-console.log("✓ Pilot Readiness V1 passed: platform isolation, cashier-safe cash access, truthful cloud administration, tenant/branch scope, session reconciliation, offline recovery and sync isolation are guarded.");
+console.log("✓ Pilot Readiness V2 passed: platform isolation, cashier-safe cash access, truthful cloud administration, tenant/branch scope, revoked-access cache purging, session reconciliation, offline recovery and sync isolation are guarded.");
