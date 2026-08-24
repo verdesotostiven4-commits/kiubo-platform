@@ -24,7 +24,7 @@ const items:NavItem[]=[
   {href:"/purchases",label:"Compras",glyph:"↓",group:"management",permission:"purchases",feature:"purchases"},
   {href:"/reports",label:"Reportes",glyph:"↗",group:"management",permission:"reports",feature:"reports"},
   {href:"/invoices",label:"Factura",glyph:"◇",group:"management",permission:"invoices",feature:"invoices"},
-  {href:"/operations",label:"Caja y equipo",glyph:"◫",group:"account",permission:"operations",feature:"operations"},
+  {href:"/operations",label:"Caja y fiados",glyph:"◫",group:"account",permission:"operations",feature:"operations"},
   {href:"/branding",label:"Marca",glyph:"✎",group:"account",permission:"branding",feature:"branding"},
   {href:"/onboarding",label:"Configurar negocio",glyph:"✓",group:"account",permission:"onboarding",feature:"dashboard"},
   {href:"/upgrade",label:"Plan y módulos",glyph:"✧",group:"account",permission:"upgrade"}
