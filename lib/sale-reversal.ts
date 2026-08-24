@@ -29,6 +29,10 @@ export function reverseSaleLocally(db:KiuboLocalDatabase,saleId:string,rawReason
   const sale=db.sales.find(candidate=>candidate.id===saleId);
   if(!sale)return{ok:false as const,message:"Venta no encontrada"};
   if(saleLifecycle(sale)==="voided")return{ok:false as const,message:"La venta ya está anulada"};
+  const localSession=loadLocalSession(),actor=db.users.find(user=>user.id===localSession?.userId&&user.tenantId===sale.tenantId);
+  if(!actor?.platformAdmin&&actor?.role!=="owner"&&actor?.role!=="admin")return{ok:false as const,message:"Solo propietario o administrador puede anular una venta"};
+  const saleAt=Date.parse(sale.createdAt),age=Date.now()-saleAt;
+  if(!Number.isFinite(saleAt)||age>24*60*60*1000||age<-(5*60*1000))return{ok:false as const,message:"La ventana de anulación expiró; una operación más antigua debe ir por devolución o nota de crédito"};
   if(sale.payment==="credit")return{ok:false as const,message:"Los fiados con saldo requieren un flujo de reverso específico; esta venta no se anuló"};
   if(sale.payment==="mixed")return{ok:false as const,message:"Las ventas mixtas históricas no se pueden anular hasta reconstruir su reparto de pago"};
   const reason=rawReason.replace(/\s+/g," ").trim().slice(0,240);
@@ -47,10 +51,11 @@ export function reverseSaleLocally(db:KiuboLocalDatabase,saleId:string,rawReason
     const previous=product.stock,newStock=Number((previous+item.qty).toFixed(4));
     product.stock=newStock;
     productAfterSnapshots.push({...product});
+    const movementId=makeId("stock-void");
     stockMovements.push({
-      id:makeId("stock-void"),tenantId:sale.tenantId,branchId:sale.branchId,productId:product.id,
+      id:movementId,tenantId:sale.tenantId,branchId:sale.branchId,productId:product.id,
       type:"adjustment_in",quantity:item.qty,previousStock:previous,newStock,reference:`VOID:${sale.id}`,
-      clientOperationId:makeId("op-void-stock"),createdAt:reversedAt,
+      clientOperationId:movementId,createdAt:reversedAt,
     });
   });
   db.sales=db.sales.map(current=>current.id===sale.id?saleAfter:current);
@@ -67,7 +72,6 @@ export function reverseSaleLocally(db:KiuboLocalDatabase,saleId:string,rawReason
   const now=reversedAt,existing=db.syncQueue.find(item=>item.tenantId===sale.tenantId&&item.entityType==="saleReversalTransactions"&&item.entityId===sale.id&&(item.status==="pending"||item.status==="failed"));
   if(existing){existing.payload=payload;existing.branchId=sale.branchId;existing.status="pending";existing.attempts=0;existing.updatedAt=now;delete existing.lastError}
   else db.syncQueue.push({id:makeId("queue"),operationId:makeId("op-sale-void"),tenantId:sale.tenantId,branchId:sale.branchId,entityType:"saleReversalTransactions",entityId:sale.id,action:"upsert",payload,status:"pending",attempts:0,createdAt:now,updatedAt:now});
-  const localSession=loadLocalSession();
   db.auditLogs.push({id:makeId("audit"),tenantId:sale.tenantId,branchId:sale.branchId,actorUserId:localSession?.userId,action:"sales.reversal_queued",entityType:"saleReversalTransactions",entityId:sale.id,metadata:{deviceId:getLocalDeviceId(),payment:sale.payment,total:sale.total,reason,cashOutflow:cashMovement?.amount||0},createdAt:now});
   db.auditLogs=db.auditLogs.slice(-1500);
   return{ok:true as const,message:`Venta anulada localmente · $${sale.total.toFixed(2)} · pendiente de confirmación Cloud`};

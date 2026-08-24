@@ -26,11 +26,15 @@ requireText("supabase/migrations/0017_supplier_cash_outflow_v1.sql",["apply_purc
 requireText("components/PurchasesClient.tsx",["enqueuePurchaseTransaction","enqueueSupplierPaymentTransaction","trackChanges:false","costo promedio","getOpenCashSession","salida de caja"]);
 requireText("supabase/migrations/0016_inventory_adjustment_v2.sql",["apply_inventory_adjustments_v2","v_new_stock=v_stock+v_delta","insufficient stock for adjustment"]);
 requireText("components/InventoryClient.tsx",["enqueueInventoryAdjustment","Ir a Compras","un solo flujo oficial","trackChanges:false"]);
-requireText("supabase/migrations/0018_sale_reversal_v1.sql",["apply_sale_reversals_v1","cash refund must equal sale total","v_new_stock:=v_stock+v_qty","status','voided'"]);
-requireText("lib/sale-reversal.ts",["reverseSaleLocally","saleReversalTransactions","sales.reversal_queued"]);
-requireText("components/ReportsClient.tsx",["saleLifecycle(s)==\"completed\"","Confirmar anulación","Cuadre esperado vs. contado","Ventas anuladas"]);
+requireText("supabase/migrations/0018_sale_reversal_v1.sql",["apply_sale_reversals_v1","sale reversal window expired","array['owner','admin']","cash refund must equal sale total","v_new_stock:=v_stock+v_qty","status','voided'"]);
+requireText("lib/sale-reversal.ts",["reverseSaleLocally","saleReversalTransactions","Solo propietario o administrador","24*60*60*1000","sales.reversal_queued"]);
+const provider=text("lib/data-provider.ts");
+for(const needle of ["atomicOnlyCommand","apply_sale_reversals_v1","Motor Cloud de anulaciones pendiente de activación"])assert.ok(provider.includes(needle),`lib/data-provider.ts missing Pilot Readiness reversal atomicity: ${needle}`);
+assert.ok(!provider.includes("fallbackSaleReversalOperations"),"Pilot reversal path must stay atomic-only");
+requireText("components/ReportsClient.tsx",["saleLifecycle(s)==\"completed\"","Confirmar anulación","Solo propietario o administrador","Cuadre esperado vs. contado","Ventas anuladas"]);
+requireText("lib/cash-reconciliation.ts",["reconcileCashSession","session.openingAmount+cashSales+manualIncome-cashOut"]);
 requireText("lib/sync-engine.ts",["isActiveQueueItem(item,activeTenantId)","recoverRejectedCommand","navigator.locks"]);
 requireText("lib/offline-durability.ts",["recoverInterruptedSyncQueue","snapshotOfflineDatabase","navigator.storage?.persist"]);
 requireText("vercel.json",["\"deploymentEnabled\": false"]);
 
-console.log("✓ Pilot Readiness V7 passed: truthful payments, auditable sale reversals, cash reconciliation, cloud team roles, branch revocation, atomic sales/cash/purchases/inventory, supplier cash outflows, offline recovery and tenant-safe sync are guarded.");
+console.log("✓ Pilot Readiness V8 passed: manager-only atomic sale voids, truthful payments, cash reconciliation, cloud roles, branch revocation, purchases/inventory, offline recovery and tenant-safe sync are guarded.");

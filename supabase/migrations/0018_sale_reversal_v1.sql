@@ -1,5 +1,6 @@
--- KIUBO Cloud v2 · atomic sale reversal for cash/transfer sales.
+-- KIUBO Cloud v2 · atomic sale reversal for recent cash/transfer sales.
 -- Restores product stock, marks the original sale voided and records any cash refund in one transaction.
+-- Voids are manager actions; older transactions belong to the future return/credit-note flow instead.
 
 create or replace function public.apply_sale_reversals_v1(p_operations jsonb)
 returns jsonb
@@ -19,6 +20,7 @@ declare
   v_item jsonb;
   v_payment text;
   v_total numeric;
+  v_sale_created timestamptz;
   v_product_id text;
   v_product jsonb;
   v_product_branch uuid;
@@ -51,7 +53,8 @@ begin
       if v_tenant is null or v_branch is null or v_operation is null or v_sale_id is null then raise exception 'invalid sale reversal identifiers'; end if;
       if length(v_operation)>160 or length(v_sale_id)>200 then raise exception 'sale reversal identifier too long'; end if;
       if not public.tenant_can_operate(v_tenant) then raise exception 'tenant is not allowed to operate'; end if;
-      if not public.can_sync_entity(v_tenant,'sales') or not public.can_sync_entity(v_tenant,'stockMovements') then raise exception 'role denied for sale reversal'; end if;
+      if not (public.is_platform_admin() or public.has_tenant_role(v_tenant,array['owner','admin'])) then raise exception 'role denied for sale reversal'; end if;
+      if not public.can_sync_entity(v_tenant,'sales') or not public.can_sync_entity(v_tenant,'stockMovements') then raise exception 'role denied for sale reversal entities'; end if;
       if not public.branch_belongs_to_tenant(v_tenant,v_branch) then raise exception 'branch does not belong to tenant'; end if;
       if not public.has_branch_access(v_tenant,v_branch) then raise exception 'branch denied'; end if;
 
@@ -78,6 +81,8 @@ begin
       if v_payment not in('cash','transfer') then raise exception 'sale cannot be reversed with this payment method'; end if;
       v_total:=coalesce(nullif(v_sale->>'total','')::numeric,0);
       if v_total<0 then raise exception 'invalid sale total'; end if;
+      v_sale_created:=coalesce(nullif(v_sale->>'createdAt','')::timestamptz,now());
+      if v_sale_created>now()+interval '5 minutes' or now()-v_sale_created>interval '24 hours' then raise exception 'sale reversal window expired; use return or credit note flow'; end if;
       v_items:=v_sale->'items';
       if jsonb_typeof(v_items)<>'array' or jsonb_array_length(v_items)=0 then raise exception 'sale reversal has no items'; end if;
       if jsonb_typeof(op->'payload'->'stockMovements')<>'array' or jsonb_array_length(op->'payload'->'stockMovements')<>jsonb_array_length(v_items) then raise exception 'sale reversal stock movement count mismatch'; end if;
@@ -88,6 +93,13 @@ begin
           group by movement->>'productId' having count(*)>1
         ) duplicated
       ) then raise exception 'duplicate sale reversal product'; end if;
+      if exists(
+        select 1 from (
+          select movement->>'id' movement_id,count(*)
+          from jsonb_array_elements(op->'payload'->'stockMovements') movement
+          group by movement->>'id' having count(*)>1
+        ) duplicated_ids
+      ) then raise exception 'duplicate sale reversal movement id'; end if;
 
       v_reason:=left(regexp_replace(coalesce(op->'payload'->>'reason',''),'\s+',' ','g'),240);
       if length(trim(v_reason))<3 then raise exception 'sale reversal reason required'; end if;
