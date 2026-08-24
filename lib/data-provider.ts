@@ -74,6 +74,7 @@ function isMissingRpc(message:string,name:string){
   const lower=message.toLowerCase();
   return lower.includes(name.toLowerCase())&&(lower.includes("could not find")||lower.includes("does not exist")||lower.includes("schema cache"));
 }
+function isMissingV2Rpc(message:string){return isMissingRpc(message,"pull_sync_changes_v2")}
 function normalizeRpcResults(operations:SyncQueueRecord[],data:unknown,error?:string):SyncPushResult[]{
   if(error)return operations.map(item=>({operationId:item.operationId,ok:false,error}));
   const rows=Array.isArray(data)?data as Array<{operationId?:string;ok?:boolean;error?:string}>:[];
@@ -233,7 +234,7 @@ const supabaseProvider:KiuboDataProvider={
           changes:Array.isArray(payload.changes)?payload.changes:[]
         };
       }
-      if(!isMissingRpc(result.error.message,"pull_sync_changes_v2"))throw new Error(result.error.message);
+      if(!isMissingV2Rpc(result.error.message))throw new Error(result.error.message);
     }
 
     const legacyCursor=cursor&&!REVISION_RE.test(cursor)?cursor:readTimestampCursor(tenantId);
