@@ -72,7 +72,7 @@ export const initialDatabase:KiuboLocalDatabase={
   sales:[],
   users:[
     {id:"u-owner",tenantId:PILOT_TENANT_ID,name:"Administrador KIUBO",email:"admin@kiubo.local",role:"owner",active:true,pin:"1234",platformAdmin:true,createdAt:epoch},
-    {id:"u-cashier",tenantId:PILOT_TENANT_ID,name:"Caja 01",email:"caja@kiubo.local",role:"cashier",active:true,pin:"1234",createdAt:epoch}
+    {id:"u-cashier",tenantId:PILOT_TENANT_ID,name:"Caja 01",email:"caja@kiubo.local",role:"cashier",active:true,pin:"1234",platformAdmin:false,createdAt:epoch}
   ],
   cashSessions:[],cashMovements:[],credits:[],creditPayments:[],suppliers:[],purchases:[],supplierPayments:[],stockMovements:[],
   settings:[defaultSettings(PILOT_TENANT_ID,"Piloto 001"),defaultSettings("tenant-internal-reference","Barrio MAX · referencia")],
@@ -85,6 +85,28 @@ const TRACKED_COLLECTIONS:SyncEntity[]=["tenants","branches","tenantProducts","c
 function cloneInitial():KiuboLocalDatabase{return JSON.parse(JSON.stringify(initialDatabase)) as KiuboLocalDatabase}
 function ensureBranches(tenants:TenantRecord[],source:BranchRecord[]){const branches=[...source];for(const tenant of tenants){if(!branches.some(b=>b.tenantId===tenant.id))branches.push(defaultBranch(tenant.id))}return branches}
 function primaryBranchId(branches:BranchRecord[],tenantId:string){return branches.find(b=>b.tenantId===tenantId&&b.active)?.id??branches.find(b=>b.tenantId===tenantId)?.id??""}
+function safeSingleLine(value:unknown,max:number){return String(value??"").replace(/[\r\n\t]+/g," ").replace(/\s{2,}/g," ").trim().slice(0,max)}
+function fallbackProductCode(id:string){const suffix=id.replace(/[^a-z0-9]/gi,"").slice(-8).toUpperCase();return`SKU-${suffix||"PRODUCTO"}`}
+function safeProductNumber(value:unknown){const parsed=Number(value);return Number.isFinite(parsed)&&parsed>=0?parsed:0}
+function normalizeTenantProduct(product:TenantProduct,branchOf:(tenantId:string)=>string):TenantProduct{
+  const id=String(product.id||"").trim();
+  const rawBarcode=String(product.barcode??"").trim();
+  const barcodeValid=rawBarcode.length>0&&rawBarcode.length<=96&&!/[\r\n]/.test(rawBarcode);
+  const name=safeSingleLine(product.name,160)||"Producto sin nombre";
+  return{
+    ...product,
+    id,
+    tenantId:String(product.tenantId||""),
+    branchId:String(product.branchId||branchOf(product.tenantId)),
+    masterProductId:safeSingleLine(product.masterProductId,160)||`custom-${id}`,
+    barcode:barcodeValid?rawBarcode:fallbackProductCode(id),
+    name,
+    price:safeProductNumber(product.price),
+    cost:safeProductNumber(product.cost),
+    stock:safeProductNumber(product.stock),
+    active:product.active!==false
+  };
+}
 function normalize(raw:Partial<KiuboLocalDatabase>|null|undefined):KiuboLocalDatabase{
   const base=cloneInitial();
   const tenants=Array.isArray(raw?.tenants)?raw.tenants:base.tenants;
@@ -98,7 +120,7 @@ function normalize(raw:Partial<KiuboLocalDatabase>|null|undefined):KiuboLocalDat
     if(!settings.some(s=>s.tenantId===tenant.id))settings.push(defaultSettings(tenant.id,tenant.name));
     if(!branding.some(b=>b.tenantId===tenant.id))branding.push(defaultBranding(tenant.id,tenant.name));
   }
-  const tenantProducts=(Array.isArray(raw?.tenantProducts)?raw.tenantProducts:base.tenantProducts).map(p=>({...p,branchId:(p as TenantProduct).branchId||branchOf(p.tenantId)}));
+  const tenantProducts=(Array.isArray(raw?.tenantProducts)?raw.tenantProducts:base.tenantProducts).map(p=>normalizeTenantProduct(p as TenantProduct,branchOf));
   const sales=(Array.isArray(raw?.sales)?raw.sales:[]).map(s=>({...s,branchId:(s as SaleRecord).branchId||branchOf(s.tenantId),clientOperationId:(s as SaleRecord).clientOperationId||s.id}));
   const cashSessions=(Array.isArray(raw?.cashSessions)?raw.cashSessions:[]).map(s=>({...s,branchId:(s as CashSessionRecord).branchId||branchOf(s.tenantId)}));
   const cashMovements=(Array.isArray(raw?.cashMovements)?raw.cashMovements:[]).map(m=>({...m,branchId:(m as CashMovementRecord).branchId||branchOf(m.tenantId),clientOperationId:(m as CashMovementRecord).clientOperationId||m.id}));
