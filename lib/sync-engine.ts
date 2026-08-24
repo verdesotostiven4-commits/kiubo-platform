@@ -4,7 +4,7 @@ import type { SyncEntity,SyncPullResult,SyncPushResult,SyncQueueRecord } from ".
 
 export type SyncCycleResult={ok:boolean;mode:"local"|"supabase";pushed:number;failed:number;pulled:number;message:string};
 const UUID_RE=/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-const SYNCABLE_ENTITIES=new Set<SyncEntity>(["tenantProducts","customers","sales","cashSessions","cashMovements","credits","creditPayments","settings","branding","suppliers","purchases","supplierPayments","stockMovements"]);
+const SYNCABLE_ENTITIES=new Set<SyncEntity>(["tenantProducts","customers","sales","saleTransactions","cashSessions","cashMovements","credits","creditPayments","settings","branding","suppliers","purchases","supplierPayments","stockMovements"]);
 const MAX_PULL_PAGES=4;
 
 function keyFor(entity:SyncEntity,record:Record<string,unknown>){return entity==="settings"||entity==="branding"?String(record.tenantId||""):String(record.id||"")}
@@ -22,7 +22,7 @@ function safeOperation(item:SyncQueueRecord):SyncQueueRecord{
 function applyPulled(db:ReturnType<typeof loadLocalDatabase>,changes:SyncPullResult["changes"]){
   const mutable=db as unknown as Record<SyncEntity,Record<string,unknown>[]>;
   for(const change of changes){
-    if(!SYNCABLE_ENTITIES.has(change.entityType))continue;
+    if(!SYNCABLE_ENTITIES.has(change.entityType)||change.entityType==="saleTransactions")continue;
     const collection=mutable[change.entityType];
     if(!Array.isArray(collection))continue;
     const index=collection.findIndex(record=>keyFor(change.entityType,record)===change.entityId);

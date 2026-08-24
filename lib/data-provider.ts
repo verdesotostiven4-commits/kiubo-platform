@@ -1,6 +1,7 @@
+import type { CreditRecord, SaleRecord, StockMovementRecord, TenantProduct } from "./local-store";
+import { getWorkspaceContext,loadLocalDatabase } from "./local-store";
 import type { SyncPullResult, SyncPushResult, SyncQueueRecord } from "./sync-types";
 import { getSupabaseBrowserClient,isSupabaseConfigured } from "./supabase-browser";
-import { getWorkspaceContext,loadLocalDatabase } from "./local-store";
 
 export type DataMode = "local" | "supabase";
 export type ProviderHealth = { ok:boolean; mode:DataMode; configured:boolean; message?:string };
@@ -11,6 +12,13 @@ export type KiuboDataProvider = {
   pushOperations(operations:SyncQueueRecord[]):Promise<SyncPushResult[]>;
   pullChanges(cursor?:string):Promise<SyncPullResult>;
   commitCursor(cursor?:string):void;
+};
+
+type SaleTransactionPayload={
+  sale?:SaleRecord;
+  productSnapshots?:TenantProduct[];
+  stockMovements?:StockMovementRecord[];
+  credit?:CreditRecord;
 };
 
 export const localProvider:KiuboDataProvider={
@@ -50,6 +58,73 @@ function isMissingV2Rpc(message:string){
   const lower=message.toLowerCase();
   return lower.includes("pull_sync_changes_v2")&&(lower.includes("could not find")||lower.includes("does not exist")||lower.includes("schema cache"));
 }
+function isMissingSaleTransactionRpc(message:string){
+  const lower=message.toLowerCase();
+  return lower.includes("apply_sale_transactions_v2")&&(lower.includes("could not find")||lower.includes("does not exist")||lower.includes("schema cache"));
+}
+function normalizeRpcResults(operations:SyncQueueRecord[],data:unknown,error?:string):SyncPushResult[]{
+  if(error)return operations.map(item=>({operationId:item.operationId,ok:false,error}));
+  const rows=Array.isArray(data)?data as Array<{operationId?:string;ok?:boolean;error?:string}>:[];
+  return operations.map(item=>{
+    const row=rows.find(candidate=>candidate.operationId===item.operationId);
+    return{operationId:item.operationId,ok:Boolean(row?.ok),error:row?.error||(!row?"Backend no confirmó la operación":undefined)};
+  });
+}
+async function pushGeneric(
+  client:NonNullable<ReturnType<typeof getSupabaseBrowserClient>>,
+  operations:SyncQueueRecord[]
+):Promise<SyncPushResult[]>{
+  if(!operations.length)return[];
+  const result=await client.rpc("apply_sync_operations",{p_operations:operations});
+  return normalizeRpcResults(operations,result.data,result.error?.message);
+}
+function fallbackSaleOperations(command:SyncQueueRecord):SyncQueueRecord[]{
+  if(!command.payload||typeof command.payload!=="object")return[];
+  const payload=command.payload as SaleTransactionPayload;
+  const sale=payload.sale;
+  if(!sale||typeof sale!=="object"||!sale.id)return[];
+  const now=command.createdAt||new Date().toISOString();
+  const make=(entityType:SyncQueueRecord["entityType"],entityId:string,body:unknown,index:string,branchId?:string):SyncQueueRecord=>({
+    id:`${command.id}:${index}`,
+    operationId:`${command.operationId}:${index}`,
+    tenantId:command.tenantId,
+    branchId,
+    entityType,
+    entityId,
+    action:"upsert",
+    payload:body,
+    status:"pending",
+    attempts:0,
+    createdAt:now,
+    updatedAt:now,
+  });
+  const ops:SyncQueueRecord[]=[make("sales",sale.id,sale,"sale",sale.branchId)];
+  (payload.productSnapshots||[]).forEach((product,index)=>ops.push(make("tenantProducts",product.id,product,`product-${index}`,product.branchId)));
+  (payload.stockMovements||[]).forEach((movement,index)=>ops.push(make("stockMovements",movement.id,movement,`stock-${index}`,movement.branchId)));
+  if(payload.credit)ops.push(make("credits",payload.credit.id,payload.credit,"credit",payload.credit.branchId));
+  return ops;
+}
+async function pushSaleTransactions(
+  client:NonNullable<ReturnType<typeof getSupabaseBrowserClient>>,
+  commands:SyncQueueRecord[]
+):Promise<SyncPushResult[]>{
+  if(!commands.length)return[];
+  const result=await client.rpc("apply_sale_transactions_v2",{p_operations:commands});
+  if(!result.error)return normalizeRpcResults(commands,result.data);
+  if(!isMissingSaleTransactionRpc(result.error.message))return normalizeRpcResults(commands,undefined,result.error.message);
+
+  const grouped=commands.map(command=>({command,operations:fallbackSaleOperations(command)}));
+  const fallback=grouped.flatMap(group=>group.operations);
+  const fallbackResults=await pushGeneric(client,fallback);
+  const byId=new Map(fallbackResults.map(item=>[item.operationId,item]));
+  return grouped.map(({command,operations})=>{
+    if(!operations.length)return{operationId:command.operationId,ok:false,error:"Venta local inválida para sincronizar"};
+    const failed=operations.map(item=>byId.get(item.operationId)).find(item=>!item?.ok);
+    return failed
+      ? {operationId:command.operationId,ok:false,error:failed.error||"No se pudo sincronizar la venta en modo compatible"}
+      : {operationId:command.operationId,ok:true};
+  });
+}
 async function pullLegacy(
   client:NonNullable<ReturnType<typeof getSupabaseBrowserClient>>,
   tenantId:string,
@@ -75,13 +150,12 @@ const supabaseProvider:KiuboDataProvider={
     if(!operations.length)return[];
     const client=getSupabaseBrowserClient();
     if(!client)return operations.map(item=>({operationId:item.operationId,ok:false,error:"Cloud no configurado"}));
-    const result=await client.rpc("apply_sync_operations",{p_operations:operations});
-    if(result.error)return operations.map(item=>({operationId:item.operationId,ok:false,error:result.error.message}));
-    const rows=Array.isArray(result.data)?result.data as Array<{operationId?:string;ok?:boolean;error?:string}>:[];
-    return operations.map(item=>{
-      const row=rows.find(candidate=>candidate.operationId===item.operationId);
-      return{operationId:item.operationId,ok:Boolean(row?.ok),error:row?.error||(!row?"Backend no confirmó la operación":undefined)};
-    });
+
+    const generic=operations.filter(item=>item.entityType!=="saleTransactions");
+    const sales=operations.filter(item=>item.entityType==="saleTransactions");
+    const results=[...(await pushGeneric(client,generic)),...(await pushSaleTransactions(client,sales))];
+    const byId=new Map(results.map(item=>[item.operationId,item]));
+    return operations.map(item=>byId.get(item.operationId)??{operationId:item.operationId,ok:false,error:"Backend no confirmó la operación"});
   },
   async pullChanges(cursor){
     const client=getSupabaseBrowserClient(),tenantId=activeCloudTenant();
