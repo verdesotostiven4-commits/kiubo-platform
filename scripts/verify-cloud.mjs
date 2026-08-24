@@ -14,6 +14,7 @@ const checks = [
   ["supabase/migrations/0009_sync_revision_cursor.sql", ["sync_entity_revision_seq", "pull_sync_changes_v2", "revision>v_after", "hasMore"]],
   ["supabase/migrations/0010_sales_stock_transaction_v2.sql", ["apply_sale_transactions_v2", "pg_advisory_xact_lock", "for update", "v_new_stock=v_stock-v_qty", "sync_receipts"]],
   ["supabase/migrations/0011_finance_transaction_v2.sql", ["apply_finance_transactions_v2", "cashTransactions", "creditPaymentTransactions", "sync_tenant_products_stock_nonnegative"]],
+  ["supabase/migrations/0012_stock_conflict_guard.sql", ["sync_tenant_products_stock_nonnegative", "sync_nonnegative_number", "not valid"]],
   ["lib/cloud-control.ts", ["signInWithOtp", "platform_provision_tenant_by_email", "/set-password"]],
   ["components/SetPasswordClient.tsx", ["updateUser", "new-password", "Guardar y entrar"]],
   ["app/api/health/route.ts", ["auth/v1/health", "next_public_kiubo_auth_mode", "next_public_kiubo_data_mode"]],
