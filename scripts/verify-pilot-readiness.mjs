@@ -30,8 +30,8 @@ requireText("components/InventoryClient.tsx",["enqueueInventoryAdjustment","Ir a
 requireText("supabase/migrations/0018_sale_reversal_v1.sql",["apply_sale_reversals_v1","sale reversal window expired","array['owner','admin']","cash refund must equal sale total","v_new_stock:=v_stock+v_qty","status','voided'"]);
 requireText("lib/sale-reversal.ts",["reverseSaleLocally","saleReversalTransactions","Solo propietario o administrador","24*60*60*1000","sales.reversal_queued"]);
 const provider=text("lib/data-provider.ts");
-for(const needle of ["atomicOnlyCommand","apply_sale_reversals_v1","Motor Cloud de anulaciones pendiente de activación","apply_finance_transactions_v2","apply_purchase_transactions_v3"])assert.ok(provider.includes(needle),`lib/data-provider.ts missing Pilot Readiness guard: ${needle}`);
-assert.ok(!provider.includes("fallbackSaleReversalOperations"),"Pilot reversal path must stay atomic-only");
+for(const needle of ["atomicOnlyCommand","apply_sale_transactions_v2","apply_sale_reversals_v1","apply_finance_transactions_v2","apply_purchase_transactions_v3","apply_inventory_adjustments_v2","Motor Cloud de ventas pendiente de activación","Motor Cloud de caja y fiados pendiente de activación","Motor Cloud de compras y pagos pendiente de activación","Motor Cloud de ajustes de inventario pendiente de activación"])assert.ok(provider.includes(needle),`lib/data-provider.ts missing Pilot Readiness atomic guard: ${needle}`);
+for(const forbidden of ["fallbackSaleOperations","fallbackSaleReversalOperations","fallbackFinanceOperations","fallbackPurchaseOperations","fallbackInventoryAdjustmentOperations"])assert.ok(!provider.includes(forbidden),`Pilot transaction path must not use unsafe compatibility fallback: ${forbidden}`);
 assert.ok(!provider.includes("apply_finance_transactions_v2_legacy"),"Client must not bypass finance payment idempotency wrapper");
 assert.ok(!provider.includes("apply_purchase_transactions_v3_legacy"),"Client must not bypass purchase payment idempotency wrapper");
 requireText("components/ReportsClient.tsx",["saleLifecycle(s)==\"completed\"","Confirmar anulación","Solo propietario o administrador","Cuadre esperado vs. contado","Ventas anuladas"]);
@@ -40,4 +40,4 @@ requireText("lib/sync-engine.ts",["isActiveQueueItem(item,activeTenantId)","reco
 requireText("lib/offline-durability.ts",["recoverInterruptedSyncQueue","snapshotOfflineDatabase","navigator.storage?.persist"]);
 requireText("vercel.json",["\"deploymentEnabled\": false"]);
 
-console.log("✓ Pilot Readiness V9 passed: payment idempotency, manager-only atomic sale voids, truthful cash, cloud roles, branch revocation, purchases/inventory, offline recovery and tenant-safe sync are guarded.");
+console.log("✓ Pilot Readiness V10 passed: all coupled money/stock commands are atomic-only, payment retries are idempotent, and offline/role/branch guards remain enforced.");
