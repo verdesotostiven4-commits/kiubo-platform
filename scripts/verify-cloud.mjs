@@ -16,7 +16,9 @@ const checks = [
   ["supabase/migrations/0011_finance_transaction_v2.sql", ["apply_finance_transactions_v2", "cashTransactions", "creditPaymentTransactions", "sync_tenant_products_stock_nonnegative"]],
   ["supabase/migrations/0012_stock_conflict_guard.sql", ["sync_tenant_products_stock_nonnegative", "sync_nonnegative_number", "not valid"]],
   ["supabase/migrations/0013_pilot_readiness_branch_scope.sql", ["guard_sync_entity_branch_scope", "sync branch belongs to another tenant", "branch is inactive", "branch_can_operate"]],
+  ["supabase/migrations/0014_team_management_v1.sql", ["list_tenant_team_v1", "tenant_invite_preflight_v1", "upsert_tenant_member_by_email_v1", "update_tenant_member_v1", "auth.users", "admin cannot modify owner or admin access"]],
   ["lib/cloud-control.ts", ["signInWithOtp", "platform_provision_tenant_by_email", "/set-password"]],
+  ["lib/team-cloud.ts", ["list_tenant_team_v1", "tenant_invite_preflight_v1", "signInWithOtp", "upsert_tenant_member_by_email_v1", "update_tenant_member_v1"]],
   ["components/SetPasswordClient.tsx", ["updateUser", "new-password", "Guardar y entrar"]],
   ["app/api/health/route.ts", ["auth/v1/health", "next_public_kiubo_auth_mode", "next_public_kiubo_data_mode"]],
 ];

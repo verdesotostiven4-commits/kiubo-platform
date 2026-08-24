@@ -39,12 +39,26 @@ requireText("components/CashClient.tsx",[
 requireText("app/operations/page.tsx",[
   "NEXT_PUBLIC_KIUBO_AUTH_MODE===\"supabase\"",
   "BusinessAdminClient",
+  "TeamAdminClient",
   "OperationsClient",
 ]);
 requireText("components/BusinessAdminClient.tsx",[
   "Reglas generales del negocio",
   "saveLocalDatabase(next)",
   "Exigir caja abierta",
+]);
+requireText("components/TeamAdminClient.tsx",[
+  "Usuarios, roles y sucursales",
+  "inviteCloudTeamMember",
+  "updateCloudTeamMember",
+  "Todas las sucursales disponibles",
+  "Solo un propietario puede modificar propietarios o administradores.",
+]);
+requireText("lib/team-cloud.ts",[
+  "tenant_invite_preflight_v1",
+  "signInWithOtp",
+  "upsert_tenant_member_by_email_v1",
+  "update_tenant_member_v1",
 ]);
 requireText("lib/cloud-auth.ts",[
   "purgeRevokedCloudData",
@@ -69,6 +83,14 @@ requireText("supabase/migrations/0013_pilot_readiness_branch_scope.sql",[
   "closed'",
   "branch_can_operate",
 ]);
+requireText("supabase/migrations/0014_team_management_v1.sql",[
+  "list_tenant_team_v1",
+  "tenant_invite_preflight_v1",
+  "upsert_tenant_member_by_email_v1",
+  "update_tenant_member_v1",
+  "admin cannot modify owner or admin access",
+  "cannot modify your own access here",
+]);
 requireText("lib/sync-engine.ts",[
   "isActiveQueueItem(item,activeTenantId)",
   "recoverRejectedCommand",
@@ -80,4 +102,4 @@ requireText("lib/offline-durability.ts",[
   "navigator.storage?.persist",
 ]);
 
-console.log("✓ Pilot Readiness V2 passed: platform isolation, cashier-safe cash access, truthful cloud administration, tenant/branch scope, revoked-access cache purging, session reconciliation, offline recovery and sync isolation are guarded.");
+console.log("✓ Pilot Readiness V3 passed: real cloud team roles, branch-scoped access, revocation cache purging, platform isolation, cashier-safe cash, session reconciliation, offline recovery and sync isolation are guarded.");
