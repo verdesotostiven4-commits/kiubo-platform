@@ -13,7 +13,7 @@ const checks=[
     "enqueuePurchaseTransaction","enqueueSupplierPaymentTransaction","productBeforeSnapshots","productSnapshots","purchaseBefore","purchaseAfter","initialCashMovement","cashMovement"
   ]],
   ["lib/data-provider.ts",[
-    "apply_purchase_transactions_v3","purchaseFallback","purchaseTransactions","supplierPaymentTransactions","initialCashMovement","cashMovements"
+    "apply_purchase_transactions_v3","fallbackPurchaseOperations","purchaseTransactions","supplierPaymentTransactions","initialCashMovement","cashMovements"
   ]],
   ["lib/command-recovery.ts",[
     "purchaseTransactions","supplierPaymentTransactions","productBeforeSnapshots","purchaseBefore","initialCashMovement","cashMovement","needsCanonicalPull"
