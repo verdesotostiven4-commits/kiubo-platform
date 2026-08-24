@@ -28,7 +28,8 @@ requireText("components/OperationsClient.tsx",[
   "kind:\"close\"",
 ]);
 requireText("lib/sync-engine.ts",[
-  "item.tenantId===activeTenantId",
+  "item.tenantId===tenantId",
+  "isActiveQueueItem(item,activeTenantId)",
   "shouldRecoverRejectedCommand",
   "recoverRejectedCommand",
   "pullAvailable(provider,\"0\")",
