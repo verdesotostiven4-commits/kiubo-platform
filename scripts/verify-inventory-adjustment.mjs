@@ -19,9 +19,10 @@ requireText("lib/inventory-transaction.ts",[
   "inventory.adjustment_queued",
 ]);
 requireText("lib/data-provider.ts",[
-  "pushInventoryAdjustments",
   "apply_inventory_adjustments_v2",
   "fallbackInventoryAdjustmentOperations",
+  "inventoryAdjustmentTransactions",
+  "command(c,adjustments",
 ]);
 requireText("lib/command-recovery.ts",[
   "inventoryAdjustmentTransactions",
