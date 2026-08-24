@@ -1,9 +1,11 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
+import { createRequire } from "node:module";
 import { join } from "node:path";
 import vm from "node:vm";
 import ts from "typescript";
 
+const require = createRequire(import.meta.url);
 const root = process.cwd();
 const localStorePath = join(root, "lib/local-store.ts");
 const catalogPath = join(root, "components/CatalogClient.tsx");
