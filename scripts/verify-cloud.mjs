@@ -21,6 +21,7 @@ const checks = [
   ["supabase/migrations/0016_inventory_adjustment_v2.sql", ["apply_inventory_adjustments_v2", "inventoryAdjustmentTransactions", "for update", "insufficient stock for adjustment", "sync_receipts"]],
   ["supabase/migrations/0017_supplier_cash_outflow_v1.sql", ["apply_purchase_transactions_v3", "cash supplier payment requires register movement", "cash session is not open", "cashMovements", "type','out'"]],
   ["supabase/migrations/0018_sale_reversal_v1.sql", ["apply_sale_reversals_v1", "saleReversalTransactions", "cash refund must equal sale total", "v_new_stock:=v_stock+v_qty", "status','voided'", "sync_receipts"]],
+  ["supabase/migrations/0019_payment_idempotency_v1.sql", ["apply_finance_transactions_v2_legacy", "apply_purchase_transactions_v3_legacy", "duplicatePayment", "duplicateSupplierPayment", "duplicatePurchase", "duplicateClose"]],
   ["lib/cloud-control.ts", ["signInWithOtp", "platform_provision_tenant_by_email", "/set-password"]],
   ["lib/team-cloud.ts", ["list_tenant_team_v1", "tenant_invite_preflight_v1", "signInWithOtp", "upsert_tenant_member_by_email_v1", "update_tenant_member_v1"]],
   ["components/SetPasswordClient.tsx", ["updateUser", "new-password", "Guardar y entrar"]],
