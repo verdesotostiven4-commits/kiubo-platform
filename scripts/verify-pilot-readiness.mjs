@@ -8,7 +8,8 @@ function requireText(path,needles){const source=text(path);for(const needle of n
 
 requireText("lib/permissions.ts",[
   "if(permission===\"control\"||permission===\"leads\")return platformAdmin",
-  "admin:[\"dashboard\"",
+  "cashier:[\"dashboard\",\"upgrade\",\"pos\",\"cash\"",
+  "if(path.startsWith(\"/cash\"))return\"cash\"",
 ]);
 requireText("components/SessionEnforcer.tsx",[
   "canAccess(user.role,permission,Boolean(user.platformAdmin))",
@@ -18,16 +19,32 @@ requireText("components/SessionEnforcer.tsx",[
 requireText("components/Sidebar.tsx",[
   "platformOnly:true",
   "canAccess(user.role,item.permission,Boolean(user.platformAdmin))",
-  "Caja y fiados",
+  "href:\"/cash\"",
+  "label:\"Administración\"",
 ]);
 requireText("components/MobileNav.tsx",[
   "platformOnly:true",
   "canAccess(user.role,item.permission,Boolean(user.platformAdmin))",
+  "href:\"/cash\"",
+]);
+requireText("app/cash/page.tsx",[
+  "CashClient",
+  "Sidebar",
+]);
+requireText("components/CashClient.tsx",[
+  "enqueueCashTransaction",
+  "enqueueCreditPaymentTransaction",
+  "Caja y fiados, sin perder el control.",
 ]);
 requireText("app/operations/page.tsx",[
   "NEXT_PUBLIC_KIUBO_AUTH_MODE===\"supabase\"",
-  "cloud-operations-v2",
-  ".ops-grid:first-of-type > .panel:first-child{display:none}",
+  "BusinessAdminClient",
+  "OperationsClient",
+]);
+requireText("components/BusinessAdminClient.tsx",[
+  "Reglas generales del negocio",
+  "saveLocalDatabase(next)",
+  "Exigir caja abierta",
 ]);
 requireText("supabase/migrations/0004_security_guardrails.sql",[
   "guard_last_active_owner",
@@ -53,4 +70,4 @@ requireText("lib/offline-durability.ts",[
   "navigator.storage?.persist",
 ]);
 
-console.log("✓ Pilot Readiness V1 passed: platform isolation, tenant/branch scope, truthful cloud operations, session role reconciliation, offline recovery and sync isolation are guarded.");
+console.log("✓ Pilot Readiness V1 passed: platform isolation, cashier-safe cash access, truthful cloud administration, tenant/branch scope, session reconciliation, offline recovery and sync isolation are guarded.");

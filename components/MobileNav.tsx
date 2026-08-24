@@ -11,10 +11,10 @@ const candidates:Item[]=[
   {href:"/control",label:"Control",glyph:"K",permission:"control",platformOnly:true},
   {href:"/app",label:"Inicio",glyph:"⌂",permission:"dashboard",feature:"dashboard"},
   {href:"/pos",label:"Venta",glyph:"$",permission:"pos",feature:"pos"},
+  {href:"/cash",label:"Caja",glyph:"◫",permission:"cash",feature:"operations"},
   {href:"/inventory",label:"Stock",glyph:"□",permission:"inventory",feature:"inventory"},
   {href:"/customers",label:"Clientes",glyph:"○",permission:"customers",feature:"customers"},
-  {href:"/reports",label:"Reportes",glyph:"↗",permission:"reports",feature:"reports"},
-  {href:"/operations",label:"Más",glyph:"•••",permission:"operations",feature:"operations"}
+  {href:"/reports",label:"Reportes",glyph:"↗",permission:"reports",feature:"reports"}
 ];
 export function MobileNav(){
   const path=usePathname(),platformPath=path.startsWith("/control")||path.startsWith("/leads");const[user,setUser]=useState<UserRecord|null>(null),[tenant,setTenant]=useState<TenantRecord|undefined>();

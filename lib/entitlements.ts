@@ -41,6 +41,7 @@ export function hasFeature(tenant:TenantRecord|undefined,feature:ProductFeature)
 export function routeFeature(path:string):ProductFeature|null{
   if(path.startsWith("/app"))return"dashboard";
   if(path.startsWith("/pos"))return"pos";
+  if(path.startsWith("/cash"))return"operations";
   if(path.startsWith("/catalog"))return"products";
   if(path.startsWith("/inventory"))return"inventory";
   if(path.startsWith("/customers"))return"customers";
@@ -53,5 +54,5 @@ export function routeFeature(path:string):ProductFeature|null{
 }
 
 export const featureLabel:Record<ProductFeature,string>={
-  dashboard:"Inicio",pos:"Ventas / POS",products:"Productos",inventory:"Inventario",customers:"Clientes",operations:"Caja y equipo",reports:"Reportes",purchases:"Compras y proveedores",smartCatalog:"Catalog inteligente",branding:"Branding personalizado",multiBranch:"Múltiples sucursales",invoices:"Factura electrónica"
+  dashboard:"Inicio",pos:"Ventas / POS",products:"Productos",inventory:"Inventario",customers:"Clientes",operations:"Caja y operación",reports:"Reportes",purchases:"Compras y proveedores",smartCatalog:"Catalog inteligente",branding:"Branding personalizado",multiBranch:"Múltiples sucursales",invoices:"Factura electrónica"
 };
