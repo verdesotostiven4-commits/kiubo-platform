@@ -17,9 +17,9 @@ const candidates:Item[]=[
   {href:"/operations",label:"Más",glyph:"•••",permission:"operations",feature:"operations"}
 ];
 export function MobileNav(){
-  const path=usePathname();const[user,setUser]=useState<UserRecord|null>(null),[tenant,setTenant]=useState<TenantRecord|undefined>();
+  const path=usePathname(),platformPath=path.startsWith("/control")||path.startsWith("/leads");const[user,setUser]=useState<UserRecord|null>(null),[tenant,setTenant]=useState<TenantRecord|undefined>();
   useEffect(()=>{const db=loadLocalDatabase(),ctx=getWorkspaceContext(db);setUser(ctx.user??null);setTenant(ctx.tenant)},[path]);
-  if(!user||path==="/"||path.startsWith("/login")||path.startsWith("/demo")||path.startsWith("/precios")||path.startsWith("/como-funciona"))return null;
-  const visible=candidates.filter(item=>canAccess(user.role,item.permission)).filter(item=>!item.platformOnly||user.platformAdmin).filter(item=>user.platformAdmin||!item.feature||hasFeature(tenant,item.feature)).slice(0,5);
+  if(!user||path==="/"||path.startsWith("/login")||path.startsWith("/set-password")||path.startsWith("/auth/")||path.startsWith("/demo")||path.startsWith("/precios")||path.startsWith("/como-funciona"))return null;
+  const visible=candidates.filter(item=>canAccess(user.role,item.permission)).filter(item=>platformPath?item.platformOnly:(!item.platformOnly||user.platformAdmin)).filter(item=>user.platformAdmin||!item.feature||hasFeature(tenant,item.feature)).slice(0,5);
   return <nav className="mobile-nav" aria-label="Navegación móvil">{visible.map(item=><Link key={item.href} href={item.href} className={path===item.href?"active":""}><b>{item.glyph}</b><span>{item.label}</span></Link>)}</nav>
 }

@@ -24,7 +24,7 @@ const cloudAuthProvider:KiuboAuthProvider={
     const password=String(input.password||"");if(!password)return{ok:false,error:"Ingresa tu contraseña"};
     const result=await client.auth.signInWithPassword({email:input.email.trim().toLowerCase(),password});
     if(result.error||!result.data.user)return{ok:false,error:result.error?.message||"No se pudo iniciar sesión"};
-    try{const identity=await hydrateCloudIdentity(client,result.data.user);await runSyncCycle().catch(()=>undefined);return{ok:true,...identity}}catch(error){await client.auth.signOut();clearLocalSession();return{ok:false,error:error instanceof Error?error.message:"No se pudo preparar tu espacio KIUBO"}}
+    try{const identity=await hydrateCloudIdentity(client,result.data.user);if(!identity.user.platformAdmin)await runSyncCycle().catch(()=>undefined);return{ok:true,...identity}}catch(error){await client.auth.signOut();clearLocalSession();return{ok:false,error:error instanceof Error?error.message:"No se pudo preparar tu espacio KIUBO"}}
   },
   async signOut(){const client=getSupabaseBrowserClient();if(client)await client.auth.signOut();clearLocalSession()},
   async getSession(){const client=getSupabaseBrowserClient();if(!client)return null;const result=await client.auth.getSession();const user=result.data.session?.user;if(!user)return null;try{return(await hydrateCloudIdentity(client,user)).session}catch{return null}},
