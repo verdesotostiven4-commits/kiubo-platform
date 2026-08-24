@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent,useEffect,useMemo,useState } from "react";
+import { FormEvent,useEffect,useState } from "react";
 import { getWorkspaceContext,loadLocalDatabase,makeId,saveLocalDatabase,type MasterProduct,type TenantProduct } from "@/lib/local-store";
 import styles from "./CatalogClient.module.css";
 
@@ -45,12 +45,13 @@ export function CatalogClient(){
   const openEdit=(product:TenantProduct)=>{setEditor({kind:"edit",product});setError("");setMessage("")};
   const closeEditor=()=>{setEditor(null);setError("")};
 
-  const editorValues=useMemo(()=>{
-    if(!editor)return null;
-    if(editor.kind==="edit")return{barcode:editor.product.barcode,name:editor.product.name,cost:editor.product.cost,price:editor.product.price,stock:editor.product.stock};
-    if(editor.kind==="catalog")return{barcode:editor.master.barcode,name:`${editor.master.name} ${editor.master.presentation}`.trim(),cost:0,price:0,stock:0};
-    return{barcode:"",name:"",cost:0,price:0,stock:0};
-  },[editor]);
+  const editorValues=editor
+    ? editor.kind==="edit"
+      ? {barcode:editor.product.barcode,name:editor.product.name,cost:editor.product.cost,price:editor.product.price,stock:editor.product.stock}
+      : editor.kind==="catalog"
+        ? {barcode:editor.master.barcode,name:`${editor.master.name} ${editor.master.presentation}`.trim(),cost:0,price:0,stock:0}
+        : {barcode:"",name:"",cost:0,price:0,stock:0}
+    : null;
 
   const saveProduct=(event:FormEvent<HTMLFormElement>)=>{
     event.preventDefault();
