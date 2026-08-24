@@ -4,13 +4,16 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
+    "prebuild": "npm run verify:guards",
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
     "typecheck": "tsc --noEmit",
     "verify:sri": "node scripts/verify-sri.mjs",
     "verify:cloud": "node scripts/verify-cloud.mjs",
-    "verify": "npm run typecheck && npm run verify:cloud && npm run verify:sri"
+    "verify:product": "node scripts/verify-product-safety.mjs",
+    "verify:guards": "npm run verify:cloud && npm run verify:sri && npm run verify:product",
+    "verify": "npm run typecheck && npm run verify:guards"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.57.4",
