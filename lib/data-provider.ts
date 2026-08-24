@@ -1,4 +1,12 @@
-import type { CreditRecord, SaleRecord, StockMovementRecord, TenantProduct } from "./local-store";
+import type {
+  CashMovementRecord,
+  CashSessionRecord,
+  CreditPaymentRecord,
+  CreditRecord,
+  SaleRecord,
+  StockMovementRecord,
+  TenantProduct,
+} from "./local-store";
 import { getWorkspaceContext,loadLocalDatabase } from "./local-store";
 import type { SyncPullResult, SyncPushResult, SyncQueueRecord } from "./sync-types";
 import { getSupabaseBrowserClient,isSupabaseConfigured } from "./supabase-browser";
@@ -19,6 +27,14 @@ type SaleTransactionPayload={
   productSnapshots?:TenantProduct[];
   stockMovements?:StockMovementRecord[];
   credit?:CreditRecord;
+};
+type CashTransactionPayload=
+  | {kind:"open"|"close";session?:CashSessionRecord}
+  | {kind:"movement";movement?:CashMovementRecord};
+type CreditPaymentTransactionPayload={
+  payment?:CreditPaymentRecord;
+  creditSnapshot?:CreditRecord;
+  cashMovement?:CashMovementRecord;
 };
 
 export const localProvider:KiuboDataProvider={
@@ -54,13 +70,9 @@ function readTimestampCursor(tenantId:string){
 function writeStoredCursor(prefix:string,tenantId:string,cursor?:string){
   if(typeof window!=="undefined"&&cursor)window.localStorage.setItem(`${prefix}${tenantId}`,cursor);
 }
-function isMissingV2Rpc(message:string){
+function isMissingRpc(message:string,name:string){
   const lower=message.toLowerCase();
-  return lower.includes("pull_sync_changes_v2")&&(lower.includes("could not find")||lower.includes("does not exist")||lower.includes("schema cache"));
-}
-function isMissingSaleTransactionRpc(message:string){
-  const lower=message.toLowerCase();
-  return lower.includes("apply_sale_transactions_v2")&&(lower.includes("could not find")||lower.includes("does not exist")||lower.includes("schema cache"));
+  return lower.includes(name.toLowerCase())&&(lower.includes("could not find")||lower.includes("does not exist")||lower.includes("schema cache"));
 }
 function normalizeRpcResults(operations:SyncQueueRecord[],data:unknown,error?:string):SyncPushResult[]{
   if(error)return operations.map(item=>({operationId:item.operationId,ok:false,error}));
@@ -78,13 +90,9 @@ async function pushGeneric(
   const result=await client.rpc("apply_sync_operations",{p_operations:operations});
   return normalizeRpcResults(operations,result.data,result.error?.message);
 }
-function fallbackSaleOperations(command:SyncQueueRecord):SyncQueueRecord[]{
-  if(!command.payload||typeof command.payload!=="object")return[];
-  const payload=command.payload as SaleTransactionPayload;
-  const sale=payload.sale;
-  if(!sale||typeof sale!=="object"||!sale.id)return[];
+function makeFallbackOperation(command:SyncQueueRecord,entityType:SyncQueueRecord["entityType"],entityId:string,body:unknown,index:string,branchId?:string):SyncQueueRecord{
   const now=command.createdAt||new Date().toISOString();
-  const make=(entityType:SyncQueueRecord["entityType"],entityId:string,body:unknown,index:string,branchId?:string):SyncQueueRecord=>({
+  return{
     id:`${command.id}:${index}`,
     operationId:`${command.operationId}:${index}`,
     tenantId:command.tenantId,
@@ -97,33 +105,72 @@ function fallbackSaleOperations(command:SyncQueueRecord):SyncQueueRecord[]{
     attempts:0,
     createdAt:now,
     updatedAt:now,
-  });
-  const ops:SyncQueueRecord[]=[make("sales",sale.id,sale,"sale",sale.branchId)];
-  (payload.productSnapshots||[]).forEach((product,index)=>ops.push(make("tenantProducts",product.id,product,`product-${index}`,product.branchId)));
-  (payload.stockMovements||[]).forEach((movement,index)=>ops.push(make("stockMovements",movement.id,movement,`stock-${index}`,movement.branchId)));
-  if(payload.credit)ops.push(make("credits",payload.credit.id,payload.credit,"credit",payload.credit.branchId));
+  };
+}
+function fallbackSaleOperations(command:SyncQueueRecord):SyncQueueRecord[]{
+  if(!command.payload||typeof command.payload!=="object")return[];
+  const payload=command.payload as SaleTransactionPayload;
+  const sale=payload.sale;
+  if(!sale||typeof sale!=="object"||!sale.id)return[];
+  const ops:SyncQueueRecord[]=[makeFallbackOperation(command,"sales",sale.id,sale,"sale",sale.branchId)];
+  (payload.productSnapshots||[]).forEach((product,index)=>ops.push(makeFallbackOperation(command,"tenantProducts",product.id,product,`product-${index}`,product.branchId)));
+  (payload.stockMovements||[]).forEach((movement,index)=>ops.push(makeFallbackOperation(command,"stockMovements",movement.id,movement,`stock-${index}`,movement.branchId)));
+  if(payload.credit)ops.push(makeFallbackOperation(command,"credits",payload.credit.id,payload.credit,"credit",payload.credit.branchId));
   return ops;
 }
-async function pushSaleTransactions(
+function fallbackFinanceOperations(command:SyncQueueRecord):SyncQueueRecord[]{
+  if(!command.payload||typeof command.payload!=="object")return[];
+  if(command.entityType==="cashTransactions"){
+    const payload=command.payload as CashTransactionPayload;
+    if((payload.kind==="open"||payload.kind==="close")&&payload.session){
+      return[makeFallbackOperation(command,"cashSessions",payload.session.id,payload.session,"session",payload.session.branchId)];
+    }
+    if(payload.kind==="movement"&&payload.movement){
+      return[makeFallbackOperation(command,"cashMovements",payload.movement.id,payload.movement,"movement",payload.movement.branchId)];
+    }
+    return[];
+  }
+  if(command.entityType==="creditPaymentTransactions"){
+    const payload=command.payload as CreditPaymentTransactionPayload;
+    if(!payload.payment||!payload.creditSnapshot)return[];
+    const ops:SyncQueueRecord[]=[
+      makeFallbackOperation(command,"creditPayments",payload.payment.id,payload.payment,"payment",payload.payment.branchId),
+      makeFallbackOperation(command,"credits",payload.creditSnapshot.id,payload.creditSnapshot,"credit",payload.creditSnapshot.branchId),
+    ];
+    if(payload.cashMovement)ops.push(makeFallbackOperation(command,"cashMovements",payload.cashMovement.id,payload.cashMovement,"cash",payload.cashMovement.branchId));
+    return ops;
+  }
+  return[];
+}
+async function pushCommandWithFallback(
   client:NonNullable<ReturnType<typeof getSupabaseBrowserClient>>,
-  commands:SyncQueueRecord[]
+  commands:SyncQueueRecord[],
+  rpcName:string,
+  fallbackBuilder:(command:SyncQueueRecord)=>SyncQueueRecord[],
+  invalidMessage:string,
 ):Promise<SyncPushResult[]>{
   if(!commands.length)return[];
-  const result=await client.rpc("apply_sale_transactions_v2",{p_operations:commands});
+  const result=await client.rpc(rpcName,{p_operations:commands});
   if(!result.error)return normalizeRpcResults(commands,result.data);
-  if(!isMissingSaleTransactionRpc(result.error.message))return normalizeRpcResults(commands,undefined,result.error.message);
+  if(!isMissingRpc(result.error.message,rpcName))return normalizeRpcResults(commands,undefined,result.error.message);
 
-  const grouped=commands.map(command=>({command,operations:fallbackSaleOperations(command)}));
+  const grouped=commands.map(command=>({command,operations:fallbackBuilder(command)}));
   const fallback=grouped.flatMap(group=>group.operations);
   const fallbackResults=await pushGeneric(client,fallback);
   const byId=new Map(fallbackResults.map(item=>[item.operationId,item]));
   return grouped.map(({command,operations})=>{
-    if(!operations.length)return{operationId:command.operationId,ok:false,error:"Venta local inválida para sincronizar"};
+    if(!operations.length)return{operationId:command.operationId,ok:false,error:invalidMessage};
     const failed=operations.map(item=>byId.get(item.operationId)).find(item=>!item?.ok);
     return failed
-      ? {operationId:command.operationId,ok:false,error:failed.error||"No se pudo sincronizar la venta en modo compatible"}
+      ? {operationId:command.operationId,ok:false,error:failed.error||"No se pudo sincronizar en modo compatible"}
       : {operationId:command.operationId,ok:true};
   });
+}
+async function pushSaleTransactions(client:NonNullable<ReturnType<typeof getSupabaseBrowserClient>>,commands:SyncQueueRecord[]){
+  return pushCommandWithFallback(client,commands,"apply_sale_transactions_v2",fallbackSaleOperations,"Venta local inválida para sincronizar");
+}
+async function pushFinanceTransactions(client:NonNullable<ReturnType<typeof getSupabaseBrowserClient>>,commands:SyncQueueRecord[]){
+  return pushCommandWithFallback(client,commands,"apply_finance_transactions_v2",fallbackFinanceOperations,"Operación financiera local inválida para sincronizar");
 }
 async function pullLegacy(
   client:NonNullable<ReturnType<typeof getSupabaseBrowserClient>>,
@@ -151,9 +198,14 @@ const supabaseProvider:KiuboDataProvider={
     const client=getSupabaseBrowserClient();
     if(!client)return operations.map(item=>({operationId:item.operationId,ok:false,error:"Cloud no configurado"}));
 
-    const generic=operations.filter(item=>item.entityType!=="saleTransactions");
+    const generic=operations.filter(item=>!(["saleTransactions","cashTransactions","creditPaymentTransactions"] as string[]).includes(item.entityType));
     const sales=operations.filter(item=>item.entityType==="saleTransactions");
-    const results=[...(await pushGeneric(client,generic)),...(await pushSaleTransactions(client,sales))];
+    const finance=operations.filter(item=>item.entityType==="cashTransactions"||item.entityType==="creditPaymentTransactions");
+    const results=[
+      ...(await pushGeneric(client,generic)),
+      ...(await pushSaleTransactions(client,sales)),
+      ...(await pushFinanceTransactions(client,finance)),
+    ];
     const byId=new Map(results.map(item=>[item.operationId,item]));
     return operations.map(item=>byId.get(item.operationId)??{operationId:item.operationId,ok:false,error:"Backend no confirmó la operación"});
   },
@@ -181,7 +233,7 @@ const supabaseProvider:KiuboDataProvider={
           changes:Array.isArray(payload.changes)?payload.changes:[]
         };
       }
-      if(!isMissingV2Rpc(result.error.message))throw new Error(result.error.message);
+      if(!isMissingRpc(result.error.message,"pull_sync_changes_v2"))throw new Error(result.error.message);
     }
 
     const legacyCursor=cursor&&!REVISION_RE.test(cursor)?cursor:readTimestampCursor(tenantId);
