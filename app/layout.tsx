@@ -22,5 +22,6 @@ import { PwaRegister } from "@/components/PwaRegister";
 import { SessionEnforcer } from "@/components/SessionEnforcer";
 import { BrandingRuntime } from "@/components/BrandingRuntime";
 import { AppChrome } from "@/components/AppChrome";
+import { DurabilityRuntime } from "@/components/DurabilityRuntime";
 export const metadata:Metadata={title:"KIUBO · Todo tu negocio, en orden",description:"Ventas, inventario, caja, clientes, compras, reportes y facturación para negocios que quieren control sin complicarse.",icons:{icon:[{url:"https://cdn.phototourl.com/free/2026-08-22-d66f0865-834f-4fad-aba9-d7d2de485042.jpg",sizes:"1536x1536",type:"image/jpeg"}],apple:[{url:"https://cdn.phototourl.com/free/2026-08-22-d66f0865-834f-4fad-aba9-d7d2de485042.jpg",sizes:"1536x1536",type:"image/jpeg"}]}};
-export default function RootLayout({children}:Readonly<{children:React.ReactNode}>){return <html lang="es"><body><SessionEnforcer/><BrandingRuntime/>{children}<AppChrome/><PwaRegister/></body></html>}
+export default function RootLayout({children}:Readonly<{children:React.ReactNode}>){return <html lang="es"><body><DurabilityRuntime/><SessionEnforcer/><BrandingRuntime/>{children}<AppChrome/><PwaRegister/></body></html>}
