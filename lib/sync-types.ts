@@ -19,7 +19,10 @@ export type SyncEntity =
   | "supplierPayments"
   | "stockMovements";
 
-export type SyncCommandEntity = "saleTransactions";
+export type SyncCommandEntity =
+  | "saleTransactions"
+  | "cashTransactions"
+  | "creditPaymentTransactions";
 
 export type SyncQueueRecord = {
   id: string;
