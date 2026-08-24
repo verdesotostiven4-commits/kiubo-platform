@@ -17,6 +17,7 @@ const checks = [
   ["supabase/migrations/0012_stock_conflict_guard.sql", ["sync_tenant_products_stock_nonnegative", "sync_nonnegative_number", "not valid"]],
   ["supabase/migrations/0013_pilot_readiness_branch_scope.sql", ["guard_sync_entity_branch_scope", "sync branch belongs to another tenant", "branch is inactive", "branch_can_operate"]],
   ["supabase/migrations/0014_team_management_v1.sql", ["list_tenant_team_v1", "tenant_invite_preflight_v1", "upsert_tenant_member_by_email_v1", "update_tenant_member_v1", "auth.users", "admin cannot modify owner or admin access"]],
+  ["supabase/migrations/0015_purchase_transaction_v2.sql", ["apply_purchase_transactions_v2", "purchaseTransactions", "supplierPaymentTransactions", "v_new_cost", "supplier payment exceeds purchase balance", "sync_receipts"]],
   ["lib/cloud-control.ts", ["signInWithOtp", "platform_provision_tenant_by_email", "/set-password"]],
   ["lib/team-cloud.ts", ["list_tenant_team_v1", "tenant_invite_preflight_v1", "signInWithOtp", "upsert_tenant_member_by_email_v1", "update_tenant_member_v1"]],
   ["components/SetPasswordClient.tsx", ["updateUser", "new-password", "Guardar y entrar"]],
@@ -26,38 +27,12 @@ const checks = [
 let failed = false;
 for (const [relative, needles] of checks) {
   const path = join(root, relative);
-  if (!existsSync(path)) {
-    console.error(`✗ Missing ${relative}`);
-    failed = true;
-    continue;
-  }
-  const text = readFileSync(path, "utf8").toLowerCase();
-  let fileFailed = false;
-  for (const needle of needles) {
-    if (!text.includes(String(needle).toLowerCase())) {
-      console.error(`✗ ${relative} missing guard: ${needle}`);
-      fileFailed = true;
-      failed = true;
-    }
-  }
+  if (!existsSync(path)) {console.error(`✗ Missing ${relative}`);failed = true;continue}
+  const text = readFileSync(path, "utf8").toLowerCase();let fileFailed = false;
+  for (const needle of needles) {if (!text.includes(String(needle).toLowerCase())) {console.error(`✗ ${relative} missing guard: ${needle}`);fileFailed = true;failed = true}}
   if (!fileFailed) console.log(`✓ ${relative}`);
 }
-
 const env = readFileSync(join(root, ".env.example"), "utf8");
-for (const key of [
-  "NEXT_PUBLIC_KIUBO_AUTH_MODE",
-  "NEXT_PUBLIC_KIUBO_DATA_MODE",
-  "NEXT_PUBLIC_SUPABASE_URL",
-  "NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY",
-]) {
-  if (!env.includes(key)) {
-    console.error(`✗ .env.example missing ${key}`);
-    failed = true;
-  }
-}
-
-if (failed) {
-  console.error("KIUBO cloud verification failed.");
-  process.exit(1);
-}
+for (const key of ["NEXT_PUBLIC_KIUBO_AUTH_MODE","NEXT_PUBLIC_KIUBO_DATA_MODE","NEXT_PUBLIC_SUPABASE_URL","NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY"]) {if (!env.includes(key)) {console.error(`✗ .env.example missing ${key}`);failed = true}}
+if (failed) {console.error("KIUBO cloud verification failed.");process.exit(1)}
 console.log("✓ KIUBO cloud foundation verification passed.");
