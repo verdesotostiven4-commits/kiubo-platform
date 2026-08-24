@@ -32,8 +32,8 @@ export function SessionEnforcer(){
       let tenantId=user.platformAdmin?(session.activeTenantId||user.tenantId):user.tenantId;
       if(!db.tenants.some(t=>t.id===tenantId&&t.plan!=="Internal"))tenantId=user.tenantId;
       const branch=db.branches.find(b=>b.id===session.activeBranchId&&b.tenantId===tenantId&&b.active)??getPrimaryBranch(db,tenantId);
-      if(session.activeTenantId!==tenantId||session.activeBranchId!==branch?.id){saveLocalSession({...session,tenantId:user.tenantId,activeTenantId:tenantId,activeBranchId:branch?.id})}
-      if(!canAccess(user.role,permission)){router.replace(homeForRole(user.role));return}
+      if(session.activeTenantId!==tenantId||session.activeBranchId!==branch?.id||session.role!==user.role){saveLocalSession({...session,tenantId:user.tenantId,activeTenantId:tenantId,activeBranchId:branch?.id,role:user.role})}
+      if(!canAccess(user.role,permission,Boolean(user.platformAdmin))){router.replace(homeForRole(user.role));return}
       const feature=routeFeature(path),tenant=db.tenants.find(t=>t.id===tenantId);
       if(feature&&!user.platformAdmin&&!hasFeature(tenant,feature)){router.replace(`/upgrade?feature=${feature}`)}
     };

@@ -15,6 +15,7 @@ const checks = [
   ["supabase/migrations/0010_sales_stock_transaction_v2.sql", ["apply_sale_transactions_v2", "pg_advisory_xact_lock", "for update", "v_new_stock=v_stock-v_qty", "sync_receipts"]],
   ["supabase/migrations/0011_finance_transaction_v2.sql", ["apply_finance_transactions_v2", "cashTransactions", "creditPaymentTransactions", "sync_tenant_products_stock_nonnegative"]],
   ["supabase/migrations/0012_stock_conflict_guard.sql", ["sync_tenant_products_stock_nonnegative", "sync_nonnegative_number", "not valid"]],
+  ["supabase/migrations/0013_pilot_readiness_branch_scope.sql", ["guard_sync_entity_branch_scope", "sync branch belongs to another tenant", "branch is inactive", "branch_can_operate"]],
   ["lib/cloud-control.ts", ["signInWithOtp", "platform_provision_tenant_by_email", "/set-password"]],
   ["components/SetPasswordClient.tsx", ["updateUser", "new-password", "Guardar y entrar"]],
   ["app/api/health/route.ts", ["auth/v1/health", "next_public_kiubo_auth_mode", "next_public_kiubo_data_mode"]],

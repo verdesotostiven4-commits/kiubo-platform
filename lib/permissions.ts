@@ -2,12 +2,17 @@ import type { UserRole } from "./local-store";
 export type Permission="control"|"leads"|"dashboard"|"onboarding"|"upgrade"|"pos"|"inventory"|"purchases"|"catalog"|"customers"|"invoices"|"reports"|"branding"|"operations";
 const grants:Record<UserRole,Permission[]>={
   owner:["control","leads","dashboard","onboarding","upgrade","pos","inventory","purchases","catalog","customers","invoices","reports","branding","operations"],
-  admin:["control","leads","dashboard","onboarding","upgrade","pos","inventory","purchases","catalog","customers","invoices","reports","branding","operations"],
+  admin:["dashboard","onboarding","upgrade","pos","inventory","purchases","catalog","customers","invoices","reports","branding","operations"],
   cashier:["dashboard","upgrade","pos","customers","invoices","reports"],
   inventory:["dashboard","upgrade","inventory","purchases","catalog","reports"],
   viewer:["dashboard","upgrade","reports"]
 };
-export function canAccess(role:UserRole,permission:Permission){return grants[role].includes(permission)}
+export function canAccess(role:UserRole,permission:Permission,platformAdmin=false){
+  // Platform routes are never granted by a tenant role alone. A browser-side role bug
+  // must not make KIUBO Control or Leads visible/accessible to a business user.
+  if(permission==="control"||permission==="leads")return platformAdmin;
+  return grants[role].includes(permission);
+}
 export function permissionForPath(path:string):Permission|null{
   if(path.startsWith("/control"))return"control";
   if(path.startsWith("/leads"))return"leads";
