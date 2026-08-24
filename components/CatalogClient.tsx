@@ -14,6 +14,7 @@ type EditorState=
 
 const money=(value:number)=>new Intl.NumberFormat("es-EC",{style:"currency",currency:"USD"}).format(value||0);
 const compactNumber=(value:number)=>new Intl.NumberFormat("es-EC",{maximumFractionDigits:3}).format(value||0);
+const cleanSingleLine=(value:string)=>value.replace(/[\r\n\t]+/g," ").replace(/\s{2,}/g," ").trim();
 
 export function CatalogClient(){
   const[db,setDb]=useState<ReturnType<typeof loadLocalDatabase>|null>(null);
@@ -57,12 +58,14 @@ export function CatalogClient(){
     event.preventDefault();
     if(!ctx.branchId||!editor)return;
     const form=new FormData(event.currentTarget);
-    const name=String(form.get("name")||"").trim();
+    const name=cleanSingleLine(String(form.get("name")||""));
     const rawBarcode=String(form.get("barcode")||"").trim();
     const cost=Number(form.get("cost")||0);
     const price=Number(form.get("price")||0);
     const stock=Number(form.get("stock")||0);
     if(!name){setError("Ponle un nombre al producto para poder guardarlo.");return}
+    if(name.length>160){setError("El nombre es demasiado largo. Usa máximo 160 caracteres.");return}
+    if(rawBarcode&&(rawBarcode.length>96||/[\r\n]/.test(rawBarcode))){setError("El código debe ser una sola línea y tener máximo 96 caracteres.");return}
     if(!Number.isFinite(cost)||!Number.isFinite(price)||!Number.isFinite(stock)||cost<0||price<0||stock<0){setError("Costo, precio y stock deben ser valores válidos y no negativos.");return}
 
     const next=loadLocalDatabase();
@@ -83,7 +86,7 @@ export function CatalogClient(){
     }
 
     saveLocalDatabase(next);
-    setDb(next);
+    setDb(loadLocalDatabase());
     setMode("mine");
     setStockFilter("all");
     setQuery("");
@@ -100,7 +103,7 @@ export function CatalogClient(){
     if(index<0)return;
     next.tenantProducts[index]={...next.tenantProducts[index],active:false};
     saveLocalDatabase(next);
-    setDb(next);
+    setDb(loadLocalDatabase());
     setEditor(null);
     setMessage(`${editor.product.name} fue archivado.`);
   };
@@ -161,8 +164,8 @@ export function CatalogClient(){
         <div className={styles.editorTop}><div><span className={styles.kicker}>{editor.kind==="edit"?"EDITAR PRODUCTO":editor.kind==="catalog"?"AGREGAR DEL CATÁLOGO":"NUEVO PRODUCTO"}</span><h2>{editor.kind==="edit"?"Ajusta lo necesario":editor.kind==="catalog"?editor.master.name:"Vamos a crearlo"}</h2><p>{editor.kind==="edit"?"Los cambios quedarán en esta sucursal.":"Pide solo lo esencial. Después podrás cambiarlo cuando quieras."}</p></div><button className={styles.close} type="button" onClick={closeEditor} aria-label="Cerrar">×</button></div>
         {error&&<div className={`${styles.notice} ${styles.noticeError}`}>{error}</div>}
         <form className={styles.form} onSubmit={saveProduct} key={`${editor.kind}-${editor.kind==="edit"?editor.product.id:editor.kind==="catalog"?editor.master.id:"new"}`}>
-          <label>Nombre del producto<input name="name" defaultValue={editorValues.name} autoFocus placeholder="Ej. Coca-Cola 500 ml"/><span className={styles.fieldHint}>Es lo que verás al vender.</span></label>
-          <label>Código de barras / código interno<input name="barcode" defaultValue={editorValues.barcode} placeholder="Escanea o déjalo vacío"/><span className={styles.fieldHint}>Si lo dejas vacío, KIUBO crea uno interno.</span></label>
+          <label>Nombre del producto<input name="name" defaultValue={editorValues.name} autoFocus maxLength={160} placeholder="Ej. Coca-Cola 500 ml"/><span className={styles.fieldHint}>Es lo que verás al vender.</span></label>
+          <label>Código de barras / código interno<input name="barcode" defaultValue={editorValues.barcode} maxLength={96} autoCapitalize="off" autoCorrect="off" placeholder="Escanea o déjalo vacío"/><span className={styles.fieldHint}>Si lo dejas vacío, KIUBO crea uno interno.</span></label>
           <div className={styles.formGrid}><label>Costo<input name="cost" type="number" min="0" step="0.0001" defaultValue={editorValues.cost}/></label><label>Precio de venta<input name="price" type="number" min="0" step="0.01" defaultValue={editorValues.price}/></label></div>
           <label>Stock inicial<input name="stock" type="number" min="0" step="0.001" defaultValue={editorValues.stock}/><span className={styles.fieldHint}>También puedes empezar en 0 y recibir mercadería después.</span></label>
           <button className={styles.save} type="submit">{editor.kind==="edit"?"Guardar cambios":"Guardar producto"}</button>
