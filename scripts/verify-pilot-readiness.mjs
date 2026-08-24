@@ -11,7 +11,7 @@ requireText("components/SessionEnforcer.tsx",["canAccess(user.role,permission,Bo
 requireText("components/Sidebar.tsx",["platformOnly:true","canAccess(user.role,item.permission,Boolean(user.platformAdmin))","href:\"/cash\"","label:\"Administración\""]);
 requireText("components/MobileNav.tsx",["platformOnly:true","canAccess(user.role,item.permission,Boolean(user.platformAdmin))","href:\"/cash\""]);
 requireText("app/cash/page.tsx",["CashClient","Sidebar"]);
-requireText("components/CashClient.tsx",["enqueueCashTransaction","enqueueCreditPaymentTransaction","Caja y fiados, sin perder el control."]);
+requireText("components/CashClient.tsx",["enqueueCashTransaction","enqueueCreditPaymentTransaction","Caja y fiados, sin perder el control.","reconcileCashSession","CUADRADA"]);
 requireText("components/PosClient.tsx",['const paymentOptions:Payment[]=["cash","transfer","credit"]','if(payment==="mixed")']);
 requireText("app/operations/page.tsx",["NEXT_PUBLIC_KIUBO_AUTH_MODE===\"supabase\"","BusinessAdminClient","TeamAdminClient","OperationsClient"]);
 requireText("components/BusinessAdminClient.tsx",["Reglas generales del negocio","saveLocalDatabase(next)","Exigir caja abierta"]);
@@ -26,7 +26,11 @@ requireText("supabase/migrations/0017_supplier_cash_outflow_v1.sql",["apply_purc
 requireText("components/PurchasesClient.tsx",["enqueuePurchaseTransaction","enqueueSupplierPaymentTransaction","trackChanges:false","costo promedio","getOpenCashSession","salida de caja"]);
 requireText("supabase/migrations/0016_inventory_adjustment_v2.sql",["apply_inventory_adjustments_v2","v_new_stock=v_stock+v_delta","insufficient stock for adjustment"]);
 requireText("components/InventoryClient.tsx",["enqueueInventoryAdjustment","Ir a Compras","un solo flujo oficial","trackChanges:false"]);
+requireText("supabase/migrations/0018_sale_reversal_v1.sql",["apply_sale_reversals_v1","cash refund must equal sale total","v_new_stock:=v_stock+v_qty","status','voided'"]);
+requireText("lib/sale-reversal.ts",["reverseSaleLocally","saleReversalTransactions","sales.reversal_queued"]);
+requireText("components/ReportsClient.tsx",["saleLifecycle(s)==\"completed\"","Confirmar anulación","Cuadre esperado vs. contado","Ventas anuladas"]);
 requireText("lib/sync-engine.ts",["isActiveQueueItem(item,activeTenantId)","recoverRejectedCommand","navigator.locks"]);
 requireText("lib/offline-durability.ts",["recoverInterruptedSyncQueue","snapshotOfflineDatabase","navigator.storage?.persist"]);
+requireText("vercel.json",["\"deploymentEnabled\": false"]);
 
-console.log("✓ Pilot Readiness V6 passed: truthful payments, cloud team roles, branch revocation, atomic sales/cash/purchases/inventory, supplier cash outflows, offline recovery and tenant-safe sync are guarded.");
+console.log("✓ Pilot Readiness V7 passed: truthful payments, auditable sale reversals, cash reconciliation, cloud team roles, branch revocation, atomic sales/cash/purchases/inventory, supplier cash outflows, offline recovery and tenant-safe sync are guarded.");

@@ -21,6 +21,7 @@ export type SyncEntity =
 
 export type SyncCommandEntity =
   | "saleTransactions"
+  | "saleReversalTransactions"
   | "cashTransactions"
   | "creditPaymentTransactions"
   | "purchaseTransactions"

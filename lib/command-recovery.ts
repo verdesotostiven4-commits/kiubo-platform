@@ -2,14 +2,15 @@ import {getLocalDeviceId,loadLocalSession,makeId,type CashMovementRecord,type Ca
 import type {SyncQueueRecord} from "./sync-types";
 
 type SalePayload={sale?:SaleRecord;stockMovements?:StockMovementRecord[];credit?:CreditRecord};
+type SaleReversalPayload={saleBefore?:SaleRecord;saleAfter?:SaleRecord;productBeforeSnapshots?:TenantProduct[];productAfterSnapshots?:TenantProduct[];stockMovements?:StockMovementRecord[];cashMovement?:CashMovementRecord};
 type CashPayload=|{kind:"open"|"close";session?:CashSessionRecord}|{kind:"movement";movement?:CashMovementRecord};
 type CreditPayload={payment?:CreditPaymentRecord;creditSnapshot?:CreditRecord;cashMovement?:CashMovementRecord};
 type PurchasePayload={purchase?:PurchaseRecord;productBeforeSnapshots?:TenantProduct[];productSnapshots?:TenantProduct[];stockMovements?:StockMovementRecord[];initialPayment?:SupplierPaymentRecord;initialCashMovement?:CashMovementRecord};
 type SupplierPaymentPayload={payment?:SupplierPaymentRecord;purchaseBefore?:PurchaseRecord;purchaseAfter?:PurchaseRecord;cashMovement?:CashMovementRecord};
 type AdjustmentPayload={productBefore?:TenantProduct;productAfter?:TenantProduct;movement?:StockMovementRecord};
 
-const COMMAND_TYPES=new Set(["saleTransactions","cashTransactions","creditPaymentTransactions","purchaseTransactions","supplierPaymentTransactions","inventoryAdjustmentTransactions"]);
-const TERMINAL_ERROR_HINTS=["insufficient stock","stock_nonnegative","negative stock","product not found","product is inactive","customer not found","credit not found","credit already paid","cash session already open","cash session already closed","cash session is not open","cash session not found","branch denied","branch mismatch","branch does not belong","role denied","tenant is not allowed","tenant mismatch","sale id mismatch","invalid sale","invalid product","invalid payment","invalid cash","invalid credit","invalid finance","supplier not found","purchase not found","purchase already paid","duplicate purchase document","payment exceeds purchase balance","supplier payment","invalid purchase","purchase id mismatch","inventory adjustment","invalid inventory","requires customer","must contain","must be positive","cannot be negative","already open","already closed","violates check constraint"];
+const COMMAND_TYPES=new Set(["saleTransactions","saleReversalTransactions","cashTransactions","creditPaymentTransactions","purchaseTransactions","supplierPaymentTransactions","inventoryAdjustmentTransactions"]);
+const TERMINAL_ERROR_HINTS=["insufficient stock","stock_nonnegative","negative stock","product not found","product is inactive","customer not found","credit not found","credit already paid","cash session already open","cash session already closed","cash session is not open","cash session not found","branch denied","branch mismatch","branch does not belong","role denied","tenant is not allowed","tenant mismatch","sale id mismatch","invalid sale","sale not found","sale reversal","sale cannot be reversed","cash refund","invalid product","invalid payment","invalid cash","invalid credit","invalid finance","supplier not found","purchase not found","purchase already paid","duplicate purchase document","payment exceeds purchase balance","supplier payment","invalid purchase","purchase id mismatch","inventory adjustment","invalid inventory","requires customer","must contain","must be positive","cannot be negative","already open","already closed","violates check constraint"];
 const eq=(a:number,b:number)=>Math.abs(a-b)<.000001;
 const clean=(error:string)=>error.replace(/\s+/g," ").trim().slice(0,500);
 export function shouldRecoverRejectedCommand(item:SyncQueueRecord,error:string){return COMMAND_TYPES.has(item.entityType)&&TERMINAL_ERROR_HINTS.some(x=>error.toLowerCase().includes(x))}
@@ -23,6 +24,13 @@ export function recoverRejectedCommand(db:KiuboLocalDatabase,item:SyncQueueRecor
     const ids=new Set((p.stockMovements||[]).map(x=>x.id));if(ids.size){const n=db.stockMovements.filter(x=>!ids.has(x.id));changed||=n.length!==db.stockMovements.length;db.stockMovements=n}
     const cr=removeById(db.credits,p.credit?.id);db.credits=cr.items;changed||=cr.changed;
     for(const m of p.stockMovements||[]){const product=db.tenantProducts.find(x=>x.id===m.productId&&x.tenantId===item.tenantId);if(product&&eq(product.stock,m.newStock)){product.stock=Math.max(0,m.previousStock);changed=true}else needsCanonicalPull=true}
+  }
+  if(item.entityType==="saleReversalTransactions"&&item.payload&&typeof item.payload==="object"){
+    const p=item.payload as SaleReversalPayload;
+    const ids=new Set((p.stockMovements||[]).map(x=>x.id));if(ids.size){const n=db.stockMovements.filter(x=>!ids.has(x.id));changed||=n.length!==db.stockMovements.length;db.stockMovements=n}
+    const cash=removeById(db.cashMovements,p.cashMovement?.id);db.cashMovements=cash.items;changed||=cash.changed;
+    if(p.saleBefore&&p.saleAfter){const current=db.sales.find(x=>x.id===p.saleAfter?.id),status=(current as (SaleRecord&{status?:string})|undefined)?.status??"completed";if(current&&status==="voided"){db.sales=db.sales.map(x=>x.id===p.saleAfter?.id?p.saleBefore!:x);changed=true}else needsCanonicalPull=true}
+    const before=new Map((p.productBeforeSnapshots||[]).map(x=>[x.id,x])),after=new Map((p.productAfterSnapshots||[]).map(x=>[x.id,x]));for(const [id,b] of before){const a=after.get(id),current=db.tenantProducts.find(x=>x.id===id&&x.tenantId===item.tenantId);if(a&&current&&eq(current.stock,a.stock)&&eq(current.cost,a.cost)){current.stock=b.stock;current.cost=b.cost;changed=true}else needsCanonicalPull=true}
   }
   if(item.entityType==="cashTransactions"&&item.payload&&typeof item.payload==="object"){
     const p=item.payload as CashPayload;
