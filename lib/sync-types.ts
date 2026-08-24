@@ -48,4 +48,14 @@ export type AuditLogRecord = {
 };
 
 export type SyncPushResult = { operationId:string; ok:boolean; remoteId?:string; error?:string };
-export type SyncPullResult = { cursor?:string; changes:Array<{tenantId:string;branchId?:string;entityType:SyncEntity;entityId:string;action:SyncAction;payload?:unknown;updatedAt:string}> };
+export type SyncChange = {
+  tenantId:string;
+  branchId?:string;
+  entityType:SyncEntity;
+  entityId:string;
+  action:SyncAction;
+  payload?:unknown;
+  updatedAt:string;
+  revision?:number;
+};
+export type SyncPullResult = { cursor?:string; hasMore?:boolean; changes:SyncChange[] };
