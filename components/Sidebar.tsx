@@ -5,7 +5,8 @@ import { usePathname,useRouter } from "next/navigation";
 import { KiuboMark } from "./Logo";
 import { WorkspaceSwitcher } from "./WorkspaceSwitcher";
 import { SyncStatus } from "./SyncStatus";
-import { TenantRecord,UserRecord,clearLocalSession,getWorkspaceContext,loadLocalDatabase } from "@/lib/local-store";
+import { TenantRecord,UserRecord,getWorkspaceContext,loadLocalDatabase } from "@/lib/local-store";
+import { getAuthProvider } from "@/lib/auth-provider";
 import { Permission,canAccess } from "@/lib/permissions";
 import { ProductFeature,hasFeature } from "@/lib/entitlements";
 
@@ -30,11 +31,11 @@ const items:NavItem[]=[
 ];
 const roleLabel={owner:"Propietario",admin:"Administrador",cashier:"Cajero",inventory:"Inventario",viewer:"Consulta"} as const;
 export function Sidebar(){
-  const router=useRouter(),pathname=usePathname();
+  const router=useRouter(),pathname=usePathname(),platformPath=pathname.startsWith("/control")||pathname.startsWith("/leads");
   const[user,setUser]=useState<UserRecord|null>(null),[tenant,setTenant]=useState<TenantRecord|undefined>();
   useEffect(()=>{const db=loadLocalDatabase(),ctx=getWorkspaceContext(db);setUser(ctx.user??null);setTenant(ctx.tenant)},[pathname]);
-  const logout=()=>{clearLocalSession();router.replace("/login")};
-  const visible=useMemo(()=>items.filter(item=>!user||canAccess(user.role,item.permission)).filter(item=>!item.platformOnly||user?.platformAdmin).filter(item=>user?.platformAdmin||!item.feature||hasFeature(tenant,item.feature)),[tenant,user]);
+  const logout=async()=>{await getAuthProvider().signOut();router.replace("/login")};
+  const visible=useMemo(()=>items.filter(item=>!user||canAccess(user.role,item.permission)).filter(item=>!item.platformOnly||user?.platformAdmin).filter(item=>!platformPath||item.group==="platform").filter(item=>user?.platformAdmin||!item.feature||hasFeature(tenant,item.feature)),[platformPath,tenant,user]);
   const groups=(["platform","daily","management","account"] as Group[]).map(group=>({group,items:visible.filter(item=>item.group===group)})).filter(section=>section.items.length);
-  return <aside className="sidebar"><div className="sidebar-top"><KiuboMark/></div><WorkspaceSwitcher/><nav className="sidebar-nav" aria-label="Navegación principal">{groups.map(section=><div className="nav-group" key={section.group}><div className="nav-group-label">{groupLabel[section.group]}</div>{section.items.map(item=><Link key={item.href} href={item.href} className={`nav-item ${pathname===item.href?"active":""}`}><span className="nav-glyph" aria-hidden="true">{item.glyph}</span><span className="nav-label">{item.label}</span></Link>)}</div>)}</nav><div className="sidebar-bottom"><SyncStatus/>{user&&<div className="session-card"><strong>{user.name}</strong><span>{roleLabel[user.role]}{user.platformAdmin?" · KIUBO Admin":tenant?` · ${tenant.plan}`:""}</span><button onClick={logout}>Cerrar sesión</button></div>}<div className="tiny-card"><strong>KIUBO Preview</strong><span>Producto en construcción activa</span></div></div></aside>
+  return <aside className="sidebar" style={{overflowY:"auto",overflowX:"hidden",overscrollBehavior:"contain"}}><div className="sidebar-top"><KiuboMark/></div>{!platformPath&&<WorkspaceSwitcher/>}<nav className="sidebar-nav" aria-label="Navegación principal">{groups.map(section=><div className="nav-group" key={section.group}><div className="nav-group-label">{groupLabel[section.group]}</div>{section.items.map(item=><Link key={item.href} href={item.href} className={`nav-item ${pathname===item.href?"active":""}`}><span className="nav-glyph" aria-hidden="true">{item.glyph}</span><span className="nav-label">{item.label}</span></Link>)}</div>)}</nav><div className="sidebar-bottom">{!platformPath&&<SyncStatus/>}{user&&<div className="session-card"><strong>{user.name}</strong><span>{roleLabel[user.role]}{user.platformAdmin?" · KIUBO Admin":tenant?` · ${tenant.plan}`:""}</span><button onClick={()=>void logout()}>Cerrar sesión</button></div>}<div className="tiny-card"><strong>{platformPath?"KIUBO Plataforma":"KIUBO Preview"}</strong><span>{platformPath?"Administración separada de los negocios":"Producto en construcción activa"}</span></div></div></aside>
 }
