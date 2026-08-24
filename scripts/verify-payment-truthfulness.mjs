@@ -9,29 +9,11 @@ const requireText=(path,needles)=>{const source=text(path);for(const needle of n
 const pos=text("components/PosClient.tsx");
 assert.ok(pos.includes('const paymentOptions:Payment[]=["cash","transfer","credit"]'),"POS must expose only cash, transfer and credit until mixed split amounts are persisted");
 assert.ok(!pos.includes('paymentOptions:Payment[]=["cash","transfer","mixed"'),"POS must not expose mixed payment until split amounts are persisted");
-requireText("components/PurchasesClient.tsx",[
-  "cashMovement",
-  "Abre caja antes de pagar en efectivo a un proveedor",
-  "salida de caja",
-  "initialCashMovement",
-]);
-requireText("lib/purchase-transaction.ts",[
-  "initialCashMovement",
-  "cashMovement",
-]);
-requireText("lib/data-provider.ts",[
-  "apply_purchase_transactions_v3",
-  "initialCashMovement",
-  "cashMovement",
-]);
-requireText("lib/command-recovery.ts",[
-  "cashMovement",
-  "initialCashMovement",
-]);
-requireText("supabase/migrations/0017_supplier_cash_outflow_v1.sql",[
-  "apply_purchase_transactions_v3",
-  "cash session is not open",
-  "cash supplier payment requires register movement",
-]);
-
-console.log("✓ Payment truthfulness V1 passed: unsupported mixed payments are hidden and supplier cash payments flow through an open cash session.");
+requireText("components/PurchasesClient.tsx",["cashMovement","Abre caja antes de pagar en efectivo a un proveedor","salida de caja","initialCashMovement"]);
+requireText("lib/purchase-transaction.ts",["initialCashMovement","cashMovement"]);
+requireText("lib/data-provider.ts",["apply_purchase_transactions_v3","atomicOnlyCommand","Motor Cloud de compras y pagos pendiente de activación"]);
+requireText("lib/command-recovery.ts",["cashMovement","initialCashMovement"]);
+requireText("supabase/migrations/0017_supplier_cash_outflow_v1.sql",["apply_purchase_transactions_v3","cash session is not open","cash supplier payment requires register movement"]);
+const provider=text("lib/data-provider.ts");
+assert.ok(!provider.includes("fallbackPurchaseOperations"),"Supplier cash payments must never fall back to non-atomic generic writes");
+console.log("✓ Payment truthfulness V2 passed: mixed payments stay hidden and supplier cash payments remain atomic with their register outflow.");
