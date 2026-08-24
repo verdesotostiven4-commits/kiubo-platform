@@ -4,7 +4,12 @@ import type { SyncEntity,SyncPullResult,SyncPushResult,SyncQueueRecord } from ".
 
 export type SyncCycleResult={ok:boolean;mode:"local"|"supabase";pushed:number;failed:number;pulled:number;message:string};
 const UUID_RE=/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-const SYNCABLE_ENTITIES=new Set<SyncQueueRecord["entityType"]>(["tenantProducts","customers","sales","saleTransactions","cashSessions","cashMovements","credits","creditPayments","settings","branding","suppliers","purchases","supplierPayments","stockMovements"]);
+const SYNCABLE_ENTITIES=new Set<SyncQueueRecord["entityType"]>([
+  "tenantProducts","customers","sales","saleTransactions",
+  "cashSessions","cashMovements","cashTransactions",
+  "credits","creditPayments","creditPaymentTransactions",
+  "settings","branding","suppliers","purchases","supplierPayments","stockMovements"
+]);
 const MAX_PULL_PAGES=4;
 
 function keyFor(entity:SyncEntity,record:Record<string,unknown>){return entity==="settings"||entity==="branding"?String(record.tenantId||""):String(record.id||"")}
