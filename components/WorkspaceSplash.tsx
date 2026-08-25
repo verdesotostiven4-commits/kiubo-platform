@@ -7,6 +7,7 @@ import styles from "./WorkspaceSplash.module.css";
 
 const SKIP_PREFIXES=["/login","/set-password","/auth/","/control","/leads","/demo","/precios","/como-funciona"];
 const SIX_HOURS=6*60*60*1000;
+type SplashSeen={day?:string;shownAt?:number;sessionStartedAt?:string};
 
 export function WorkspaceSplash(){
   const pathname=usePathname();
@@ -19,8 +20,11 @@ export function WorkspaceSplash(){
     const settings=getTenantSettings(db,ctx.tenantId);if(!settings.splashEnabled)return;
     const branding=getTenantBranding(db,ctx.tenantId),today=new Date().toISOString().slice(0,10);
     const key=`kiubo.workspace.splash.v2:${ctx.tenantId}`;
-    let prior:{day?:string;shownAt?:number;sessionStartedAt?:string}|null=null;
-    try{prior=JSON.parse(window.localStorage.getItem(key)||"null") as typeof prior}catch{prior=null}
+    let prior:SplashSeen|undefined;
+    try{
+      const raw=window.localStorage.getItem(key);
+      if(raw)prior=JSON.parse(raw) as SplashSeen;
+    }catch{prior=undefined}
     const now=Date.now(),freshSession=prior?.sessionStartedAt!==session.startedAt,stale=!prior?.shownAt||now-prior.shownAt>SIX_HOURS;
     if(prior?.day===today&&!freshSession&&!stale)return;
     window.localStorage.setItem(key,JSON.stringify({day:today,shownAt:now,sessionStartedAt:session.startedAt}));
