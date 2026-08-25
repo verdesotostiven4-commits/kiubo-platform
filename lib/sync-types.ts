@@ -7,6 +7,7 @@ export type SyncEntity =
   | "tenantProducts"
   | "customers"
   | "sales"
+  | "orders"
   | "users"
   | "cashSessions"
   | "cashMovements"
