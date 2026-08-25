@@ -14,7 +14,7 @@ requireText("lib/local-store.ts",[
   'TRACKED_COLLECTIONS:SyncEntity[]=["tenants","branches","tenantProducts","customers","sales","orders"',
   "nextOrderNumber"
 ]);
-requireText("lib/sync-types.ts",['| "orders";']);
+requireText("lib/sync-types.ts",['| "orders"']);
 requireText("lib/order-sync.ts",['entityType==="orders"','action:"orders.upsert"']);
 requireText("lib/permissions.ts",['path.startsWith("/orders")','path.startsWith("/order-print")','path.startsWith("/receipt")']);
 requireText("lib/entitlements.ts",['path.startsWith("/orders")','path.startsWith("/order-print")','path.startsWith("/receipt")']);
