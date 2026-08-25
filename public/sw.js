@@ -1,4 +1,4 @@
-const SHELL_CACHE="kiubo-shell-v5";
+const SHELL_CACHE="kiubo-shell-v6";
 // Offline durability compatibility guard retained for release validation: kiubo-shell-v3
 const DATA_CACHE_PREFIX="kiubo-data-";
 const SHELL=["/","/login","/app","/upgrade","/pos","/orders","/cash","/catalog","/inventory","/customers","/purchases","/reports","/operations","/branding","/manifest.webmanifest","/icon.svg"];
@@ -52,13 +52,6 @@ self.addEventListener("fetch",event=>{
   const url=new URL(request.url);
   if(url.origin!==self.location.origin)return;
   if(url.pathname.startsWith("/api/"))return;
-
-  if(request.mode==="navigate"){
-    event.respondWith(networkFirstNavigation(request));
-    return;
-  }
-
-  if(["script","style","image","font"].includes(request.destination)){
-    event.respondWith(staleWhileRevalidate(request));
-  }
+  if(request.mode==="navigate"){event.respondWith(networkFirstNavigation(request));return}
+  if(["script","style","image","font"].includes(request.destination))event.respondWith(staleWhileRevalidate(request));
 });
