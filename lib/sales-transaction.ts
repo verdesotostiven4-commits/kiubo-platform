@@ -3,6 +3,7 @@ import {
   loadLocalSession,
   makeId,
   type CreditRecord,
+  type FoodOrderRecord,
   type KiuboLocalDatabase,
   type SaleRecord,
   type StockMovementRecord,
@@ -14,6 +15,8 @@ export type SaleTransactionPayload = {
   productSnapshots: TenantProduct[];
   stockMovements: StockMovementRecord[];
   credit?: CreditRecord;
+  orderBefore?: FoodOrderRecord;
+  orderAfter?: FoodOrderRecord;
 };
 
 export function enqueueSaleTransaction(db:KiuboLocalDatabase,payload:SaleTransactionPayload){
@@ -59,7 +62,7 @@ export function enqueueSaleTransaction(db:KiuboLocalDatabase,payload:SaleTransac
     action:"sales.transaction_queued",
     entityType:"saleTransactions",
     entityId:sale.id,
-    metadata:{deviceId:getLocalDeviceId(),items:sale.items.length,total:sale.total},
+    metadata:{deviceId:getLocalDeviceId(),items:sale.items.length,total:sale.total,orderId:payload.orderAfter?.id},
     createdAt:now,
   });
 

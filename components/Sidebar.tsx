@@ -15,6 +15,7 @@ type NavItem={href:string;label:string;glyph:string;group:Group;permission:Permi
 const groupLabel:Record<Group,string>={platform:"PLATAFORMA",daily:"DÍA A DÍA",management:"GESTIÓN",account:"NEGOCIO"};
 const items:NavItem[]=[
   {href:"/control",label:"KIUBO Control",glyph:"K",group:"platform",permission:"control",platformOnly:true},
+  {href:"/control/launch",label:"Preparar negocio",glyph:"＋",group:"platform",permission:"control",platformOnly:true},
   {href:"/leads",label:"Prospectos",glyph:"✦",group:"platform",permission:"leads",platformOnly:true},
   {href:"/app",label:"Inicio",glyph:"⌂",group:"daily",permission:"dashboard",feature:"dashboard"},
   {href:"/pos",label:"Ventas / POS",glyph:"$",group:"daily",permission:"pos",feature:"pos"},

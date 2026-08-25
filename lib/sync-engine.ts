@@ -1,11 +1,12 @@
 import { recoverRejectedCommand,shouldRecoverRejectedCommand } from "./command-recovery";
 import { getDataProvider,type KiuboDataProvider } from "./data-provider";
-import { getSyncSummary,getWorkspaceContext,loadLocalDatabase,saveLocalDatabase,updateSyncOperation } from "./local-store";
+import { getSyncSummary,getWorkspaceContext,loadLocalDatabase,saveLocalDatabase,updateSyncOperation,type FoodOrderRecord } from "./local-store";
+import { queueFoodOrder } from "./order-sync";
 import type { SyncEntity,SyncPullResult,SyncPushResult,SyncQueueRecord } from "./sync-types";
 
 export type SyncCycleResult={ok:boolean;mode:"local"|"supabase";pushed:number;failed:number;pulled:number;message:string};
 const UUID_RE=/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-const SYNCABLE_ENTITIES=new Set<SyncQueueRecord["entityType"]>(["tenantProducts","customers","sales","orders","saleTransactions","cashSessions","cashMovements","cashTransactions","credits","creditPayments","creditPaymentTransactions","settings","branding","suppliers","purchases","supplierPayments","stockMovements"]);
+const SYNCABLE_ENTITIES=new Set<SyncQueueRecord["entityType"]>(["tenantProducts","customers","sales","orders","saleTransactions","cashSessions","cashMovements","cashTransactions","credits","creditPayments","creditPaymentTransactions","settings","branding","suppliers","purchases","supplierPayments","stockMovements","purchaseTransactions","supplierPaymentTransactions","inventoryAdjustmentTransactions","saleReversalTransactions"]);
 const MAX_PULL_PAGES=4;
 const STALE_SYNCING_MS=60_000;
 
@@ -97,41 +98,140 @@ async function runSyncCycleCore():Promise<SyncCycleResult>{
   const now=Date.now();
   const activeQueue=db.syncQueue.filter(item=>isActiveQueueItem(item,activeTenantId));
   const waitingRetry=activeQueue.filter(item=>item.status==="failed"&&!retryDue(item,now));
-  const pending=activeQueue.filter(item=>item.status==="pending"||(item.status==="failed"&&retryDue(item,now))).slice(0,100);
+
+  // Never push cached data from another tenant/account. One sync cycle belongs to exactly one active workspace.
+  const pending=activeQueue
+    .filter(item=>item.status==="pending"||(item.status==="failed"&&retryDue(item,now)))
+    .slice(0,100);
 
   if(!pending.length){
     const pulled=await pullAvailable(provider);
     persistPulled(provider,db,pulled);
-    return{ok:waitingRetry.length===0,mode:provider.mode,pushed:0,failed:waitingRetry.length,pulled:pulled.changes.length,message:waitingRetry.length?`Hay ${waitingRetry.length} cambio${waitingRetry.length===1?"":"s"} protegido${waitingRetry.length===1?"":"s"}; KIUBO reintentará automáticamente`:pulled.hasMore?"KIUBO sigue poniéndose al día":pulled.changes.length?"Datos cloud actualizados":"Todo sincronizado"};
+    return{
+      ok:waitingRetry.length===0,
+      mode:provider.mode,
+      pushed:0,
+      failed:waitingRetry.length,
+      pulled:pulled.changes.length,
+      message:waitingRetry.length
+        ? `Hay ${waitingRetry.length} cambio${waitingRetry.length===1?"":"s"} protegido${waitingRetry.length===1?"":"s"}; KIUBO reintentará automáticamente`
+        : pulled.hasMore?"KIUBO sigue poniéndose al día":pulled.changes.length?"Datos cloud actualizados":"Todo sincronizado"
+    };
   }
 
   for(const item of pending)updateSyncOperation(item.operationId,"syncing");
   let results:SyncPushResult[];
-  try{results=await provider.pushOperations(pending.map(safeOperation))}catch(error){const message=error instanceof Error?error.message:"No se pudo contactar al backend";for(const item of pending)updateSyncOperation(item.operationId,"failed",message);return{ok:false,mode:provider.mode,pushed:0,failed:pending.length,pulled:0,message}}
+  try{
+    results=await provider.pushOperations(pending.map(safeOperation));
+  }catch(error){
+    const message=error instanceof Error?error.message:"No se pudo contactar al backend";
+    for(const item of pending)updateSyncOperation(item.operationId,"failed",message);
+    return{ok:false,mode:provider.mode,pushed:0,failed:pending.length,pulled:0,message};
+  }
 
   const byId=new Map(results.map(result=>[result.operationId,result]));
   let pushed=0,failed=0,recovered=0;
+  const completedOrders:{operationId:string;order:FoodOrderRecord}[]=[];
   for(const item of pending){
     const result=byId.get(item.operationId);
-    if(result?.ok){updateSyncOperation(item.operationId,"synced");pushed++;continue}
+    if(result?.ok){
+      if(item.entityType==="saleTransactions"&&item.payload&&typeof item.payload==="object"){
+        const order=(item.payload as {orderAfter?:FoodOrderRecord}).orderAfter;
+        if(order){
+          // Keep the sale operation in "syncing" until its paid-order follow-up is durably queued.
+          // A crash before that point makes the stale operation retry safely and the sale RPC is idempotent.
+          completedOrders.push({operationId:item.operationId,order});
+          continue;
+        }
+      }
+      updateSyncOperation(item.operationId,"synced");
+      pushed++;
+      continue;
+    }
+
     const error=result?.error||"El backend no confirmó la operación";
     if(shouldRecoverRejectedCommand(item,error)){
-      const recoveryDb=loadLocalDatabase();recoverRejectedCommand(recoveryDb,item,error);const queued=recoveryDb.syncQueue.find(candidate=>candidate.operationId===item.operationId);
-      if(queued){queued.status="synced";queued.updatedAt=new Date().toISOString();queued.lastError=`Rechazada y recuperada: ${error}`.slice(0,600)}
-      saveLocalDatabase(recoveryDb,{trackChanges:false});recovered++;
-    }else{updateSyncOperation(item.operationId,"failed",error);failed++}
+      const recoveryDb=loadLocalDatabase();
+      recoverRejectedCommand(recoveryDb,item,error);
+      const queued=recoveryDb.syncQueue.find(candidate=>candidate.operationId===item.operationId);
+      if(queued){
+        // Terminal business rejection: keep the audit trail but do not retry forever.
+        queued.status="synced";
+        queued.updatedAt=new Date().toISOString();
+        queued.lastError=`Rechazada y recuperada: ${error}`.slice(0,600);
+      }
+      saveLocalDatabase(recoveryDb,{trackChanges:false});
+      recovered++;
+    }else{
+      updateSyncOperation(item.operationId,"failed",error);
+      failed++;
+    }
+  }
+
+  // A paid Food Service order is published only after its protected sale command is confirmed.
+  // Existing unpaid-order writes from the same batch have already been settled before this follow-up is queued.
+  if(completedOrders.length){
+    const orderDb=loadLocalDatabase();
+    for(const completed of completedOrders)queueFoodOrder(orderDb,completed.order);
+    saveLocalDatabase(orderDb,{trackChanges:false});
+    for(const completed of completedOrders){updateSyncOperation(completed.operationId,"synced");pushed++}
   }
 
   let afterPush=loadLocalDatabase();
-  const unresolved=afterPush.syncQueue.some(item=>isActiveQueueItem(item,activeTenantId)&&(item.status==="pending"||item.status==="syncing"||item.status==="failed"));
-  if(recovered&&!unresolved){
-    try{const canonical=await pullAvailable(provider,"0");persistPulled(provider,afterPush,canonical);afterPush=loadLocalDatabase();return{ok:false,mode:provider.mode,pushed,failed:0,pulled:canonical.changes.length,message:`KIUBO recuperó ${recovered} operación${recovered===1?"":"es"} rechazada${recovered===1?"":"s"} y restauró el estado cloud`}}
-    catch(error){const message=error instanceof Error?error.message:"No se pudo confirmar el estado cloud";return{ok:false,mode:provider.mode,pushed,failed:0,pulled:0,message:`KIUBO recuperó ${recovered} operación${recovered===1?"":"es"}; falta confirmar la nube: ${message}`}}
-  }
-  if(unresolved)return{ok:false,mode:provider.mode,pushed,failed,pulled:0,message:failed?"Quedaron cambios protegidos; KIUBO volverá a intentarlo":"Cambios locales enviados"};
+  const unresolved=afterPush.syncQueue.some(item=>
+    isActiveQueueItem(item,activeTenantId)&&
+    (item.status==="pending"||item.status==="syncing"||item.status==="failed")
+  );
 
-  const pulled=await pullAvailable(provider);persistPulled(provider,afterPush,pulled);
-  return{ok:true,mode:provider.mode,pushed,failed,pulled:pulled.changes.length,message:pulled.hasMore?"Cambios enviados; KIUBO sigue poniéndose al día":"Sincronización completada"};
+  // A rejected optimistic command is removed locally. When the queue is otherwise clean,
+  // force a canonical pull from revision 0 so stale absolute stock/cash snapshots cannot survive.
+  if(recovered&&!unresolved){
+    try{
+      const canonical=await pullAvailable(provider,"0");
+      persistPulled(provider,afterPush,canonical);
+      afterPush=loadLocalDatabase();
+      return{
+        ok:false,
+        mode:provider.mode,
+        pushed,
+        failed:0,
+        pulled:canonical.changes.length,
+        message:`KIUBO recuperó ${recovered} operación${recovered===1?"":"es"} rechazada${recovered===1?"":"s"} y restauró el estado cloud`
+      };
+    }catch(error){
+      const message=error instanceof Error?error.message:"No se pudo confirmar el estado cloud";
+      return{
+        ok:false,
+        mode:provider.mode,
+        pushed,
+        failed:0,
+        pulled:0,
+        message:`KIUBO recuperó ${recovered} operación${recovered===1?"":"es"}; falta confirmar la nube: ${message}`
+      };
+    }
+  }
+
+  if(unresolved){
+    return{
+      ok:false,
+      mode:provider.mode,
+      pushed,
+      failed,
+      pulled:0,
+      message:failed?"Quedaron cambios protegidos; KIUBO volverá a intentarlo":"Cambios locales enviados"
+    };
+  }
+
+  const pulled=await pullAvailable(provider);
+  persistPulled(provider,afterPush,pulled);
+  return{
+    ok:true,
+    mode:provider.mode,
+    pushed,
+    failed,
+    pulled:pulled.changes.length,
+    message:pulled.hasMore?"Cambios enviados; KIUBO sigue poniéndose al día":"Sincronización completada"
+  };
 }
 
 export async function runSyncCycle():Promise<SyncCycleResult>{
@@ -149,5 +249,12 @@ export function syncSnapshot(){
   const provider=getDataProvider(),db=loadLocalDatabase();
   if(provider.mode==="local")return getSyncSummary(db);
   const ctx=getWorkspaceContext(db),items=db.syncQueue.filter(item=>item.tenantId===ctx.tenantId&&UUID_RE.test(item.tenantId)&&SYNCABLE_ENTITIES.has(item.entityType));
-  return{pending:items.filter(item=>item.status==="pending").length,syncing:items.filter(item=>item.status==="syncing").length,failed:items.filter(item=>item.status==="failed").length,synced:items.filter(item=>item.status==="synced").length,total:items.length,cursor:db.syncCursor};
+  return{
+    pending:items.filter(item=>item.status==="pending").length,
+    syncing:items.filter(item=>item.status==="syncing").length,
+    failed:items.filter(item=>item.status==="failed").length,
+    synced:items.filter(item=>item.status==="synced").length,
+    total:items.length,
+    cursor:db.syncCursor
+  };
 }
