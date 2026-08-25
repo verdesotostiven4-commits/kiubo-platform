@@ -12,7 +12,7 @@ for(const needle of ["saleReversalTransactions","apply_sale_reversals_v1","atomi
 assert.ok(!provider.includes("fallbackSaleReversalOperations"),"Sale reversals must never fall back to multi-write generic sync");
 requireText("lib/command-recovery.ts",["saleReversalTransactions","productBeforeSnapshots","productAfterSnapshots","removeById(db.cashMovements"]);
 requireText("lib/sync-types.ts",["saleReversalTransactions"]);
-requireText("components/ReportsClient.tsx",["reverseSaleLocally","saleLifecycle(s)==\"completed\"","ANULADA","Confirmar anulación","Solo propietario o administrador","Ventas anuladas"]);
+requireText("components/ReportsClient.tsx",["reverseSaleLocally","saleLifecycle(s)===\"completed\"","ANULADA","Confirmar anulación","Solo propietario o administrador","Ventas anuladas"]);
 const cash=text("lib/cash-reconciliation.ts");
 assert.ok(cash.includes('s.payment==="cash"'),"Cash reconciliation must preserve the original physical cash sale");
 assert.ok(!cash.includes("saleVoided"),"Voided cash sales stay in historical cash flow because the refund is a separate cash outflow");
