@@ -4,13 +4,13 @@ import { getDataProvider } from "@/lib/data-provider";
 import { runSyncCycle,syncSnapshot } from "@/lib/sync-engine";
 
 export function SyncStatus(){
-  const provider=getDataProvider(),[summary,setSummary]=useState(()=>({pending:0,syncing:0,failed:0,synced:0,total:0,cursor:undefined as string|undefined})),[online,setOnline]=useState(true),[busy,setBusy]=useState(false),[message,setMessage]=useState("");
+  const provider=getDataProvider(),[summary,setSummary]=useState(()=>({pending:0,syncing:0,failed:0,synced:0,total:0,cursor:undefined as string|undefined})),[online,setOnline]=useState(true),[busy,setBusy]=useState(false);
   const busyRef=useRef(false);
   const refresh=useCallback(()=>{setSummary(syncSnapshot());setOnline(typeof navigator==="undefined"?true:navigator.onLine)},[]);
   const sync=useCallback(async()=>{
     if(provider.mode==="local"||!provider.configured||busyRef.current||typeof navigator!=="undefined"&&!navigator.onLine)return;
     busyRef.current=true;setBusy(true);
-    try{const result=await runSyncCycle();setMessage(result.message)}catch(error){setMessage(error instanceof Error?error.message:"No se pudo sincronizar")}finally{busyRef.current=false;refresh();setBusy(false)}
+    try{await runSyncCycle()}catch{}finally{busyRef.current=false;refresh();setBusy(false)}
   },[provider,refresh]);
   useEffect(()=>{
     refresh();if(typeof navigator!=="undefined"&&navigator.onLine&&provider.configured)void sync();
@@ -22,5 +22,6 @@ export function SyncStatus(){
     return()=>{window.clearInterval(timer);window.removeEventListener("online",onOnline);window.removeEventListener("offline",refresh);window.removeEventListener("focus",onFocus);document.removeEventListener("visibilitychange",onVisibility)}
   },[provider.configured,provider.mode,refresh,sync]);
   const waiting=summary.pending+summary.failed+summary.syncing;
-  return <div className="sync-card"><div><strong>{online?"Dispositivo listo":"Sin internet"}</strong><span>{provider.mode==="local"?"Modo local · nube pendiente":provider.configured?"Cloud conectado":"Cloud sin configurar"}</span></div><div className="sync-row"><span className={summary.failed?"sync-badge error":"sync-badge"}>{waiting?`${waiting} pendientes`:"Todo al día"}</span><button onClick={()=>void sync()} disabled={busy||!online||provider.mode==="local"||!provider.configured}>{busy?"Sincronizando…":provider.mode==="local"?"Cloud pendiente":!provider.configured?"Configurar cloud":"Sincronizar"}</button></div>{message&&<small>{message}</small>}</div>
+  const label=!online?"Sin internet":provider.mode==="local"?"Modo local":!provider.configured?"Cloud pendiente":waiting?`${waiting} por sincronizar`:"Cloud conectado";
+  return <div className={`sync-compact ${online?"online":"offline"}`}><span className="sync-dot" aria-hidden="true"/><span>{label}</span>{provider.configured&&provider.mode!=="local"&&<button type="button" aria-label="Sincronizar ahora" title="Sincronizar ahora" onClick={()=>void sync()} disabled={busy||!online}>{busy?"…":"↻"}</button>}</div>;
 }
