@@ -15,7 +15,8 @@ export function AppChrome(){
   if(chromeFreePath(path))return null;
   const showPersistentSidebar=persistentSidebarPath(path);
   return <>
-    {showPersistentSidebar&&<div className="persistent-workspace-sidebar" aria-hidden="false"><Sidebar/></div>}
+    <div className="window-controls-titlebar" aria-hidden="true"><span className="window-controls-mark">K</span><strong>KIUBO</strong><small>Todo tu negocio, en orden.</small></div>
+    {showPersistentSidebar&&<div className="persistent-workspace-sidebar"><Sidebar/></div>}
     <YukiPilotCatalogBootstrap/>
     <RealtimeSyncRuntime/>
     <WorkspaceSplash/>
