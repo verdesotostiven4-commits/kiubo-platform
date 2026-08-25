@@ -32,6 +32,7 @@ export function PwaInstallButton(){
   },[]);
 
   const install=async()=>{
+    if(installed)return;
     if(!prompt){setHelp(true);return}
     await prompt.prompt();
     const choice=await prompt.userChoice;
@@ -39,8 +40,19 @@ export function PwaInstallButton(){
     setPrompt(null);
   };
 
+  useEffect(()=>{
+    const onKey=(event:KeyboardEvent)=>{
+      if(event.ctrlKey&&event.altKey&&event.key.toLowerCase()==="k"){
+        event.preventDefault();
+        void install();
+      }
+    };
+    window.addEventListener("keydown",onKey);
+    return()=>window.removeEventListener("keydown",onKey);
+  },[installed,prompt]);
+
   return <>
-    {installed?<div className="pwa-install-state"><span>✓</span><span>KIUBO instalado</span></div>:<button className="pwa-install-button" type="button" onClick={()=>void install()}><span>↧</span><span>Instalar KIUBO</span></button>}
-    {help&&<div className="install-help-backdrop" role="presentation" onMouseDown={event=>{if(event.target===event.currentTarget)setHelp(false)}}><section className="install-help" role="dialog" aria-modal="true" aria-label="Instalar KIUBO"><button className="install-help-close" onClick={()=>setHelp(false)} aria-label="Cerrar">×</button><span className="install-help-icon">K</span><h3>Instalar KIUBO en esta computadora</h3><p>El instalador automático todavía no fue ofrecido por {browser}. Puedes instalarlo desde el menú del navegador sin perder ningún dato.</p><ol><li>Abre el menú de {browser}.</li><li>Busca <b>Instalar KIUBO</b>, <b>Instalar aplicación</b> o <b>Guardar y compartir → Instalar página como aplicación</b>.</li><li>Confirma <b>Instalar</b> y luego ancla KIUBO a la barra de tareas si deseas.</li></ol><small>Después de instalarlo, abre KIUBO desde su icono; ya no necesitas usar F11 ni trabajar como una pestaña del navegador.</small><button className="install-help-ok" onClick={()=>setHelp(false)}>Entendido</button></section></div>}
+    {installed?<div className="pwa-install-state"><span>✓</span><span>KIUBO instalado</span></div>:<button className="pwa-install-button" type="button" onClick={()=>void install()} title="Instalar KIUBO · Ctrl + Alt + K"><span>↧</span><span>Instalar KIUBO <small style={{opacity:.62}}>Ctrl Alt K</small></span></button>}
+    {help&&<div className="install-help-backdrop" role="presentation" onMouseDown={event=>{if(event.target===event.currentTarget)setHelp(false)}}><section className="install-help" role="dialog" aria-modal="true" aria-label="Instalar KIUBO"><button className="install-help-close" onClick={()=>setHelp(false)} aria-label="Cerrar">×</button><span className="install-help-icon">K</span><h3>Instalar KIUBO en esta computadora</h3><p>{browser} todavía no entregó a KIUBO el instalador automático. Prueba primero <b>Ctrl + Alt + K</b>; si vuelve a aparecer esta ayuda, instala desde el menú del navegador.</p><ol><li>Abre el menú de {browser}.</li><li>Busca <b>Instalar KIUBO</b>, <b>Instalar aplicación</b> o <b>Guardar y compartir → Instalar página como aplicación</b>.</li><li>Confirma <b>Instalar</b> y luego ancla KIUBO a la barra de tareas si deseas.</li></ol><small>Después de instalarlo, abre KIUBO desde su icono. No uses F11: la PWA abre como aplicación independiente.</small><button className="install-help-ok" onClick={()=>setHelp(false)}>Entendido</button></section></div>}
   </>;
 }
