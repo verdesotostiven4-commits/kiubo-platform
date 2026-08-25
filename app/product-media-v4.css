@@ -1,0 +1,35 @@
+/* YUKI product media v4 — one 4:3 image system across POS and catalog. */
+@media (min-width:1001px){
+  .product-results{grid-template-columns:repeat(auto-fill,minmax(235px,1fr))!important;grid-auto-rows:max-content!important;align-items:start!important}
+  .product-results .pos-product{grid-template-rows:auto auto!important;min-height:0!important;align-self:start!important}
+  .product-results .product-icon{height:auto!important;aspect-ratio:4/3!important;min-height:0!important;background:linear-gradient(145deg,#fff8ed,#f5eee2)!important}
+  .product-results .product-icon img{width:100%!important;height:100%!important;object-fit:cover!important;object-position:center!important;display:block!important}
+  .product-results .pos-product>div:last-child{min-height:64px!important;align-content:center!important}
+
+  /* Make checkout feel like a register, not another settings form. */
+  .cart-panel{background:#fff!important;border-left:1px solid #e4e9e6!important;box-shadow:-14px 0 34px rgba(21,43,35,.045)!important}
+  .cart-head{border-bottom:0!important;padding-bottom:4px!important}
+  .cart-head .eyebrow{color:var(--coral)!important}
+  .cart-head h2{font-size:23px!important}
+  .pos-customer-select{border-radius:13px!important;background:#f8faf9!important}
+  .cart-lines{border-top:1px solid #edf1ee;margin-top:5px!important}
+  .cart-line.interactive{padding:12px 0!important}
+  .cart-line.interactive>div:first-child strong{font-size:13.5px!important}
+  .cart-line.interactive>div:first-child span{color:#829088!important}
+  .cart-line .qty button{width:30px!important;height:30px!important;border-radius:9px!important;font-size:15px!important}
+  .cart-total{margin:0 -18px!important;padding:15px 18px!important;background:#f7faf8!important;border-top:1px solid #e3eae6!important;border-bottom:1px solid #e3eae6!important}
+  .cart-total strong{font-size:36px!important;color:#10243d!important}
+  .cart-panel>.payment-grid{margin-top:11px!important}
+  .cart-panel>.payment-grid button{min-height:44px!important;font-size:11.5px!important;border-radius:12px!important}
+  .cart-panel>.button.primary.checkout{min-height:52px!important;border-radius:14px!important;font-size:16px!important;box-shadow:0 10px 24px color-mix(in srgb,var(--coral) 18%,transparent)!important}
+  .cart-panel>button.button.secondary.checkout{opacity:.78!important}
+}
+
+@media (min-width:1001px) and (max-width:1500px){
+  .product-results{grid-template-columns:repeat(auto-fill,minmax(215px,1fr))!important}
+}
+
+@media (max-width:1000px){
+  .product-results .product-icon{aspect-ratio:4/3;overflow:hidden}
+  .product-results .product-icon img{object-fit:cover;object-position:center}
+}
