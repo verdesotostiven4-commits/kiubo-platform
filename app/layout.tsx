@@ -21,6 +21,7 @@ import "./brand-refresh.css";
 import "./delivery-polish.css";
 import "./pos-native.css";
 import "./native-shell-v3.css";
+import "./product-media-v4.css";
 import { PwaRegister } from "@/components/PwaRegister";
 import { SessionEnforcer } from "@/components/SessionEnforcer";
 import { BrandingRuntime } from "@/components/BrandingRuntime";
