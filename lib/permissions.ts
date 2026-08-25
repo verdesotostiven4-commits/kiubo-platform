@@ -17,6 +17,7 @@ export function permissionForPath(path:string):Permission|null{
   if(path.startsWith("/app"))return"dashboard";
   if(path.startsWith("/onboarding"))return"onboarding";
   if(path.startsWith("/upgrade"))return"upgrade";
+  if(path.startsWith("/orders")||path.startsWith("/order-print")||path.startsWith("/receipt"))return"pos";
   if(path.startsWith("/pos"))return"pos";
   if(path.startsWith("/cash"))return"cash";
   if(path.startsWith("/inventory"))return"inventory";
