@@ -6,6 +6,7 @@ import { enqueueInventoryAdjustment } from "@/lib/inventory-transaction";
 import { KIUBO_DATA_REFRESHED } from "./RealtimeSyncRuntime";
 
 const movementLabel={sale:"Venta",purchase:"Compra",adjustment_in:"Ajuste +",adjustment_out:"Ajuste -"} as const;
+// Inventory integrity guard: las compras conservan un solo flujo oficial de recepción y kardex.
 
 export function InventoryClient(){
   const[db,setDb]=useState<KiuboLocalDatabase|null>(null),[message,setMessage]=useState("Inventario listo");
