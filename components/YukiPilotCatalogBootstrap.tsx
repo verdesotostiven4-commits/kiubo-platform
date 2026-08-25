@@ -6,6 +6,8 @@ import { runSyncCycle } from "@/lib/sync-engine";
 import { KIUBO_DATA_REFRESHED } from "./RealtimeSyncRuntime";
 
 const VIRTUAL_STOCK=1_000_000;
+export const YUKI_PACKAGING_BARCODE="YUKI-ENVASE";
+export const YUKI_PACKAGING_PRICE=.50;
 const YUKI_MENU=[
   {slug:"yogurt-mora",name:"Yogurt Mora",category:"Yogurts",price:4.50},
   {slug:"yogurt-fresa",name:"Yogurt Fresa",category:"Yogurts",price:4.50},
@@ -42,29 +44,39 @@ export function YukiPilotCatalogBootstrap(){
     if(!ctx.tenant||ctx.tenant.name.trim().toUpperCase()!=="YUKI"||!ctx.branchId)return;
     const settings=getTenantSettings(db,ctx.tenantId);
     if(settings.businessType!=="food_service")return;
-    if(db.tenantProducts.some(product=>product.tenantId===ctx.tenantId&&product.branchId===ctx.branchId))return;
+    let changed=false;
 
-    const products:TenantProduct[]=YUKI_MENU.map(item=>({
-      id:`yuki-menu-${item.slug}`,
-      tenantId:ctx.tenantId,
-      branchId:ctx.branchId,
-      masterProductId:`custom-yuki-${item.slug}`,
-      barcode:`YUKI-${item.slug.replace(/-/g,"").slice(0,22).toUpperCase()}`,
-      name:item.name,
-      price:item.price,
-      cost:0,
-      stock:VIRTUAL_STOCK,
-      active:true,
-      category:item.category,
-      trackStock:false,
-    }));
+    const settingsIndex=db.settings.findIndex(item=>item.tenantId===ctx.tenantId);
+    if(settingsIndex>=0){
+      const current=db.settings[settingsIndex];
+      const serviceModes:["table","takeaway","delivery"]=["table","takeaway","delivery"];
+      if(current.tableCount!==5||JSON.stringify(current.serviceModes)!==JSON.stringify(serviceModes)){
+        db.settings[settingsIndex]={...current,tableCount:5,serviceModes};
+        changed=true;
+      }
+    }
 
-    db.tenantProducts.push(...products);
+    const branchProducts=db.tenantProducts.filter(product=>product.tenantId===ctx.tenantId&&product.branchId===ctx.branchId);
+    if(!branchProducts.length){
+      const products:TenantProduct[]=YUKI_MENU.map(item=>({
+        id:`yuki-menu-${item.slug}`,tenantId:ctx.tenantId,branchId:ctx.branchId,masterProductId:`custom-yuki-${item.slug}`,
+        barcode:`YUKI-${item.slug.replace(/-/g,"").slice(0,22).toUpperCase()}`,name:item.name,price:item.price,cost:0,stock:VIRTUAL_STOCK,active:true,category:item.category,trackStock:false,
+      }));
+      db.tenantProducts.push(...products);changed=true;
+    }
+
+    if(!branchProducts.some(product=>product.barcode===YUKI_PACKAGING_BARCODE)){
+      db.tenantProducts.push({
+        id:"yuki-service-packaging",tenantId:ctx.tenantId,branchId:ctx.branchId,masterProductId:"custom-yuki-packaging",
+        barcode:YUKI_PACKAGING_BARCODE,name:"Envase",price:YUKI_PACKAGING_PRICE,cost:0,stock:VIRTUAL_STOCK,active:true,category:"Cargos",trackStock:false,
+      });
+      changed=true;
+    }
+
+    if(!changed)return;
     saveLocalDatabase(db);
-    window.dispatchEvent(new CustomEvent(KIUBO_DATA_REFRESHED,{detail:{source:"yuki-pilot-menu"}}));
-    void runSyncCycle().then(result=>{
-      if(result.pulled>0||result.pushed>0)window.dispatchEvent(new CustomEvent(KIUBO_DATA_REFRESHED,{detail:result}));
-    }).catch(()=>undefined);
+    window.dispatchEvent(new CustomEvent(KIUBO_DATA_REFRESHED,{detail:{source:"yuki-pilot-restaurant"}}));
+    void runSyncCycle().then(result=>{if(result.pulled>0||result.pushed>0)window.dispatchEvent(new CustomEvent(KIUBO_DATA_REFRESHED,{detail:result}))}).catch(()=>undefined);
   },[]);
   return null;
 }
