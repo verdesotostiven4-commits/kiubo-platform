@@ -11,8 +11,8 @@ export function BusinessBrandMark(){
     setData({custom:ctx.tenant?.plan==="Custom",name:branding.businessName||ctx.tenant?.name||"Negocio",logo:branding.logoUrl||""});
   },[]);
   if(!data||!data.custom)return <KiuboMark/>;
-  return <div className="business-brand">
+  return <div className="business-brand business-brand-custom">
     <div className="business-brand-logo">{data.logo?<img src={data.logo} alt={data.name}/>:<strong>{data.name.slice(0,1).toUpperCase()}</strong>}</div>
-    <div className="business-brand-copy"><strong>{data.name}</strong><span>Workspace del negocio</span></div>
+    <div className="business-brand-copy"><small>NEGOCIO</small><strong>{data.name}</strong><span>Gestionado con KIUBO</span></div>
   </div>;
 }
