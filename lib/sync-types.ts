@@ -7,6 +7,7 @@ export type SyncEntity =
   | "tenantProducts"
   | "customers"
   | "sales"
+  | "orders"
   | "users"
   | "cashSessions"
   | "cashMovements"
@@ -21,6 +22,7 @@ export type SyncEntity =
 
 export type SyncCommandEntity =
   | "saleTransactions"
+  | "saleReversalTransactions"
   | "cashTransactions"
   | "creditPaymentTransactions"
   | "purchaseTransactions"

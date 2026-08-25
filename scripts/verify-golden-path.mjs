@@ -37,9 +37,9 @@ requireText("lib/sync-engine.ts",[
 ]);
 requireText("lib/command-recovery.ts",[
   "system.command_recovered",
-  "db.sales=db.sales.filter",
-  "product.stock=Math.max(0,movement.previousStock)",
-  "db.creditPayments=db.creditPayments.filter",
+  "removeById(db.sales",
+  "product.stock=Math.max(0,m.previousStock)",
+  "removeById(db.creditPayments",
   "current.status=\"open\"",
 ]);
 requireText("supabase/migrations/0010_sales_stock_transaction_v2.sql",[
@@ -58,7 +58,6 @@ requireText("components/ReportsClient.tsx",[
   "cashSessions",
 ]);
 
-// Deterministic business-flow model: product -> open cash -> sale -> stock -> close -> report -> reload.
 const state={
   product:{id:"p1",stock:10,price:1.50,cost:1.00},
   sales:[],
@@ -90,13 +89,11 @@ assert.equal(reloaded.product.stock,8,"offline/local persistence round-trip must
 assert.equal(reloaded.cash.status,"closed","offline/local persistence round-trip must keep cash close");
 assert.equal(reloaded.sales.length,1,"offline/local persistence round-trip must keep sale history");
 
-// Conflict recovery model: optimistic local sale is rolled back only when it is still the latest local mutation,
-// then a canonical cloud pull wins. This prevents last-write-wins stock corruption.
 const rejectedMovement={previousStock:1,newStock:0};
 let optimisticStock=0;
 if(optimisticStock===rejectedMovement.newStock)optimisticStock=rejectedMovement.previousStock;
 assert.equal(optimisticStock,1,"recovery must undo its own optimistic delta");
-const canonicalCloudStock=0; // another device sold the last unit first
+const canonicalCloudStock=0;
 optimisticStock=canonicalCloudStock;
 assert.equal(optimisticStock,0,"canonical cloud state must win after a concurrent rejection");
 

@@ -1,11 +1,12 @@
 import { recoverRejectedCommand,shouldRecoverRejectedCommand } from "./command-recovery";
 import { getDataProvider,type KiuboDataProvider } from "./data-provider";
-import { getSyncSummary,getWorkspaceContext,loadLocalDatabase,saveLocalDatabase,updateSyncOperation } from "./local-store";
+import { getSyncSummary,getWorkspaceContext,loadLocalDatabase,saveLocalDatabase,updateSyncOperation,type FoodOrderRecord } from "./local-store";
+import { queueFoodOrder } from "./order-sync";
 import type { SyncEntity,SyncPullResult,SyncPushResult,SyncQueueRecord } from "./sync-types";
 
 export type SyncCycleResult={ok:boolean;mode:"local"|"supabase";pushed:number;failed:number;pulled:number;message:string};
 const UUID_RE=/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-const SYNCABLE_ENTITIES=new Set<SyncQueueRecord["entityType"]>(["tenantProducts","customers","sales","saleTransactions","cashSessions","cashMovements","cashTransactions","credits","creditPayments","creditPaymentTransactions","settings","branding","suppliers","purchases","supplierPayments","stockMovements"]);
+const SYNCABLE_ENTITIES=new Set<SyncQueueRecord["entityType"]>(["tenantProducts","customers","sales","orders","saleTransactions","cashSessions","cashMovements","cashTransactions","credits","creditPayments","creditPaymentTransactions","settings","branding","suppliers","purchases","supplierPayments","stockMovements","purchaseTransactions","supplierPaymentTransactions","inventoryAdjustmentTransactions","saleReversalTransactions"]);
 const MAX_PULL_PAGES=4;
 const STALE_SYNCING_MS=60_000;
 
@@ -130,9 +131,19 @@ async function runSyncCycleCore():Promise<SyncCycleResult>{
 
   const byId=new Map(results.map(result=>[result.operationId,result]));
   let pushed=0,failed=0,recovered=0;
+  const completedOrders:{operationId:string;order:FoodOrderRecord}[]=[];
   for(const item of pending){
     const result=byId.get(item.operationId);
     if(result?.ok){
+      if(item.entityType==="saleTransactions"&&item.payload&&typeof item.payload==="object"){
+        const order=(item.payload as {orderAfter?:FoodOrderRecord}).orderAfter;
+        if(order){
+          // Keep the sale operation in "syncing" until its paid-order follow-up is durably queued.
+          // A crash before that point makes the stale operation retry safely and the sale RPC is idempotent.
+          completedOrders.push({operationId:item.operationId,order});
+          continue;
+        }
+      }
       updateSyncOperation(item.operationId,"synced");
       pushed++;
       continue;
@@ -155,6 +166,15 @@ async function runSyncCycleCore():Promise<SyncCycleResult>{
       updateSyncOperation(item.operationId,"failed",error);
       failed++;
     }
+  }
+
+  // A paid Food Service order is published only after its protected sale command is confirmed.
+  // Existing unpaid-order writes from the same batch have already been settled before this follow-up is queued.
+  if(completedOrders.length){
+    const orderDb=loadLocalDatabase();
+    for(const completed of completedOrders)queueFoodOrder(orderDb,completed.order);
+    saveLocalDatabase(orderDb,{trackChanges:false});
+    for(const completed of completedOrders){updateSyncOperation(completed.operationId,"synced");pushed++}
   }
 
   let afterPush=loadLocalDatabase();

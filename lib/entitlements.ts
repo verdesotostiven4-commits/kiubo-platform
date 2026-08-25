@@ -40,6 +40,7 @@ export function hasFeature(tenant:TenantRecord|undefined,feature:ProductFeature)
 
 export function routeFeature(path:string):ProductFeature|null{
   if(path.startsWith("/app"))return"dashboard";
+  if(path.startsWith("/orders")||path.startsWith("/order-print")||path.startsWith("/receipt"))return"pos";
   if(path.startsWith("/pos"))return"pos";
   if(path.startsWith("/cash"))return"operations";
   if(path.startsWith("/catalog"))return"products";
