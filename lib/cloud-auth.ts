@@ -48,6 +48,7 @@ function purgeRevokedCloudData(
 
   db.tenantProducts=db.tenantProducts.filter(item=>branchAllowed(item)&&(!platformAdmin?item.tenantId===tenantId:true));
   db.sales=db.sales.filter(item=>branchAllowed(item)&&(!platformAdmin?item.tenantId===tenantId:true));
+  db.orders=db.orders.filter(item=>branchAllowed(item)&&(!platformAdmin?item.tenantId===tenantId:true));
   db.cashSessions=db.cashSessions.filter(item=>branchAllowed(item)&&(!platformAdmin?item.tenantId===tenantId:true));
   db.cashMovements=db.cashMovements.filter(item=>branchAllowed(item)&&(!platformAdmin?item.tenantId===tenantId:true));
   db.credits=db.credits.filter(item=>branchAllowed(item)&&(!platformAdmin?item.tenantId===tenantId:true));
