@@ -16,6 +16,8 @@ requireText("lib/local-store.ts",[
 ]);
 requireText("lib/sync-types.ts",['| "orders";']);
 requireText("lib/order-sync.ts",['entityType==="orders"','action:"orders.upsert"']);
+requireText("lib/permissions.ts",['path.startsWith("/orders")','path.startsWith("/order-print")','path.startsWith("/receipt")']);
+requireText("lib/entitlements.ts",['path.startsWith("/orders")','path.startsWith("/order-print")','path.startsWith("/receipt")']);
 requireText("components/RealtimeSyncRuntime.tsx",[
   'table:"sync_entities"',
   'filter:`tenant_id=eq.${ctx.tenantId}`',
@@ -46,12 +48,14 @@ requireText("lib/command-recovery.ts",[
   "p.orderBefore",
   "removeById(db.orders,p.orderAfter.id)"
 ]);
+requireText("lib/cloud-auth.ts",["db.orders=db.orders.filter"]);
 requireText("components/FoodOrdersClient.tsx",["En preparación","Marcar listo","Cobrar en POS","KIUBO_DATA_REFRESHED"]);
 requireText("lib/media-storage.ts",["image/webp","MAX_SOURCE_BYTES=15*1024*1024","cacheControl:\"31536000\"","kiubo-media"]);
 requireText("components/CatalogClient.tsx",["uploadOptimizedMedia","imageFile","imageUrl","category"]);
 requireText("components/BusinessLaunchClient.tsx",["Crear, configurar e invitar","businessType:\"food_service\"","ownerEmail:\"\""]);
 requireText("components/Sidebar.tsx",['href:"/orders"','businessTypes:["food_service"]','href:"/control/launch"']);
-requireText("components/AppChrome.tsx",["RealtimeSyncRuntime","WorkspaceSplash"]);
+requireText("components/MobileNav.tsx",['href:"/orders"','businessTypes:["food_service"]','href:"/control/launch"']);
+requireText("components/AppChrome.tsx",["RealtimeSyncRuntime","WorkspaceSplash",'path.startsWith("/receipt")','path.startsWith("/order-print")']);
 requireText("supabase/migrations/0020_food_service_platform_v1.sql",[
   "target_type in('customers','sales','cashSessions','cashMovements','credits','creditPayments','orders')",
   "configure_business_profile_v1",
@@ -60,4 +64,4 @@ requireText("supabase/migrations/0020_food_service_platform_v1.sql",[
   "kiubo_media_insert"
 ]);
 
-console.log("✓ Food Service V1 guard passed: orders, delayed paid publication, crash-safe follow-up, recovery, realtime nudges, optimized media and guided business launch remain wired.");
+console.log("✓ Food Service V2 guard passed: orders, protected private routes, branch-scope purge, delayed paid publication, crash-safe follow-up, recovery, realtime nudges, optimized media and guided launch remain wired.");
