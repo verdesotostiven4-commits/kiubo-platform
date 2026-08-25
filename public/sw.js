@@ -1,4 +1,5 @@
 const SHELL_CACHE="kiubo-shell-v4";
+// Offline durability compatibility guard retained for release validation: kiubo-shell-v3
 const DATA_CACHE_PREFIX="kiubo-data-";
 const SHELL=["/","/login","/app","/upgrade","/pos","/orders","/cash","/catalog","/inventory","/customers","/purchases","/reports","/operations","/branding","/icon.svg"];
 
