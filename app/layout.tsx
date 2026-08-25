@@ -30,10 +30,12 @@ import { AppChrome } from "@/components/AppChrome";
 import { DurabilityRuntime } from "@/components/DurabilityRuntime";
 import { NativeAppGuards } from "@/components/NativeAppGuards";
 
+const KIUBO_OFFICIAL_ICON="https://blogger.googleusercontent.com/img/a/AVvXsEhKMHanXsqFTA1HgWHkeQmCzsHpL_qqREfV7uY6U_97DnHM0Ito7RorUwZk8VY94alzkhDc4gjqWJx82xuxDo_mwHkdC_0PCL7xu2KDES5_gBMTEos4pJF8bkujdRn81sjcNZO7QNlrqTH5sX9kmCd4Wgh1XDq3XvKOE-m_ZVRBnC_pIUbG4ae7txFoLpA";
+
 export const metadata:Metadata={
   title:"KIUBO · Todo tu negocio, en orden",
   description:"Ventas, inventario, caja, clientes, compras, reportes y facturación para negocios que quieren control sin complicarse.",
-  icons:{icon:[{url:"/icon.svg",type:"image/svg+xml"}],apple:[{url:"/icon.svg"}]},
+  icons:{icon:[{url:KIUBO_OFFICIAL_ICON}],apple:[{url:KIUBO_OFFICIAL_ICON}]},
   appleWebApp:{capable:true,title:"KIUBO",statusBarStyle:"black-translucent"},
 };
 
