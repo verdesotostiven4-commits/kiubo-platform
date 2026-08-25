@@ -19,16 +19,18 @@ import {
 import { enqueueSaleTransaction } from "@/lib/sales-transaction";
 import { queueFoodOrder } from "@/lib/order-sync";
 import { KIUBO_DATA_REFRESHED } from "./RealtimeSyncRuntime";
+import { YUKI_PACKAGING_BARCODE } from "./YukiPilotCatalogBootstrap";
 
-type CartLine=TenantProduct&{qty:number};
+type CartLine=TenantProduct&{qty:number;cartKey:string;optionLabel?:string};
 type Payment=SaleRecord["payment"];
-type PosDraft={cart:Array<{productId:string;qty:number}>;query:string;payment:Payment;customerId:string;category:string;serviceMode:ServiceMode;tableLabel:string;customerName:string;phone:string;address:string;orderNotes:string;activeOrderId:string};
+type PosDraft={cart:Array<{productId:string;qty:number;optionLabel?:string}>;query:string;payment:Payment;customerId:string;category:string;serviceMode:ServiceMode;tableLabel:string;customerName:string;phone:string;address:string;orderNotes:string;activeOrderId:string};
 const paymentLabel:Record<Payment,string>={cash:"Efectivo",transfer:"Transferencia",mixed:"Mixto",credit:"Fiado"};
 const paymentOptions:Payment[]=["cash","transfer","credit"];
 const CHECKOUT_KEY="kiubo.food.checkout.order.v1";
-const POS_DRAFT_PREFIX="kiubo.pos.draft.v2";
+const POS_DRAFT_PREFIX="kiubo.pos.draft.v3";
 const serviceLabel:Record<ServiceMode,string>={counter:"Mostrador",table:"Local / mesa",takeaway:"Para llevar",delivery:"Domicilio"};
 const posDraftKey=(tenantId:string,branchId:string)=>`${POS_DRAFT_PREFIX}:${tenantId}:${branchId}`;
+const cartKeyFor=(productId:string,optionLabel?:string)=>`${productId}::${optionLabel||"base"}`;
 
 export function PosClient(){
   const[db,setDb]=useState<ReturnType<typeof loadLocalDatabase>|null>(null);
@@ -47,6 +49,7 @@ export function PosClient(){
   const[activeOrderId,setActiveOrderId]=useState("");
   const[lastSaleId,setLastSaleId]=useState("");
   const[draftReady,setDraftReady]=useState(false);
+  const[pendingCombo,setPendingCombo]=useState<TenantProduct|null>(null);
   const refresh=()=>setDb(loadLocalDatabase());
 
   useEffect(()=>{
@@ -67,7 +70,7 @@ export function PosClient(){
         for(const saved of draft.cart||[]){
           const product=db.tenantProducts.find(item=>item.id===saved.productId&&item.tenantId===workspace.tenantId&&item.branchId===workspace.branchId&&item.active);
           const qty=Math.max(1,Math.floor(Number(saved.qty)||1));
-          if(product)lines.push({...product,qty:product.trackStock===false?qty:Math.min(qty,Math.max(1,product.stock))});
+          if(product)lines.push({...product,qty:product.trackStock===false?qty:Math.min(qty,Math.max(1,product.stock)),cartKey:cartKeyFor(product.id,saved.optionLabel),optionLabel:saved.optionLabel});
         }
         setCart(lines);
         setQuery(typeof draft.query==="string"?draft.query:"");
@@ -82,9 +85,7 @@ export function PosClient(){
         setOrderNotes(typeof draft.orderNotes==="string"?draft.orderNotes:"");
         setActiveOrderId(typeof draft.activeOrderId==="string"?draft.activeOrderId:"");
         if(lines.length)setMessage(`Venta recuperada · ${lines.reduce((sum,line)=>sum+line.qty,0)} productos`);
-      }catch{
-        window.localStorage.removeItem(key);
-      }
+      }catch{window.localStorage.removeItem(key)}
     }
     setDraftReady(true);
   },[db,draftReady]);
@@ -99,20 +100,11 @@ export function PosClient(){
     if(!order){setDraftReady(true);return}
     const lines:CartLine[]=[];
     for(const item of order.items){
+      if(item.productId==="yuki-service-packaging")continue;
       const product=db.tenantProducts.find(p=>p.id===item.productId&&p.tenantId===ctx.tenantId&&p.branchId===ctx.branchId&&p.active);
-      if(product)lines.push({...product,qty:item.qty});
+      if(product)lines.push({...product,qty:item.qty,cartKey:cartKeyFor(product.id,item.notes),optionLabel:item.notes});
     }
-    setCart(lines);
-    setActiveOrderId(order.id);
-    setServiceMode(order.serviceMode);
-    setTableLabel(order.tableLabel||"");
-    setCustomerId(order.customerId||"");
-    setCustomerName(order.customerName||"");
-    setPhone(order.phone||"");
-    setAddress(order.address||"");
-    setOrderNotes(order.notes||"");
-    setMessage(`Pedido #${String(order.number).padStart(4,"0")} cargado para cobrar`);
-    setDraftReady(true);
+    setCart(lines);setActiveOrderId(order.id);setServiceMode(order.serviceMode);setTableLabel(order.tableLabel||"");setCustomerId(order.customerId||"");setCustomerName(order.customerName||"");setPhone(order.phone||"");setAddress(order.address||"");setOrderNotes(order.notes||"");setMessage(`Pedido #${String(order.number).padStart(4,"0")} cargado para cobrar`);setDraftReady(true);
   },[db?.orders.length]);
 
   useEffect(()=>{
@@ -121,82 +113,116 @@ export function PosClient(){
     const key=posDraftKey(workspace.tenantId,workspace.branchId);
     const empty=cart.length===0&&!query.trim()&&payment==="cash"&&!customerId&&category==="Todos"&&serviceMode==="counter"&&!tableLabel.trim()&&!customerName.trim()&&!phone.trim()&&!address.trim()&&!orderNotes.trim()&&!activeOrderId;
     if(empty){window.localStorage.removeItem(key);return}
-    const draft:PosDraft={cart:cart.map(line=>({productId:line.id,qty:line.qty})),query,payment,customerId,category,serviceMode,tableLabel,customerName,phone,address,orderNotes,activeOrderId};
+    const draft:PosDraft={cart:cart.map(line=>({productId:line.id,qty:line.qty,optionLabel:line.optionLabel})),query,payment,customerId,category,serviceMode,tableLabel,customerName,phone,address,orderNotes,activeOrderId};
     window.localStorage.setItem(key,JSON.stringify(draft));
   },[db,draftReady,cart,query,payment,customerId,category,serviceMode,tableLabel,customerName,phone,address,orderNotes,activeOrderId]);
 
   if(!db)return <div className="loading-card">Preparando POS…</div>;
 
   const ctx=getWorkspaceContext(db),tenant=ctx.tenant,branch=ctx.branch,settings=getTenantSettings(db,ctx.tenantId),foodService=settings.businessType==="food_service";
-  const products=db.tenantProducts.filter(p=>p.tenantId===ctx.tenantId&&p.branchId===ctx.branchId&&p.active);
+  const allProducts=db.tenantProducts.filter(p=>p.tenantId===ctx.tenantId&&p.branchId===ctx.branchId&&p.active);
+  const packagingProduct=allProducts.find(product=>product.barcode===YUKI_PACKAGING_BARCODE);
+  const products=allProducts.filter(product=>product.barcode!==YUKI_PACKAGING_BARCODE);
   const customers:CustomerRecord[]=db.customers.filter(c=>c.tenantId===ctx.tenantId);
   const categories=["Todos",...Array.from(new Set(products.map(product=>product.category||"General"))).sort((a,b)=>a.localeCompare(b,"es"))];
   const filtered=products.filter(p=>(category==="Todos"||(p.category||"General")===category)&&`${p.name} ${p.barcode} ${p.price}`.toLowerCase().includes(query.toLowerCase()));
-  const total=cart.reduce((sum,line)=>sum+line.price*line.qty,0),blocked=tenant?.status==="suspended";
   const enabledModes:ServiceMode[]=foodService?(settings.serviceModes.length?settings.serviceModes:["table","takeaway","delivery"]):[];
   const activeServiceMode:ServiceMode=foodService?(enabledModes.includes(serviceMode)?serviceMode:(enabledModes[0]||"counter")):serviceMode;
+  const subtotal=cart.reduce((sum,line)=>sum+line.price*line.qty,0);
+  const packagingFee=foodService&&packagingProduct&&(activeServiceMode==="takeaway"||activeServiceMode==="delivery")?packagingProduct.price:0;
+  const total=subtotal+packagingFee,blocked=tenant?.status==="suspended";
+  const yogurtOptions=products.filter(product=>(product.category||"").toLowerCase()==="yogurts").map(product=>product.name.replace(/^yogurt\s+/i,"").trim()).filter(Boolean);
+  const openTableOrders=db.orders.filter(order=>order.tenantId===ctx.tenantId&&order.branchId===ctx.branchId&&order.serviceMode==="table"&&order.paymentStatus==="unpaid"&&order.status!=="cancelled"&&order.status!=="delivered");
+  const tableNumbers=Array.from({length:Math.max(0,settings.tableCount||0)},(_,index)=>String(index+1));
 
-  const add=(product:TenantProduct)=>{
+  const resetCustomer=()=>{setCustomerId("");setCustomerName("");setPhone("");setAddress("");setOrderNotes("")};
+  const addDirect=(product:TenantProduct,optionLabel?:string)=>{
     if(product.trackStock!==false&&product.stock<=0){setMessage(`${product.name} sin stock`);return}
+    const cartKey=cartKeyFor(product.id,optionLabel);
     setCart(current=>{
-      const found=current.find(line=>line.id===product.id);
+      const found=current.find(line=>line.cartKey===cartKey);
       if(found){
         if(product.trackStock!==false&&found.qty>=product.stock){setMessage(`Stock máximo: ${product.stock}`);return current}
-        return current.map(line=>line.id===product.id?{...line,qty:line.qty+1}:line);
+        return current.map(line=>line.cartKey===cartKey?{...line,qty:line.qty+1}:line);
       }
-      return[...current,{...product,qty:1}];
+      return[...current,{...product,qty:1,cartKey,optionLabel}];
     });
-    setMessage(`${product.name} agregado`);
+    setMessage(`${product.name}${optionLabel?` · ${optionLabel}`:""} agregado`);
   };
-  const changeQty=(id:string,delta:number)=>setCart(current=>current.map(line=>line.id===id?{...line,qty:line.trackStock===false?line.qty+delta:Math.min(line.stock,line.qty+delta)}:line).filter(line=>line.qty>0));
+  const add=(product:TenantProduct)=>{
+    if(foodService&&(product.category||"").toLowerCase()==="combos"&&yogurtOptions.length){setPendingCombo(product);return}
+    addDirect(product);
+  };
+  const changeQty=(cartKey:string,delta:number)=>setCart(current=>current.map(line=>line.cartKey===cartKey?{...line,qty:line.trackStock===false?line.qty+delta:Math.min(line.stock,line.qty+delta)}:line).filter(line=>line.qty>0));
 
   const validateOrderDetails=()=>{
     if(!foodService)return true;
-    if(activeServiceMode==="table"&&!tableLabel.trim()){setMessage("Escribe la mesa para el pedido local");return false}
+    if(activeServiceMode==="table"&&!tableLabel.trim()){setMessage("Selecciona una mesa para continuar");return false}
     if(activeServiceMode==="delivery"&&(!customerName.trim()||!phone.trim()||!address.trim())){setMessage("Para domicilio necesitamos nombre, teléfono y dirección");return false}
     return true;
   };
 
+  const orderItems=()=>[
+    ...cart.map(line=>({productId:line.id,name:line.optionLabel?`${line.name} · ${line.optionLabel}`:line.name,qty:line.qty,unitPrice:line.price,notes:line.optionLabel})),
+    ...(packagingFee&&packagingProduct?[{productId:packagingProduct.id,name:"Envase",qty:1,unitPrice:packagingFee}]:[]),
+  ];
+
   const buildOrder=(next:ReturnType<typeof loadLocalDatabase>,workspace:ReturnType<typeof getWorkspaceContext>,paymentStatus:"unpaid"|"paid",saleId?:string):FoodOrderRecord=>{
     const existing=activeOrderId?next.orders.find(order=>order.id===activeOrderId):undefined,now=new Date().toISOString();
     return{
-      id:existing?.id||makeId("order"),
-      tenantId:workspace.tenantId,
-      branchId:workspace.branchId,
-      number:existing?.number||nextOrderNumber(next,workspace.tenantId,workspace.branchId),
-      serviceMode:activeServiceMode,
-      tableLabel:tableLabel.trim()||undefined,
-      customerId:customerId||undefined,
-      customerName:customerName.trim()||customers.find(c=>c.id===customerId)?.name||undefined,
-      phone:phone.trim()||undefined,
-      address:address.trim()||undefined,
-      notes:orderNotes.trim()||undefined,
-      items:cart.map(line=>({productId:line.id,name:line.name,qty:line.qty,unitPrice:line.price})),
-      total:Number(total.toFixed(2)),
-      status:existing?.status||"new",
-      paymentStatus,
-      saleId:saleId||existing?.saleId,
-      createdBy:existing?.createdBy||workspace.user?.id,
-      createdAt:existing?.createdAt||now,
-      updatedAt:now,
+      id:existing?.id||makeId("order"),tenantId:workspace.tenantId,branchId:workspace.branchId,number:existing?.number||nextOrderNumber(next,workspace.tenantId,workspace.branchId),
+      serviceMode:activeServiceMode,tableLabel:tableLabel.trim()||undefined,customerId:customerId||undefined,customerName:customerName.trim()||customers.find(c=>c.id===customerId)?.name||undefined,
+      phone:phone.trim()||undefined,address:address.trim()||undefined,notes:orderNotes.trim()||undefined,items:orderItems(),total:Number(total.toFixed(2)),status:existing?.status||"new",paymentStatus,
+      saleId:saleId||existing?.saleId,createdBy:existing?.createdBy||workspace.user?.id,createdAt:existing?.createdAt||now,updatedAt:now,
     };
   };
 
   const persistOrder=(next:ReturnType<typeof loadLocalDatabase>,order:FoodOrderRecord,queue=true)=>{
-    const index=next.orders.findIndex(item=>item.id===order.id);
-    if(index>=0)next.orders[index]=order;else next.orders.unshift(order);
-    if(queue)queueFoodOrder(next,order);
+    const index=next.orders.findIndex(item=>item.id===order.id);if(index>=0)next.orders[index]=order;else next.orders.unshift(order);if(queue)queueFoodOrder(next,order);
   };
 
-  const saveOrder=()=>{
-    if(!foodService||!cart.length){setMessage(cart.length?"Este perfil no usa pedidos":"Agrega productos al pedido");return}
-    if(!validateOrderDetails())return;
+  const saveOrder=(silent=false)=>{
+    if(!foodService||!cart.length){if(!silent)setMessage(cart.length?"Este perfil no usa pedidos":"Agrega productos al pedido");return null}
+    if(!validateOrderDetails())return null;
     const next=loadLocalDatabase(),workspace=getWorkspaceContext(next),order=buildOrder(next,workspace,"unpaid");
-    persistOrder(next,order,true);
-    saveLocalDatabase(next,{trackChanges:false});
-    setDb(next);
-    setActiveOrderId(order.id);
-    setMessage(`Pedido #${String(order.number).padStart(4,"0")} guardado · ${serviceLabel[order.serviceMode]}`);
+    persistOrder(next,order,true);saveLocalDatabase(next,{trackChanges:false});setDb(next);setActiveOrderId(order.id);
+    if(!silent)setMessage(activeServiceMode==="table"?`Mesa ${tableLabel} guardada · puedes atender otra mesa`:`Pedido #${String(order.number).padStart(4,"0")} puesto en espera`);
+    return order;
+  };
+
+  const loadTableOrder=(label:string,source=loadLocalDatabase())=>{
+    const workspace=getWorkspaceContext(source),order=source.orders.find(item=>item.tenantId===workspace.tenantId&&item.branchId===workspace.branchId&&item.serviceMode==="table"&&item.tableLabel===label&&item.paymentStatus==="unpaid"&&item.status!=="cancelled"&&item.status!=="delivered");
+    setServiceMode("table");setTableLabel(label);setQuery("");setCategory("Todos");setPayment("cash");setLastSaleId("");
+    if(!order){setCart([]);setActiveOrderId("");resetCustomer();setDb(source);setMessage(`Mesa ${label} · libre, lista para nuevo pedido`);return}
+    const lines:CartLine[]=[];
+    for(const item of order.items){
+      if(item.productId===packagingProduct?.id)continue;
+      const product=source.tenantProducts.find(p=>p.id===item.productId&&p.tenantId===workspace.tenantId&&p.branchId===workspace.branchId&&p.active);
+      if(product)lines.push({...product,qty:item.qty,cartKey:cartKeyFor(product.id,item.notes),optionLabel:item.notes});
+    }
+    setCart(lines);setActiveOrderId(order.id);setCustomerId(order.customerId||"");setCustomerName(order.customerName||"");setPhone(order.phone||"");setAddress(order.address||"");setOrderNotes(order.notes||"");setDb(source);setMessage(`Mesa ${label} recuperada · ${lines.reduce((sum,line)=>sum+line.qty,0)} productos`);
+  };
+
+  const selectTable=(label:string)=>{
+    if(activeServiceMode==="table"&&tableLabel&&tableLabel!==label&&cart.length){
+      const saved=saveOrder(true);
+      if(!saved)return;
+      loadTableOrder(label,loadLocalDatabase());
+      return;
+    }
+    if(activeServiceMode!=="table"&&cart.length){setMessage("Cobra o pon en espera el pedido actual antes de cambiar a una mesa");return}
+    loadTableOrder(label);
+  };
+
+  const changeServiceMode=(mode:ServiceMode)=>{
+    if(mode===activeServiceMode)return;
+    if(activeServiceMode==="table"&&tableLabel&&cart.length){const saved=saveOrder(true);if(!saved)return}
+    setServiceMode(mode);setTableLabel("");setCart([]);setActiveOrderId("");resetCustomer();setMessage(`${serviceLabel[mode]} · nuevo pedido`);
+  };
+
+  const clearCurrent=()=>{
+    if(cart.length&&!window.confirm("¿Vaciar el pedido actual? Los pedidos ya puestos en espera no se eliminan."))return;
+    setCart([]);setActiveOrderId("");resetCustomer();setLastSaleId("");setMessage(activeServiceMode==="table"&&tableLabel?`Mesa ${tableLabel} · pedido limpio`:"Listo para vender");
   };
 
   const checkout=()=>{
@@ -209,95 +235,69 @@ export function PosClient(){
     if(payment==="credit"&&!currentSettings.allowCredit){setMessage("El fiado está desactivado");return}
     if(payment==="credit"&&!customerId){setMessage("Selecciona un cliente para registrar el fiado");return}
     if(payment==="cash"&&currentSettings.requireCashSession&&!getOpenCashSession(next,workspace.tenantId,workspace.branchId)){setMessage("Debes abrir caja en esta sucursal antes de cobrar");return}
+
+    const grouped=new Map<string,{product:TenantProduct;qty:number;options:Map<string,number>}>();
     for(const line of cart){
       const current=next.tenantProducts.find(p=>p.id===line.id&&p.tenantId===workspace.tenantId&&p.branchId===workspace.branchId);
       if(!current||(current.trackStock!==false&&current.stock<line.qty)){setMessage(`Revisa stock de ${line.name}`);refresh();return}
+      const group=grouped.get(line.id)||{product:current,qty:0,options:new Map<string,number>()};group.qty+=line.qty;
+      if(line.optionLabel)group.options.set(line.optionLabel,(group.options.get(line.optionLabel)||0)+line.qty);grouped.set(line.id,group);
     }
+    if(packagingFee&&packagingProduct){const current=next.tenantProducts.find(p=>p.id===packagingProduct.id);if(current)grouped.set(current.id,{product:current,qty:1,options:new Map()})}
 
     const now=new Date().toISOString();
-    const sale:SaleRecord={id:makeId("sale"),tenantId:workspace.tenantId,branchId:workspace.branchId,customerId:customerId||undefined,total:Number(total.toFixed(2)),payment,items:cart.map(line=>({productId:line.id,name:line.name,qty:line.qty,unitPrice:line.price,unitCost:line.cost})),createdAt:now};
-    sale.clientOperationId=sale.id;
+    const saleItems=[...grouped.values()].map(group=>{
+      const optionText=[...group.options.entries()].map(([label,qty])=>`${label}${qty>1?` ×${qty}`:""}`).join(" / ");
+      return{productId:group.product.id,name:optionText?`${group.product.name} · ${optionText}`:group.product.name,qty:group.qty,unitPrice:group.product.price,unitCost:group.product.cost};
+    });
+    const sale:SaleRecord={id:makeId("sale"),tenantId:workspace.tenantId,branchId:workspace.branchId,customerId:customerId||undefined,total:Number(total.toFixed(2)),payment,items:saleItems,createdAt:now};sale.clientOperationId=sale.id;
 
     let orderBefore:FoodOrderRecord|undefined,order:FoodOrderRecord|undefined;
-    if(foodService){
-      const existing=activeOrderId?next.orders.find(item=>item.id===activeOrderId):undefined;
-      if(existing)orderBefore={...existing,items:existing.items.map(item=>({...item}))};
-      order=buildOrder(next,workspace,"paid",sale.id);
-      sale.orderId=order.id;
-      persistOrder(next,order,false);
-    }
-
+    if(foodService){const existing=activeOrderId?next.orders.find(item=>item.id===activeOrderId):undefined;if(existing)orderBefore={...existing,items:existing.items.map(item=>({...item}))};order=buildOrder(next,workspace,"paid",sale.id);sale.orderId=order.id;persistOrder(next,order,false)}
     next.sales.unshift(sale);
     let credit:CreditRecord|undefined;
-    if(payment==="credit"&&customerId){
-      credit={id:makeId("credit"),tenantId:workspace.tenantId,branchId:workspace.branchId,customerId,saleId:sale.id,description:`Venta ${sale.id.slice(-8)}`,originalAmount:sale.total,balance:sale.total,status:"open",createdAt:now};
-      next.credits.unshift(credit);
-    }
+    if(payment==="credit"&&customerId){credit={id:makeId("credit"),tenantId:workspace.tenantId,branchId:workspace.branchId,customerId,saleId:sale.id,description:`Venta ${sale.id.slice(-8)}`,originalAmount:sale.total,balance:sale.total,status:"open",createdAt:now};next.credits.unshift(credit)}
 
     const stockMovements:StockMovementRecord[]=[],productSnapshots:TenantProduct[]=[];
-    for(const line of cart){
-      const current=next.tenantProducts.find(p=>p.id===line.id)!;
-      const previous=current.stock,newStock=previous-line.qty;
-      const movement:StockMovementRecord={id:makeId("stock"),tenantId:workspace.tenantId,branchId:workspace.branchId,productId:current.id,type:"sale",quantity:-line.qty,previousStock:previous,newStock,reference:sale.id,createdAt:now};
-      movement.clientOperationId=movement.id;
-      stockMovements.push(movement);
-      next.stockMovements.unshift(movement);
-      current.stock=newStock;
-      productSnapshots.push({...current});
+    for(const item of saleItems){
+      const current=next.tenantProducts.find(p=>p.id===item.productId)!;const previous=current.stock,newStock=previous-item.qty;
+      const movement:StockMovementRecord={id:makeId("stock"),tenantId:workspace.tenantId,branchId:workspace.branchId,productId:current.id,type:"sale",quantity:-item.qty,previousStock:previous,newStock,reference:sale.id,createdAt:now};movement.clientOperationId=movement.id;
+      stockMovements.push(movement);next.stockMovements.unshift(movement);current.stock=newStock;productSnapshots.push({...current});
     }
 
-    enqueueSaleTransaction(next,{sale,productSnapshots,stockMovements,credit,orderBefore,orderAfter:order});
-    saveLocalDatabase(next,{trackChanges:false});
-    window.localStorage.removeItem(posDraftKey(workspace.tenantId,workspace.branchId));
-    setDb(next);
-    setCart([]);
-    setQuery("");
-    setPayment("cash");
-    setCustomerId("");
-    setCustomerName("");
-    setPhone("");
-    setAddress("");
-    setOrderNotes("");
-    setTableLabel("");
-    setCategory("Todos");
-    setServiceMode("counter");
-    setActiveOrderId("");
-    setLastSaleId(sale.id);
-    setMessage(`Venta guardada · ${paymentLabel[payment]} · $${sale.total.toFixed(2)}${order?` · Pedido #${String(order.number).padStart(4,"0")}`:""}`);
+    enqueueSaleTransaction(next,{sale,productSnapshots,stockMovements,credit,orderBefore,orderAfter:order});saveLocalDatabase(next,{trackChanges:false});window.localStorage.removeItem(posDraftKey(workspace.tenantId,workspace.branchId));
+    setDb(next);setCart([]);setQuery("");setPayment("cash");setCustomerId("");setCustomerName("");setPhone("");setAddress("");setOrderNotes("");setActiveOrderId("");setLastSaleId(sale.id);setMessage(`Venta guardada · ${paymentLabel[payment]} · $${sale.total.toFixed(2)}${tableLabel?` · Mesa ${tableLabel}`:""}`);
   };
 
   if(blocked)return <div className="license-block"><div className="hero-mini">K</div><span className="eyebrow">LICENCIA SUSPENDIDA</span><h2>{tenant?.name??"Este negocio"} está en modo consulta.</h2><p>No se borra información ni se permiten nuevas ventas hasta reactivar la licencia desde KIUBO Control.</p></div>;
 
   return <>
-    <div className="workspace-banner">
-      <div><span>NEGOCIO</span><strong>{tenant?.name??"Negocio"}</strong></div>
-      <div><span>SUCURSAL</span><strong>{branch?.code} · {branch?.name}</strong></div>
-      <div><span>ESTADO</span><strong>{message}</strong></div>
-    </div>
-    <div className="pos-grid">
+    <div className="workspace-banner pos-workspace-banner"><div><span>NEGOCIO</span><strong>{tenant?.name??"Negocio"}</strong></div><div><span>SUCURSAL</span><strong>{branch?.code} · {branch?.name}</strong></div><div><span>ESTADO</span><strong>{message}</strong></div></div>
+    <div className="pos-grid restaurant-pos-grid">
       <section className="pos-products">
         {foodService&&<>
-          <div className="payment-grid" style={{marginBottom:10}}>{enabledModes.map(mode=><button key={mode} className={activeServiceMode===mode?"selected":""} onClick={()=>setServiceMode(mode)}>{serviceLabel[mode]}</button>)}</div>
-          {activeServiceMode==="table"&&<input className="search-input" value={tableLabel} onChange={e=>setTableLabel(e.target.value)} placeholder={`Mesa (1–${settings.tableCount||"…"})`}/>} 
-          <div className="payment-grid" style={{margin:"10px 0"}}>{categories.map(item=><button key={item} className={category===item?"selected":""} onClick={()=>setCategory(item)}>{item}</button>)}</div>
+          <div className="service-mode-bar">{enabledModes.map(mode=><button key={mode} className={activeServiceMode===mode?"selected":""} onClick={()=>changeServiceMode(mode)}>{serviceLabel[mode]}</button>)}</div>
+          {activeServiceMode==="table"&&<div className="table-selector"><div className="table-selector-head"><span>MESAS</span><small>Selecciona una mesa. Al cambiar, el pedido actual queda en espera automáticamente.</small></div><div className="table-selector-grid">{tableNumbers.map(label=>{const open=openTableOrders.find(order=>order.tableLabel===label),active=tableLabel===label;return <button key={label} className={`${open?"occupied":"free"} ${active?"active":""}`} onClick={()=>selectTable(label)}><strong>Mesa {label}</strong><span>{open?`${open.items.reduce((sum,item)=>sum+item.qty,0)} prod. · $${open.total.toFixed(2)}`:"Libre"}</span></button>})}</div></div>}
+          <div className="category-strip">{categories.map(item=><button key={item} className={category===item?"selected":""} onClick={()=>setCategory(item)}>{item}</button>)}</div>
         </>}
-        <input className="search-input" value={query} onChange={e=>setQuery(e.target.value)} placeholder="Buscar producto…"/>
-        <div className="product-results" style={foodService?{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(185px,1fr))",gap:10}:undefined}>
-          {filtered.length?filtered.map(product=><button className="pos-product" style={foodService?{display:"grid",gridTemplateColumns:"64px 1fr",textAlign:"left",minHeight:86}:undefined} key={product.id} onClick={()=>add(product)}><div className="product-icon" style={{width:58,height:58,overflow:"hidden",borderRadius:10}}>{product.imageUrl?<img src={product.imageUrl} alt="" loading="lazy" style={{width:"100%",height:"100%",objectFit:"cover"}}/>:product.name.charAt(0)}</div><div><strong>{product.name}</strong><span>{product.trackStock===false?(product.category||"Elaborado"):`${product.category||product.barcode} · Stock ${product.stock}`}</span><b>${product.price.toFixed(2)}</b></div></button>):<p className="empty-cart">No encontramos productos en esta categoría.</p>}
+        <div className="pos-search-row"><input className="search-input" value={query} onChange={e=>setQuery(e.target.value)} placeholder="Buscar producto…"/><button className="pos-clear-order" onClick={clearCurrent} disabled={!cart.length}>Vaciar</button></div>
+        <div className="product-results">
+          {filtered.length?filtered.map(product=><button className="pos-product" key={product.id} onClick={()=>add(product)}><div className="product-icon">{product.imageUrl?<img src={product.imageUrl} alt="" loading="lazy"/>:product.name.charAt(0)}</div><div><strong>{product.name}</strong><span>{product.trackStock===false?(product.category||"Elaborado"):`${product.category||product.barcode} · Stock ${product.stock}`}</span><b>${product.price.toFixed(2)}</b></div></button>):<p className="empty-cart">No encontramos productos en esta categoría.</p>}
         </div>
       </section>
-      <aside className="cart-panel">
-        <div className="cart-head"><span className="eyebrow">{foodService?activeOrderId?"PEDIDO CARGADO":"PEDIDO / VENTA":"VENTA ACTUAL"}</span><h2>{cart.reduce((n,l)=>n+l.qty,0)} productos</h2></div>
+      <aside className="cart-panel restaurant-checkout">
+        <div className="cart-head"><span className="eyebrow">{activeServiceMode==="table"&&tableLabel?`MESA ${tableLabel}`:foodService?activeOrderId?"PEDIDO EN ESPERA":"PEDIDO ACTUAL":"VENTA ACTUAL"}</span><h2>{cart.reduce((n,l)=>n+l.qty,0)} productos</h2>{activeServiceMode==="table"&&tableLabel&&<span className="checkout-table-state">{openTableOrders.some(order=>order.tableLabel===tableLabel)?"Pedido abierto":"Mesa activa"}</span>}</div>
         <select className="pos-customer-select" value={customerId} onChange={e=>setCustomerId(e.target.value)}><option value="">Cliente opcional</option>{customers.map(c=><option key={c.id} value={c.id}>{c.name} · {c.identification}</option>)}</select>
-        {foodService&&<div style={{display:"grid",gap:8,marginBottom:12}}>{activeServiceMode!=="table"&&<input className="search-input" value={customerName} onChange={e=>setCustomerName(e.target.value)} placeholder="Nombre del cliente (opcional)"/>}{activeServiceMode==="delivery"&&<><input className="search-input" value={phone} onChange={e=>setPhone(e.target.value)} placeholder="Teléfono"/><input className="search-input" value={address} onChange={e=>setAddress(e.target.value)} placeholder="Dirección de entrega"/></>}<input className="search-input" value={orderNotes} onChange={e=>setOrderNotes(e.target.value)} placeholder="Nota del pedido (sin cebolla, etc.)"/></div>}
-        <div className="cart-lines">{cart.length===0?<p className="empty-cart">Toca un producto para comenzar.</p>:cart.map(line=><div className="cart-line interactive" key={line.id}><div><strong>{line.name}</strong><span>${line.price.toFixed(2)} c/u</span></div><div className="qty"><button onClick={()=>changeQty(line.id,-1)}>−</button><b>{line.qty}</b><button onClick={()=>changeQty(line.id,1)}>+</button></div><strong>${(line.price*line.qty).toFixed(2)}</strong></div>)}</div>
-        <div className="cart-total"><span>Total</span><strong>${total.toFixed(2)}</strong></div>
-        {foodService&&<button className="button secondary checkout" onClick={saveOrder}>Guardar pedido sin cobrar</button>}
+        {foodService&&<div className="checkout-fields">{activeServiceMode!=="table"&&<input className="search-input" value={customerName} onChange={e=>setCustomerName(e.target.value)} placeholder="Nombre del cliente (opcional)"/>}{activeServiceMode==="delivery"&&<><input className="search-input" value={phone} onChange={e=>setPhone(e.target.value)} placeholder="Teléfono"/><input className="search-input" value={address} onChange={e=>setAddress(e.target.value)} placeholder="Dirección de entrega"/></>}<input className="search-input" value={orderNotes} onChange={e=>setOrderNotes(e.target.value)} placeholder="Nota del pedido (sin cebolla, etc.)"/></div>}
+        <div className="cart-lines">{cart.length===0?<p className="empty-cart">Selecciona productos para comenzar.</p>:cart.map(line=><div className="cart-line interactive" key={line.cartKey}><div><strong>{line.name}</strong>{line.optionLabel&&<em>{line.optionLabel}</em>}<span>${line.price.toFixed(2)} c/u</span></div><div className="qty"><button onClick={()=>changeQty(line.cartKey,-1)}>−</button><b>{line.qty}</b><button onClick={()=>changeQty(line.cartKey,1)}>+</button></div><strong>${(line.price*line.qty).toFixed(2)}</strong></div>)}</div>
+        <div className="checkout-summary"><div><span>Subtotal</span><b>${subtotal.toFixed(2)}</b></div>{packagingFee>0&&<div className="packaging-row"><span>Envase · automático</span><b>+${packagingFee.toFixed(2)}</b></div>}<div className="cart-total"><span>Total</span><strong>${total.toFixed(2)}</strong></div></div>
         <div className="payment-grid">{paymentOptions.map(method=><button key={method} className={payment===method?"selected":""} onClick={()=>setPayment(method)}>{paymentLabel[method]}</button>)}</div>
         <button className="button primary checkout" onClick={checkout}>Cobrar ${total.toFixed(2)}</button>
+        {foodService&&<button className="button secondary checkout hold-order" onClick={()=>saveOrder(false)}>{activeServiceMode==="table"&&tableLabel?`Poner Mesa ${tableLabel} en espera`:"Guardar pedido en espera"}</button>}
         {lastSaleId&&<a className="button secondary checkout" target="_blank" rel="noreferrer" href={`/receipt?sale=${encodeURIComponent(lastSaleId)}`}>Imprimir recibo</a>}
-        <p className="cart-note">KIUBO guarda primero en este dispositivo y sincroniza operaciones protegidas con Cloud. Si internet falla, la cola queda pendiente sin perder el trabajo.</p>
+        <p className="cart-note">Los pedidos en espera quedan guardados. Puedes cambiar de mesa y regresar después sin perder el pedido.</p>
       </aside>
     </div>
+    {pendingCombo&&<div className="combo-choice-backdrop" role="presentation" onMouseDown={event=>{if(event.target===event.currentTarget)setPendingCombo(null)}}><section className="combo-choice" role="dialog" aria-modal="true" aria-label="Elegir sabor"><button className="combo-choice-close" onClick={()=>setPendingCombo(null)}>×</button><span className="eyebrow">PERSONALIZAR COMBO</span><h3>{pendingCombo.name}</h3><p>Elige el sabor para que caja y preparación sepan exactamente qué pidió el cliente.</p><div className="combo-options">{yogurtOptions.map(option=><button key={option} onClick={()=>{addDirect(pendingCombo,`Yogur ${option}`);setPendingCombo(null)}}>{option}</button>)}<button className="neutral" onClick={()=>{addDirect(pendingCombo,"Sin especificar");setPendingCombo(null)}}>Sin especificar</button></div></section></div>}
   </>;
 }
