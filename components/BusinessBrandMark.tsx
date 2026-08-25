@@ -11,9 +11,9 @@ export function BusinessBrandMark(){
     setData({custom:ctx.tenant?.plan==="Custom",name:branding.businessName||ctx.tenant?.name||"Negocio",logo:branding.logoUrl||""});
   },[]);
   if(!data||!data.custom)return <KiuboMark/>;
-  return <div className="business-brand-mark">
-    {data.logo?<img src={data.logo} alt={data.name}/>:<strong>{data.name}</strong>}
-    <span>{data.name}</span>
-    <small>Powered by KIUBO</small>
+  return <div style={{display:"grid",justifyItems:"center",gap:4,padding:"10px 8px 6px",minHeight:72}}>
+    {data.logo?<img src={data.logo} alt={data.name} style={{display:"block",width:"100%",maxWidth:170,height:58,objectFit:"contain"}}/>:<strong style={{fontSize:22}}>{data.name}</strong>}
+    <span style={{fontSize:12,fontWeight:750,letterSpacing:".02em"}}>{data.name}</span>
+    <small style={{fontSize:9,opacity:.58,letterSpacing:".08em",textTransform:"uppercase"}}>Powered by KIUBO</small>
   </div>;
 }
