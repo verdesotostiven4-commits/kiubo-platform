@@ -38,6 +38,9 @@ requireText("components/ReportsClient.tsx",["saleLifecycle(s)===\"completed\"","
 requireText("lib/cash-reconciliation.ts",["reconcileCashSession","session.openingAmount+cashSales+manualIncome-cashOut"]);
 requireText("lib/sync-engine.ts",["isActiveQueueItem(item,activeTenantId)","recoverRejectedCommand","navigator.locks"]);
 requireText("lib/offline-durability.ts",["recoverInterruptedSyncQueue","snapshotOfflineDatabase","navigator.storage?.persist"]);
-requireText("vercel.json",["\"main\": true","\"*\": false"]);
+const vercel=JSON.parse(text("vercel.json"));
+assert.equal(vercel?.git?.deploymentEnabled?.main,true,"vercel.json must allow production deployments from main");
+assert.equal(vercel?.git?.deploymentEnabled?.["*"],false,"vercel.json must keep feature branch deployments disabled");
+console.log("✓ vercel.json production-only deployment policy");
 
-console.log("✓ Pilot Readiness V11 passed: coupled money/stock commands stay atomic-only, Food Service private routes remain protected, revoked order data is purged, and only main can deploy to Vercel.");
+console.log("✓ Pilot Readiness V12 passed: coupled money/stock commands stay atomic-only, Food Service private routes remain protected, revoked order data is purged, and only main can deploy to Vercel.");
