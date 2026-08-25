@@ -14,5 +14,6 @@ export function WorkspaceSwitcher(){
   const changeTenant=(next:string)=>{if(!user.platformAdmin)return;const first=branches.find(b=>b.tenantId===next&&b.active);switchWorkspace(next,first?.id);window.location.reload()};
   const changeBranch=(next:string)=>{switchWorkspace(tenantId,next);window.location.reload()};
   const tenant=tenants.find(t=>t.id===tenantId);
-  return <div className="workspace-switcher"><span>ESPACIO ACTIVO</span>{user.platformAdmin?<select value={tenantId} onChange={e=>changeTenant(e.target.value)}>{tenants.map(t=><option key={t.id} value={t.id}>{t.name}</option>)}</select>:<strong>{tenant?.name??"Negocio"}</strong>}<select value={branchId} onChange={e=>changeBranch(e.target.value)}>{branchOptions.map(b=><option key={b.id} value={b.id}>{b.code} · {b.name}</option>)}</select></div>
+  if(!user.platformAdmin)return <div className="workspace-switcher workspace-switcher-branch"><span>SUCURSAL</span><select value={branchId} onChange={e=>changeBranch(e.target.value)}>{branchOptions.map(b=><option key={b.id} value={b.id}>{b.code} · {b.name}</option>)}</select></div>;
+  return <div className="workspace-switcher"><span>ESPACIO ACTIVO</span><select value={tenantId} onChange={e=>changeTenant(e.target.value)}>{tenants.map(t=><option key={t.id} value={t.id}>{t.name}</option>)}</select><select value={branchId} onChange={e=>changeBranch(e.target.value)}>{branchOptions.map(b=><option key={b.id} value={b.id}>{b.code} · {b.name}</option>)}</select><small>{tenant?.plan}</small></div>
 }
