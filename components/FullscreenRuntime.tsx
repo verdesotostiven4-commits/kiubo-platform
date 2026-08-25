@@ -18,8 +18,8 @@ export function FullscreenRuntime(){
       void document.documentElement.requestFullscreen?.({navigationUI:"hide"}).catch(()=>undefined);
       cleanup();
     };
-    window.addEventListener("pointerdown",enter,true,{once:true});
-    window.addEventListener("keydown",enter,true,{once:true});
+    window.addEventListener("pointerdown",enter,{capture:true,once:true});
+    window.addEventListener("keydown",enter,{capture:true,once:true});
     return cleanup;
   },[]);
   return null;
