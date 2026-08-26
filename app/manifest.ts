@@ -12,7 +12,7 @@ export default function manifest():KiuboManifest{
     start_url:"/app",
     scope:"/",
     display:"standalone",
-    display_override:["window-controls-overlay","standalone"],
+    display_override:["standalone"],
     background_color:"#f7faff",
     theme_color:"#0b2d27",
     icons:[
