@@ -65,12 +65,24 @@ export function YukiPilotCatalogBootstrap(){
       db.tenantProducts.push(...products);changed=true;
     }
 
-    if(!branchProducts.some(product=>product.barcode===YUKI_PACKAGING_BARCODE)){
+    const packagingProduct=branchProducts.find(product=>product.barcode===YUKI_PACKAGING_BARCODE);
+    if(!packagingProduct){
       db.tenantProducts.push({
         id:"yuki-service-packaging",tenantId:ctx.tenantId,branchId:ctx.branchId,masterProductId:"custom-yuki-packaging",
         barcode:YUKI_PACKAGING_BARCODE,name:"Envase",price:YUKI_PACKAGING_PRICE,cost:0,stock:VIRTUAL_STOCK,active:true,category:"Cargos",trackStock:false,
       });
       changed=true;
+    }else{
+      const needsRepair=!packagingProduct.active||packagingProduct.name!=="Envase"||packagingProduct.price!==YUKI_PACKAGING_PRICE||packagingProduct.category!=="Cargos"||packagingProduct.trackStock!==false;
+      if(needsRepair){
+        packagingProduct.name="Envase";
+        packagingProduct.price=YUKI_PACKAGING_PRICE;
+        packagingProduct.active=true;
+        packagingProduct.category="Cargos";
+        packagingProduct.trackStock=false;
+        if(packagingProduct.stock<=0)packagingProduct.stock=VIRTUAL_STOCK;
+        changed=true;
+      }
     }
 
     if(!changed)return;
