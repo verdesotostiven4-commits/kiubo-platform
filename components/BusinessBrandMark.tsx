@@ -12,6 +12,12 @@ export function BusinessBrandMark(){
     setData({custom:ctx.tenant?.plan==="Custom",name:branding.businessName||ctx.tenant?.name||"Negocio",logo:branding.logoUrl||""});
   },[]);
   if(!data||!data.custom)return <KiuboMark/>;
+  if(data.name.trim().toUpperCase()==="YUKI")return <div className="business-brand business-brand-yuki-type" aria-label="YUKI · Gestionado con KIUBO">
+    <small>NEGOCIO</small>
+    <strong className="yuki-type-wordmark">YUKI</strong>
+    <span className="yuki-type-rule" aria-hidden="true"><i/><b>•</b><i/></span>
+    <span className="yuki-type-signature">Gestionado con <KiuboWordmark/></span>
+  </div>;
   return <div className="business-brand business-brand-custom">
     <div className="business-brand-logo">{data.logo?<img src={data.logo} alt={data.name}/>:<strong>{data.name.slice(0,1).toUpperCase()}</strong>}</div>
     <div className="business-brand-copy"><small>NEGOCIO</small><strong>{data.name}</strong><span>Gestionado con <KiuboWordmark/></span></div>
