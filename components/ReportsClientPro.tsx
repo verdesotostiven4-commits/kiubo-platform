@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect,useMemo,useState } from "react";
+import { useEffect,useState } from "react";
 import { SaleRecord,getWorkspaceContext,loadLocalDatabase,saveLocalDatabase } from "@/lib/local-store";
 import { reconcileCashSession } from "@/lib/cash-reconciliation";
 import { reverseSaleLocally,saleLifecycle,type SaleWithLifecycle } from "@/lib/sale-reversal";
@@ -28,7 +28,7 @@ export function ReportsClientPro(){
   const soldItemRows=sales.flatMap(s=>s.items),missingCostLines=soldItemRows.filter(i=>Number(i.unitCost??db.tenantProducts.find(p=>p.id===i.productId)?.cost??0)<=0).length,cost=soldItemRows.reduce((sum,i)=>sum+i.qty*Number(i.unitCost??db.tenantProducts.find(p=>p.id===i.productId)?.cost??0),0),gross=revenue-cost,grossReliable=missingCostLines===0;
   const purchased=purchases.reduce((n,p)=>n+p.total,0),payable=purchases.reduce((n,p)=>n+Math.max(0,p.total-(p.paidAmount??0)),0),receivable=credits.reduce((n,c)=>n+c.balance,0),supplierPaid=supplierPayments.reduce((n,p)=>n+p.amount,0),cashNet=cashMovements.reduce((n,m)=>n+(m.type==="in"?m.amount:-m.amount),0),closedCash=cashSessions.filter(s=>s.status==="closed").length;
   const paymentTotals=(Object.keys(label) as SaleRecord["payment"][]).map(method=>({method,total:sales.filter(s=>s.payment===method).reduce((n,s)=>n+s.total,0)}));
-  const topProducts=useMemo(()=>{const map=new Map<string,{name:string;qty:number;revenue:number}>();for(const sale of sales)for(const item of sale.items){const row=map.get(item.productId)||{name:item.name.replace(/ · .*/,""),qty:0,revenue:0};row.qty+=item.qty;row.revenue+=item.qty*item.unitPrice;map.set(item.productId,row)}return[...map.values()].sort((a,b)=>b.qty-a.qty).slice(0,6)},[sales]);
+  const topProducts=(()=>{const map=new Map<string,{name:string;qty:number;revenue:number}>();for(const sale of sales)for(const item of sale.items){const row=map.get(item.productId)||{name:item.name.replace(/ · .*/,""),qty:0,revenue:0};row.qty+=item.qty;row.revenue+=item.qty*item.unitPrice;map.set(item.productId,row)}return[...map.values()].sort((a,b)=>b.qty-a.qty).slice(0,6)})();
   const closedReconciliations=cashSessions.filter(s=>s.status==="closed").map(session=>({session,reconciliation:reconcileCashSession(db,session)})).sort((a,b)=>(b.session.closedAt??b.session.openedAt).localeCompare(a.session.closedAt??a.session.openedAt)),cashDifferenceTotal=closedReconciliations.reduce((sum,row)=>sum+(row.reconciliation.difference??0),0);
   const branches=db.branches.filter(b=>b.tenantId===ctx.tenantId&&b.active),branchSummary=branches.map(branch=>{const branchSales=db.sales.filter(s=>s.tenantId===ctx.tenantId&&s.branchId===branch.id&&inPeriod(s.createdAt)&&saleLifecycle(s)==="completed"),branchPurchases=db.purchases.filter(p=>p.tenantId===ctx.tenantId&&p.branchId===branch.id&&p.status!=="cancelled"&&inPeriod(p.createdAt)),branchCredits=db.credits.filter(c=>c.tenantId===ctx.tenantId&&c.branchId===branch.id&&c.status==="open"),salesTotal=branchSales.reduce((n,s)=>n+s.total,0);return{branch,sales:branchSales.length,revenue:salesTotal,purchases:branchPurchases.reduce((n,p)=>n+p.total,0),payable:branchPurchases.reduce((n,p)=>n+Math.max(0,p.total-(p.paidAmount??0)),0),receivable:branchCredits.reduce((n,c)=>n+c.balance,0)}});
 
