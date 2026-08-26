@@ -50,6 +50,7 @@ export function PosClient(){
   const[lastSaleId,setLastSaleId]=useState("");
   const[draftReady,setDraftReady]=useState(false);
   const[pendingCombo,setPendingCombo]=useState<TenantProduct|null>(null);
+  const[pendingComboFirstFlavor,setPendingComboFirstFlavor]=useState("");
   const refresh=()=>setDb(loadLocalDatabase());
 
   useEffect(()=>{
@@ -134,6 +135,7 @@ export function PosClient(){
   const yogurtOptions=products.filter(product=>(product.category||"").toLowerCase()==="yogurts").map(product=>product.name.replace(/^yogurt\s+/i,"").trim()).filter(Boolean);
   const openTableOrders=db.orders.filter(order=>order.tenantId===ctx.tenantId&&order.branchId===ctx.branchId&&order.serviceMode==="table"&&order.paymentStatus==="unpaid"&&order.status!=="cancelled"&&order.status!=="delivered");
   const tableNumbers=Array.from({length:Math.max(0,settings.tableCount||0)},(_,index)=>String(index+1));
+  const pendingComboYogurtCount=pendingCombo&&(pendingCombo.barcode==="YUKI-COMBO4"||/^combo\s*4$/i.test(pendingCombo.name.trim()))?2:1;
 
   const resetCustomer=()=>{setCustomerId("");setCustomerName("");setPhone("");setAddress("");setOrderNotes("")};
   const addDirect=(product:TenantProduct,optionLabel?:string)=>{
@@ -150,7 +152,7 @@ export function PosClient(){
     setMessage(`${product.name}${optionLabel?` · ${optionLabel}`:""} agregado`);
   };
   const add=(product:TenantProduct)=>{
-    if(foodService&&(product.category||"").toLowerCase()==="combos"&&yogurtOptions.length){setPendingCombo(product);return}
+    if(foodService&&(product.category||"").toLowerCase()==="combos"&&yogurtOptions.length){setPendingComboFirstFlavor("");setPendingCombo(product);return}
     addDirect(product);
   };
   const changeQty=(cartKey:string,delta:number)=>setCart(current=>current.map(line=>line.cartKey===cartKey?{...line,qty:line.trackStock===false?line.qty+delta:Math.min(line.stock,line.qty+delta)}:line).filter(line=>line.qty>0));
@@ -278,6 +280,6 @@ export function PosClient(){
         <p className="cart-note">Los pedidos en espera quedan guardados. Puedes cambiar de mesa y regresar después sin perder el pedido.</p>
       </aside>
     </div>
-    {pendingCombo&&<div className="combo-choice-backdrop" role="presentation" onMouseDown={event=>{if(event.target===event.currentTarget)setPendingCombo(null)}}><section className="combo-choice" role="dialog" aria-modal="true" aria-label="Elegir sabor"><button className="combo-choice-close" onClick={()=>setPendingCombo(null)}>×</button><span className="eyebrow">PERSONALIZAR COMBO</span><h3>{pendingCombo.name}</h3><p>Elige el sabor para que caja y preparación sepan exactamente qué pidió el cliente.</p><div className="combo-options">{yogurtOptions.map(option=><button key={option} onClick={()=>{addDirect(pendingCombo,`Yogur ${option}`);setPendingCombo(null)}}>{option}</button>)}<button className="neutral" onClick={()=>{addDirect(pendingCombo,"Sin especificar");setPendingCombo(null)}}>Sin especificar</button></div></section></div>}
+    {pendingCombo&&<div className="combo-choice-backdrop" role="presentation" onMouseDown={event=>{if(event.target===event.currentTarget){setPendingCombo(null);setPendingComboFirstFlavor("")}}}><section className="combo-choice" role="dialog" aria-modal="true" aria-label="Elegir sabor"><button className="combo-choice-close" onClick={()=>{setPendingCombo(null);setPendingComboFirstFlavor("")}}>×</button><span className="eyebrow">PERSONALIZAR COMBO</span><h3>{pendingCombo.name}</h3><p>{pendingComboYogurtCount===2?(pendingComboFirstFlavor?`Primer yogur: ${pendingComboFirstFlavor}. Ahora elige el sabor del segundo yogur.`:"Este combo incluye 2 yogures. Elige primero el sabor del Yogur 1."):"Elige el sabor para que caja y preparación sepan exactamente qué pidió el cliente."}</p><div className="combo-options">{yogurtOptions.map(option=><button key={option} onClick={()=>{if(pendingComboYogurtCount===2&&!pendingComboFirstFlavor){setPendingComboFirstFlavor(option);return}const label=pendingComboYogurtCount===2?`Yogur 1: ${pendingComboFirstFlavor||"Sin especificar"} · Yogur 2: ${option}`:`Yogur ${option}`;addDirect(pendingCombo,label);setPendingCombo(null);setPendingComboFirstFlavor("")}}>{pendingComboYogurtCount===2&&pendingComboFirstFlavor?`Yogur 2 · ${option}`:option}</button>)}<button className="neutral" onClick={()=>{if(pendingComboYogurtCount===2&&!pendingComboFirstFlavor){setPendingComboFirstFlavor("Sin especificar");return}const label=pendingComboYogurtCount===2?`Yogur 1: ${pendingComboFirstFlavor||"Sin especificar"} · Yogur 2: Sin especificar`:"Sin especificar";addDirect(pendingCombo,label);setPendingCombo(null);setPendingComboFirstFlavor("")}}>Sin especificar</button>{pendingComboYogurtCount===2&&pendingComboFirstFlavor&&<button className="neutral" onClick={()=>setPendingComboFirstFlavor("")}>← Cambiar primer sabor</button>}</div></section></div>}
   </>;
 }
