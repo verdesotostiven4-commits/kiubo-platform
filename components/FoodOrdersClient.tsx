@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect,useMemo,useState } from "react";
+import { useEffect,useState } from "react";
 import { useRouter } from "next/navigation";
 import { FoodOrderRecord,FoodOrderStatus,getTenantSettings,getWorkspaceContext,loadLocalDatabase,saveLocalDatabase } from "@/lib/local-store";
 import { KIUBO_DATA_REFRESHED } from "./RealtimeSyncRuntime";
@@ -32,7 +32,7 @@ export function FoodOrdersClient(){
   const filteredOrders=filter==="all"?orders:orders.filter(order=>order.serviceMode===filter);
   const activeOrders=filteredOrders.filter(order=>order.status!=="delivered");
   const delivered=filteredOrders.filter(order=>order.status==="delivered");
-  const grouped=useMemo(()=>new Map(activeMeta.map(meta=>[meta.key,activeOrders.filter(order=>order.status===meta.key)])),[activeOrders]);
+  const grouped=new Map(activeMeta.map(meta=>[meta.key,activeOrders.filter(order=>order.status===meta.key)]));
 
   const changeStatus=(order:FoodOrderRecord,status:FoodOrderStatus)=>{
     const next=loadLocalDatabase(),index=next.orders.findIndex(item=>item.id===order.id);if(index<0)return;
