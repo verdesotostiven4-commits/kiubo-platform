@@ -23,6 +23,7 @@ import "./pos-native.css";
 import "./native-shell-v3.css";
 import "./product-media-v4.css";
 import "./restaurant-ops-v5.css";
+import "./yuki-live-polish.css";
 import { PwaRegister } from "@/components/PwaRegister";
 import { SessionEnforcer } from "@/components/SessionEnforcer";
 import { BrandingRuntime } from "@/components/BrandingRuntime";
