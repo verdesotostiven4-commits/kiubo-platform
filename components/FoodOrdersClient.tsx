@@ -53,7 +53,7 @@ export function FoodOrdersClient(){
     <div className={styles.items}>{order.items.slice(0,6).map((item,index)=><div className={styles.item} key={`${item.productId}-${index}`}><span><b>{item.qty}×</b> {item.name}</span><span>{money(item.qty*item.unitPrice)}</span></div>)}{order.items.length>6&&<div className={styles.item}><span>+ {order.items.length-6} productos</span></div>}</div>
     {order.notes&&<div className={styles.orderNote}>Nota: {order.notes}</div>}
     <div className={styles.total}><span className={order.paymentStatus==="paid"?styles.paid:styles.pending}>{order.paymentStatus==="paid"?"✓ Pagado":"Pendiente de cobro"}</span><strong>{money(order.total)}</strong></div>
-    <div className={styles.actions}>{order.paymentStatus!=="paid"&&<button className={styles.checkout} onClick={()=>checkout(order)}>Abrir y cobrar</button>}<button className={styles.action} onClick={()=>changeStatus(order,meta.next)}>{meta.action}</button><button className={styles.print} onClick={()=>print(order)}>Imprimir</button></div>
+    <div className={styles.actions}>{order.paymentStatus!=="paid"&&<button className={styles.checkout} aria-label="Cobrar en POS" onClick={()=>checkout(order)}>Cobrar en POS</button>}<button className={styles.action} onClick={()=>changeStatus(order,meta.next)}>{meta.action}</button><button className={styles.print} onClick={()=>print(order)}>Imprimir</button></div>
   </article>;
 
   return <div className={styles.page}>
