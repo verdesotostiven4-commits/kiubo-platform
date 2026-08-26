@@ -1,4 +1,4 @@
-const SHELL_CACHE="kiubo-shell-v6";
+const SHELL_CACHE="kiubo-shell-v7";
 // Offline durability compatibility guard retained for release validation: kiubo-shell-v3
 const DATA_CACHE_PREFIX="kiubo-data-";
 const SHELL=["/","/login","/app","/upgrade","/pos","/orders","/cash","/catalog","/inventory","/customers","/purchases","/reports","/operations","/branding","/manifest.webmanifest","/icon.svg"];
@@ -22,7 +22,18 @@ self.addEventListener("activate",event=>{
 async function fetchWithTimeout(request,timeoutMs=4500){
   const controller=new AbortController();
   const timer=setTimeout(()=>controller.abort(),timeoutMs);
-  try{return await fetch(request,{signal:controller.signal})}finally{clearTimeout(timer)}
+  try{return await fetch(request,{signal:controller.signal,cache:"no-store"})}finally{clearTimeout(timer)}
+}
+
+async function networkFirst(request){
+  const cache=await caches.open(SHELL_CACHE);
+  try{
+    const response=await fetchWithTimeout(request);
+    if(response&&response.ok)await cache.put(request,response.clone());
+    return response;
+  }catch{
+    return await cache.match(request)||Response.error();
+  }
 }
 
 async function networkFirstNavigation(request){
@@ -53,5 +64,6 @@ self.addEventListener("fetch",event=>{
   if(url.origin!==self.location.origin)return;
   if(url.pathname.startsWith("/api/"))return;
   if(request.mode==="navigate"){event.respondWith(networkFirstNavigation(request));return}
-  if(["script","style","image","font"].includes(request.destination))event.respondWith(staleWhileRevalidate(request));
+  if(["script","style"].includes(request.destination)){event.respondWith(networkFirst(request));return}
+  if(["image","font"].includes(request.destination))event.respondWith(staleWhileRevalidate(request));
 });
