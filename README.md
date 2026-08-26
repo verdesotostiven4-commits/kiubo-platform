@@ -26,3 +26,5 @@ Actualmente usa `localProvider`. Cuando exista un proyecto Supabase independient
 
 ## Regla de trabajo
 Agrupar cambios por hitos grandes y desplegar solo checkpoints útiles.
+
+<!-- redeploy retry 2026-08-26: publish restored product editor -->
