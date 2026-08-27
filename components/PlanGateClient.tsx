@@ -2,7 +2,7 @@
 import { useEffect,useState } from "react";
 import { getWorkspaceContext,loadLocalDatabase } from "@/lib/local-store";
 import { PLAN_CATALOG,type CommercialPlan } from "@/lib/entitlements";
-import { KIUBO_ICON_URL,KIUBO_LOGO_LIGHT_BG_URL } from "@/lib/kiubo-brand-assets";
+import { KIUBO_ICON_URL } from "@/lib/kiubo-brand-assets";
 import { KiuboWordmark } from "./KiuboWordmark";
 
 const planTone:Record<CommercialPlan,string>={Start:"start",Pro:"pro",Custom:"custom"};
@@ -14,24 +14,24 @@ export function PlanGateClient(){
   if(!db)return <div className="loading-card">Preparando planes…</div>;
   const ctx=getWorkspaceContext(db),current=ctx.tenant?.plan as CommercialPlan|undefined,currentData=current?PLAN_CATALOG[current]:undefined;
   const request=(plan:CommercialPlan)=>setMessage(`Cambio a KIUBO ${plan} preparado. Nada cambia en ${ctx.tenant?.name||"el negocio"} hasta confirmar la activación.`);
-  return <div className="plan-studio plan-studio-v4">
-    <section className="plan-hero plan-hero-v4">
+  return <div className="plan-studio plan-studio-v4 plan-studio-v5">
+    <section className="plan-hero plan-hero-v4 plan-hero-v5">
       <div className="plan-hero-v4-main">
-        <div className="plan-brand-lockup"><img src={KIUBO_ICON_URL} alt=""/><div><KiuboWordmark/><small>PLANES QUE CRECEN CONTIGO</small></div></div>
+        <div className="plan-brand-lockup plan-brand-lockup-v5"><img src={KIUBO_ICON_URL} alt=""/><div><KiuboWordmark/><small>PLANES QUE CRECEN CONTIGO</small></div></div>
         <span className="plan-kicker">PLAN Y MÓDULOS</span>
         <h1>El KIUBO que necesitas. Nada más.</h1>
         <p>Sube de nivel cuando el negocio lo pida. Tus ventas, datos y configuración siguen en su sitio.</p>
         <div className="plan-hero-trust"><span>✓ Sin interrupciones</span><span>✓ Tus datos se mantienen</span><span>✓ Cambio controlado</span></div>
       </div>
-      <div className="plan-current-panel plan-current-panel-v4"><img src={KIUBO_LOGO_LIGHT_BG_URL} alt="KIUBO"/><span>PLAN ACTUAL</span><strong>{current||"—"}</strong><small>{currentData?.price?`${currentData.price} / mes`:""}</small><div><i/>Activo</div></div>
+      <div className="plan-current-panel-v5"><span>PLAN ACTUAL</span><strong>{current||"—"}</strong><small>{currentData?.price?`${currentData.price} / mes`:""}</small><div><i/>Activo</div></div>
     </section>
 
     {message&&<div className="plan-message">✓ {message}</div>}
 
     <section className="plan-compare-v4">
-      <div className="plan-section-heading plan-section-heading-v4"><div><span>ELIGE TU KIUBO</span><h2>Un plan claro para cada etapa</h2><p>Compara rápido y cambia solo cuando realmente lo necesites.</p></div><div className="plan-mini-brand"><img src={KIUBO_ICON_URL} alt=""/><KiuboWordmark/></div></div>
-      <div className="plan-cards plan-cards-v3 plan-cards-v4">{(Object.keys(PLAN_CATALOG) as CommercialPlan[]).map(plan=>{const data=PLAN_CATALOG[plan],active=current===plan;return <article className={`plan-card-v3 plan-card-v4 ${planTone[plan]} ${active?"active":""}`} key={plan}>
-        <div className="plan-card-brand"><img src={KIUBO_ICON_URL} alt=""/><div><KiuboWordmark/><small>{planUse[plan]}</small></div>{active&&<b>Tu plan actual</b>}</div>
+      <div className="plan-section-heading plan-section-heading-v4 plan-section-heading-v5"><div><span>ELIGE TU PLAN</span><h2>Un plan claro para cada etapa</h2><p>Compara rápido y cambia solo cuando realmente lo necesites.</p></div></div>
+      <div className="plan-cards plan-cards-v3 plan-cards-v4 plan-cards-v5">{(Object.keys(PLAN_CATALOG) as CommercialPlan[]).map(plan=>{const data=PLAN_CATALOG[plan],active=current===plan;return <article className={`plan-card-v3 plan-card-v4 plan-card-v5 ${planTone[plan]} ${active?"active":""}`} key={plan}>
+        <div className="plan-card-kicker"><span>{planUse[plan]}</span>{active&&<b>Tu plan actual</b>}</div>
         <h2>{plan}</h2>
         <div className="plan-price plan-price-v4"><strong>{data.price}</strong><small>/mes</small></div>
         <p>{data.tagline}</p>
