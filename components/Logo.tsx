@@ -1,4 +1,4 @@
-const KIUBO_ICON_URL="https://cdn.phototourl.com/free/2026-08-22-d66f0865-834f-4fad-aba9-d7d2de485042.jpg";
+import { KIUBO_ICON_URL } from "@/lib/kiubo-brand-assets";
 
 export function KiuboMark({ compact = false }: { compact?: boolean }) {
   return (
