@@ -13,12 +13,19 @@ const SPLASH_MS=5600;
 
 export function WorkspaceSplash(){
   const pathname=usePathname();
-  const[show,setShow]=useState(false);
+  const initialEligible=!SKIP_PREFIXES.some(prefix=>pathname.startsWith(prefix));
+  const[show,setShow]=useState(initialEligible);
   const[stage,setStage]=useState(0);
 
   useEffect(()=>{
-    if(SKIP_PREFIXES.some(prefix=>pathname.startsWith(prefix))||!loadLocalSession())return;
-    if(window.sessionStorage.getItem(SESSION_SPLASH_KEY))return;
+    if(SKIP_PREFIXES.some(prefix=>pathname.startsWith(prefix))||!loadLocalSession()){
+      setShow(false);
+      return;
+    }
+    if(window.sessionStorage.getItem(SESSION_SPLASH_KEY)){
+      setShow(false);
+      return;
+    }
     window.sessionStorage.setItem(SESSION_SPLASH_KEY,"1");
     setStage(0);
     setShow(true);
@@ -38,7 +45,7 @@ export function WorkspaceSplash(){
   },[show]);
 
   if(!show)return null;
-  return <div className={styles.backdrop} role="status" aria-live="polite" aria-label="KIUBO está iniciando">
+  return <div className={styles.backdrop} data-kiubo-splash="true" role="status" aria-live="polite" aria-label="KIUBO está iniciando">
     <div className={styles.ambientOne}/><div className={styles.ambientTwo}/>
     <div className={styles.orbit} aria-hidden="true"><i/><i/><i/></div>
     <div className={styles.stage}>
