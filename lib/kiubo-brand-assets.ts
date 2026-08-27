@@ -1,0 +1,11 @@
+export const KIUBO_ICON_URL="https://blogger.googleusercontent.com/img/a/AVvXsEhKMHanXsqFTA1HgWHkeQmCzsHpL_qqREfV7uY6U_97DnHM0Ito7RorUwZk8VY94alzkhDc4gjqWJx82xuxDo_mwHkdC_0PCL7xu2KDES5_gBMTEos4pJF8bkujdRn81sjcNZO7QNlrqTH5sX9kmCd4Wgh1XDq3XvKOE-m_ZVRBnC_pIUbG4ae7txFoLpA";
+
+export const KIUBO_LOGO_LIGHT_BG_URL="https://blogger.googleusercontent.com/img/a/AVvXsEh_yu4CjTLHBa5sQlbbzvW_mmjwVrhcR2UGOwg6NULFuBAHkM7YIXG2nm2dzGru8lVZCqsH2T8CjWoTEpxbpgu8JPiC5tCCW3O9cuRR4MNH4XWlhnwAQWTP1aIueELRCYdVmAD2_8fZdkbNRHJn15MHKBWiy7sP31ECxhIqXpxTVkFto1ZigeQbvF20IkY";
+
+export const KIUBO_LOGO_DARK_BG_URL="https://blogger.googleusercontent.com/img/a/AVvXsEjOVGIsOpJuZOcPhlJ9yDAWyObEQT7Tx5MQcV_e25bJeduN-J3h5juqok3hcy97MoZxCkK3zxNZp3nNiTUnRY2rdv9B187puQ-aVbI-hQHCusrPhP5IJSKl4Pv5ybMHboH0JNLkAdsPcIf2J99ZyWBEuHtD5ZD7FgYDjAflrxE0_0ktzJ3phqDmrKjk34A=w305-h171";
+
+export const KIUBO_BRAND_ASSETS={
+  icon:KIUBO_ICON_URL,
+  light:KIUBO_LOGO_LIGHT_BG_URL,
+  dark:KIUBO_LOGO_DARK_BG_URL,
+} as const;
