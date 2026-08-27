@@ -26,6 +26,7 @@ import "./restaurant-ops-v5.css";
 import "./yuki-live-polish.css";
 import "./experience-v6.css";
 import "./experience-v7.css";
+import "./experience-v8.css";
 import { PwaRegister } from "@/components/PwaRegister";
 import { SessionEnforcer } from "@/components/SessionEnforcer";
 import { BrandingRuntime } from "@/components/BrandingRuntime";

@@ -28,7 +28,7 @@ function getPeriodBounds(range:DashboardRange){
 
 export function DashboardClient(){
   const[db,setDb]=useState<ReturnType<typeof loadLocalDatabase>|null>(null);
-  const[range,setRange]=useState<DashboardRange>("today");
+  const[range,setRange]=useState<DashboardRange>("7d");
   const[paymentHelpOpen,setPaymentHelpOpen]=useState(false);
 
   useEffect(()=>{const refresh=()=>setDb(loadLocalDatabase());refresh();window.addEventListener(KIUBO_DATA_REFRESHED,refresh);return()=>window.removeEventListener(KIUBO_DATA_REFRESHED,refresh)},[]);

@@ -2,7 +2,7 @@
 import { useEffect,useState } from "react";
 import { getWorkspaceContext,loadLocalDatabase } from "@/lib/local-store";
 import { PLAN_CATALOG,type CommercialPlan } from "@/lib/entitlements";
-import { KIUBO_LOGO_DARK_BG_URL } from "@/lib/kiubo-brand-assets";
+import { KIUBO_LOGO_LIGHT_BG_URL } from "@/lib/kiubo-brand-assets";
 
 const planTone:Record<CommercialPlan,string>={Start:"start",Pro:"pro",Custom:"custom"};
 
@@ -14,7 +14,7 @@ export function PlanGateClient(){
   const request=(plan:CommercialPlan)=>setMessage(`Cambio a KIUBO ${plan} preparado. Nada cambia en ${ctx.tenant?.name||"el negocio"} hasta confirmar la activación.`);
   return <div className="plan-studio plan-studio-v3">
     <section className="plan-hero plan-hero-v3">
-      <div className="plan-hero-copy"><img className="plan-hero-logo" src={KIUBO_LOGO_DARK_BG_URL} alt="KIUBO"/><span className="plan-kicker">PLAN Y MÓDULOS</span><h1>Más capacidad cuando la necesites. Sin complicarte.</h1><p>Compara lo que incluye cada plan y revisa qué está activo sin tocar ventas, caja ni inventario.</p><div className="plan-hero-trust"><span>✓ Sin interrupciones</span><span>✓ Tus datos se mantienen</span><span>✓ Cambio controlado</span></div></div>
+      <div className="plan-hero-copy"><img className="plan-hero-logo" src={KIUBO_LOGO_LIGHT_BG_URL} alt="KIUBO"/><span className="plan-kicker">PLAN Y MÓDULOS</span><h1>Más capacidad cuando la necesites. Sin complicarte.</h1><p>Compara lo que incluye cada plan y revisa qué está activo sin tocar ventas, caja ni inventario.</p><div className="plan-hero-trust"><span>✓ Sin interrupciones</span><span>✓ Tus datos se mantienen</span><span>✓ Cambio controlado</span></div></div>
       <div className="plan-current-panel"><span>PLAN ACTUAL</span><strong>{current||"—"}</strong><small>{currentData?.price?`${currentData.price}/mes`:""}</small><div><i/>Activo</div></div>
     </section>
 
