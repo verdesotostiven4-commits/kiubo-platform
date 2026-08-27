@@ -209,6 +209,7 @@ function normalize(raw:Partial<KiuboLocalDatabase>|null|undefined):KiuboLocalDat
 function writeDatabase(db:KiuboLocalDatabase){if(typeof window!=="undefined")window.localStorage.setItem(STORAGE_KEY,JSON.stringify(db))}
 function recordKey(entity:SyncEntity,record:Record<string,unknown>){if(entity==="settings"||entity==="branding")return String(record.tenantId||"");return String(record.id||"")}
 function tenantFor(entity:SyncEntity,record:Record<string,unknown>){return entity==="tenants"?String(record.id||""):String(record.tenantId||"")}
+function trackingKey(entity:SyncEntity,record:Record<string,unknown>){return`${tenantFor(entity,record)}::${recordKey(entity,record)}`}
 function branchFor(entity:SyncEntity,record:Record<string,unknown>){if(entity==="branches")return String(record.id||"");const value=record.branchId;return typeof value==="string"&&value?value:undefined}
 function recordsOf(db:KiuboLocalDatabase,entity:SyncEntity){return (db[entity] as unknown as Record<string,unknown>[])||[]}
 function sameRecord(a?:Record<string,unknown>,b?:Record<string,unknown>){return JSON.stringify(a)===JSON.stringify(b)}
@@ -225,8 +226,8 @@ function enqueueChange(next:KiuboLocalDatabase,entity:SyncEntity,before:Record<s
 }
 function trackChanges(previous:KiuboLocalDatabase,next:KiuboLocalDatabase){
   for(const entity of TRACKED_COLLECTIONS){
-    const before=new Map(recordsOf(previous,entity).map(record=>[recordKey(entity,record),record]));
-    const after=new Map(recordsOf(next,entity).map(record=>[recordKey(entity,record),record]));
+    const before=new Map(recordsOf(previous,entity).map(record=>[trackingKey(entity,record),record]));
+    const after=new Map(recordsOf(next,entity).map(record=>[trackingKey(entity,record),record]));
     const keys=new Set([...before.keys(),...after.keys()]);
     for(const key of keys)enqueueChange(next,entity,before.get(key),after.get(key));
   }
