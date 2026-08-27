@@ -9,8 +9,19 @@ const UUID_RE=/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a
 const SYNCABLE_ENTITIES=new Set<SyncQueueRecord["entityType"]>(["tenantProducts","customers","sales","orders","saleTransactions","cashSessions","cashMovements","cashTransactions","credits","creditPayments","creditPaymentTransactions","settings","branding","suppliers","purchases","supplierPayments","stockMovements","purchaseTransactions","supplierPaymentTransactions","inventoryAdjustmentTransactions","saleReversalTransactions"]);
 const MAX_PULL_PAGES=4;
 const STALE_SYNCING_MS=60_000;
+const TENANT_ISOLATION_REPAIR_PREFIX="kiubo.sync.tenant-isolation-repair.v1:";
 
 function keyFor(entity:SyncEntity,record:Record<string,unknown>){return entity==="settings"||entity==="branding"?String(record.tenantId||""):String(record.id||"")}
+function tenantForRecord(entity:SyncEntity,record:Record<string,unknown>){return entity==="tenants"?String(record.id||""):String(record.tenantId||"")}
+function samePulledIdentity(entity:SyncEntity,record:Record<string,unknown>,tenantId:string,entityId:string){
+  return tenantForRecord(entity,record)===tenantId&&keyFor(entity,record)===entityId;
+}
+function tenantIsolationRepairDone(tenantId:string){
+  return typeof window!=="undefined"&&window.localStorage.getItem(TENANT_ISOLATION_REPAIR_PREFIX+tenantId)==="1";
+}
+function markTenantIsolationRepairDone(tenantId:string){
+  if(typeof window!=="undefined")window.localStorage.setItem(TENANT_ISOLATION_REPAIR_PREFIX+tenantId,"1");
+}
 function safeOperation(item:SyncQueueRecord):SyncQueueRecord{
   if(!item.payload||typeof item.payload!=="object")return item;
   const payload={...(item.payload as Record<string,unknown>)};
@@ -27,7 +38,9 @@ function applyPulled(db:ReturnType<typeof loadLocalDatabase>,changes:SyncPullRes
   for(const change of changes){
     const collection=mutable[change.entityType];
     if(!Array.isArray(collection))continue;
-    const index=collection.findIndex(record=>keyFor(change.entityType,record)===change.entityId);
+    // Entity ids are only unique inside a tenant in KIUBO Cloud. Platform-admin devices can
+    // cache multiple businesses at once, so never let a record from tenant A replace tenant B.
+    const index=collection.findIndex(record=>samePulledIdentity(change.entityType,record,change.tenantId,change.entityId));
     if(change.action==="delete"){
       if(index>=0)collection.splice(index,1);
       continue;
@@ -58,6 +71,13 @@ function persistPulled(provider:KiuboDataProvider,db:ReturnType<typeof loadLocal
     saveLocalDatabase(db,{trackChanges:false});
   }
   provider.commitCursor(pulled.cursor);
+}
+async function repairTenantIsolation(provider:KiuboDataProvider,db:ReturnType<typeof loadLocalDatabase>,tenantId:string){
+  if(tenantIsolationRepairDone(tenantId))return null;
+  const canonical=await pullAvailable(provider,"0");
+  persistPulled(provider,db,canonical);
+  if(!canonical.hasMore)markTenantIsolationRepairDone(tenantId);
+  return canonical;
 }
 function isActiveQueueItem(item:SyncQueueRecord,tenantId:string){
   return item.tenantId===tenantId&&SYNCABLE_ENTITIES.has(item.entityType);
@@ -105,6 +125,21 @@ async function runSyncCycleCore():Promise<SyncCycleResult>{
     .slice(0,100);
 
   if(!pending.length){
+    if(!waitingRetry.length&&!tenantIsolationRepairDone(activeTenantId)){
+      try{
+        const repaired=await repairTenantIsolation(provider,db,activeTenantId);
+        if(repaired)return{
+          ok:!repaired.hasMore,
+          mode:provider.mode,
+          pushed:0,
+          failed:0,
+          pulled:repaired.changes.length,
+          message:repaired.hasMore?"KIUBO sigue verificando el negocio en Cloud":"Datos del negocio verificados y aislados correctamente"
+        };
+      }catch{
+        // The ordinary incremental pull below remains available even if the one-time replay fails.
+      }
+    }
     const pulled=await pullAvailable(provider);
     persistPulled(provider,db,pulled);
     return{
@@ -190,6 +225,7 @@ async function runSyncCycleCore():Promise<SyncCycleResult>{
       const canonical=await pullAvailable(provider,"0");
       persistPulled(provider,afterPush,canonical);
       afterPush=loadLocalDatabase();
+      if(!canonical.hasMore)markTenantIsolationRepairDone(activeTenantId);
       return{
         ok:false,
         mode:provider.mode,
@@ -220,6 +256,22 @@ async function runSyncCycleCore():Promise<SyncCycleResult>{
       pulled:0,
       message:failed?"Quedaron cambios protegidos; KIUBO volverá a intentarlo":"Cambios locales enviados"
     };
+  }
+
+  if(!tenantIsolationRepairDone(activeTenantId)){
+    try{
+      const repaired=await repairTenantIsolation(provider,afterPush,activeTenantId);
+      if(repaired)return{
+        ok:failed===0&&!repaired.hasMore,
+        mode:provider.mode,
+        pushed,
+        failed,
+        pulled:repaired.changes.length,
+        message:repaired.hasMore?"Cambios enviados; KIUBO sigue verificando el negocio":"Cambios enviados y datos del negocio verificados"
+      };
+    }catch{
+      // Fall through to the regular incremental pull.
+    }
   }
 
   const pulled=await pullAvailable(provider);
