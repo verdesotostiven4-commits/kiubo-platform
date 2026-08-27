@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect,useMemo,useState } from "react";
+import { useEffect,useMemo,useState,type CSSProperties } from "react";
 import type { ProductOptionChoice,ProductOptionConfig } from "@/lib/product-options";
 
 const DEFAULT_YOGURT="https://blogger.googleusercontent.com/img/a/AVvXsEg_L3dUljGZBrjFX-1Nv-wUwqc9J37Dk2MlgL_HsLWYGPfccp8OSkeVItlthfRP9M0SqiUt6B07Xk7cG2rGxhKLRT0z7yyV-drSgPNRODjH676spZ0ZP7j2RCmUiAc6oryev9kl-1-c6wPhpbM04DqvQAGLeFcnK41ANXM6NKQKliFNx8ymF0fBJOcVlMQ";
@@ -15,7 +15,9 @@ const YUKI_YOGURT_ASSETS:Record<string,string>={
   maracuya:"https://blogger.googleusercontent.com/img/a/AVvXsEg0cFkXkqLJVHNhrVerv31TH3rhPVQ2XPtw5wNnP14DrI412mLnLjDs4xh6vqsooaxUfMe6_yMI0-_KePEnMPx00WvVEyt_w5spkdXZiUsjXco6bl-BbGiYKDvVmk3Aqhoq5k4ldBNh3plSpvICZ16L7CWVAup5ahjvlzLAdluvIvEJKk8NMJe1G8FoNys",
   mango:"https://blogger.googleusercontent.com/img/a/AVvXsEi8WcDA6TkxZOTPcN8ob8hOdi0Rglp1_0W6cmvzeZ9KhYXziPFwR-7Cgrh-pDbGApjhRj78MzjS5Er4O9bdqBCJu_4u-txGoPwfTJqglKqVH90Kk9j6NtBDIEMwSVnoAC0uWU_yC0irXxQF958B1Nj9f-SUrZ2QST538uvULlIP239rc_wTPoq9O-ga0XQ"
 };
+const FLAVOR_TONES:Record<string,{tone:string;soft:string;border:string}>={banana:{tone:"#d7b82f",soft:"#fff9dc",border:"#eadc91"},fresa:{tone:"#e75f78",soft:"#fff0f4",border:"#efb8c4"},frutilla:{tone:"#e75f78",soft:"#fff0f4",border:"#efb8c4"},mango:{tone:"#f09a32",soft:"#fff4e5",border:"#efc896"},maracuya:{tone:"#eeb520",soft:"#fff7d9",border:"#ead27b"},melon:{tone:"#91bd67",soft:"#f1f8e9",border:"#bad49e"},mora:{tone:"#7f53a6",soft:"#f4eef9",border:"#cbb6db"},naranjilla:{tone:"#ef8730",soft:"#fff1e5",border:"#efc19c"},"tomate-de-arbol":{tone:"#d76542",soft:"#fff0ea",border:"#e8b5a5"}};
 const slug=(value:string)=>value.normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/^-|-$/g,"");
+const toneVars=(choice:string):CSSProperties=>{const tone=FLAVOR_TONES[slug(choice)]||{tone:"#6b9d83",soft:"#f2f7f4",border:"#cfe0d7"};return{"--option-tone":tone.tone,"--option-soft":tone.soft,"--option-border":tone.border} as CSSProperties};
 export type ProductOptionVisualPreset="yuki-yogurt";
 
 type Props={productName:string;config:ProductOptionConfig;choices:ProductOptionChoice[];visualPreset?:ProductOptionVisualPreset;onClose:()=>void;onConfirm:(selections:string[])=>void};
@@ -23,38 +25,19 @@ type Props={productName:string;config:ProductOptionConfig;choices:ProductOptionC
 export function ProductOptionPicker({productName,config,choices,visualPreset,onClose,onConfirm}:Props){
   const count=Math.max(1,Math.min(8,config.selectionCount||1));
   const[selections,setSelections]=useState<string[]>(()=>Array.from({length:count},()=>""));
-  const[active,setActive]=useState(0);
-  const imageMap=useMemo(()=>new Map(choices.map(choice=>{
-    const presetAsset=visualPreset==="yuki-yogurt"?YUKI_YOGURT_ASSETS[slug(choice.label)]||DEFAULT_YOGURT:undefined;
-    return[choice.label,presetAsset||choice.imageUrl] as const;
-  })),[choices,visualPreset]);
-  useEffect(()=>{
-    const preload=visualPreset==="yuki-yogurt"?[DEFAULT_YOGURT,...Object.values(YUKI_YOGURT_ASSETS),...imageMap.values()]:[...imageMap.values()];
-    for(const src of new Set(preload.filter((value):value is string=>Boolean(value)))){const image=new Image();image.src=src}
-  },[imageMap,visualPreset]);
+  const[active,setActive]=useState(0),flavorMode=visualPreset==="yuki-yogurt";
+  const imageMap=useMemo(()=>new Map(choices.map(choice=>{const presetAsset=flavorMode?YUKI_YOGURT_ASSETS[slug(choice.label)]||DEFAULT_YOGURT:undefined;return[choice.label,presetAsset||choice.imageUrl] as const})),[choices,flavorMode]);
+  useEffect(()=>{const preload=flavorMode?[DEFAULT_YOGURT,...Object.values(YUKI_YOGURT_ASSETS),...imageMap.values()]:[...imageMap.values()];for(const src of new Set(preload.filter((value):value is string=>Boolean(value)))){const image=new Image();image.src=src}},[imageMap,flavorMode]);
   const chosenCount=selections.filter(Boolean).length,ready=chosenCount===count,current=selections[active]||"";
-  const choose=(value:string)=>{
-    if(config.allowRepeat===false&&selections.some((selection,index)=>index!==active&&selection===value))return;
-    setSelections(previous=>{const next=[...previous];next[active]=value;return next});
-    const nextEmpty=selections.findIndex((selection,index)=>index>active&&!selection);
-    if(nextEmpty>=0)setActive(nextEmpty);else if(active<count-1)setActive(active+1);
-  };
+  const choose=(value:string)=>{if(config.allowRepeat===false&&selections.some((selection,index)=>index!==active&&selection===value))return;setSelections(previous=>{const next=[...previous];next[active]=value;return next});const nextEmpty=selections.findIndex((selection,index)=>index>active&&!selection);if(nextEmpty>=0)setActive(nextEmpty);else if(active<count-1)setActive(active+1)};
   const clear=(slot:number)=>{setSelections(previous=>previous.map((value,index)=>index===slot?"":value));setActive(slot)};
   const plural=count===1?config.label:`${config.label}s`;
-  return <div className="option-picker-backdrop" role="presentation" onMouseDown={event=>{if(event.target===event.currentTarget)onClose()}}>
-    <section className="option-picker" role="dialog" aria-modal="true" aria-label={`Personalizar ${productName}`}>
-      <button className="option-picker-close" onClick={onClose} aria-label="Cerrar">×</button>
-      <header className="option-picker-head"><span>PERSONALIZAR</span><h3>{productName}</h3><p>{count===1?`Elige 1 ${config.label.toLowerCase()}.`:`Elige ${count} ${plural.toLowerCase()}. Puedes repetir si el negocio lo permite.`}</p></header>
-      <div className={`option-picker-slots option-picker-slots-${Math.min(count,4)}`}>
-        {selections.map((selection,index)=>{const src=selection?imageMap.get(selection):visualPreset==="yuki-yogurt"?DEFAULT_YOGURT:undefined;return <button key={index} className={`option-picker-slot ${active===index?"active":""} ${selection?"filled":""}`} onClick={()=>setActive(index)}>
-          {selection&&<span className="option-picker-clear" onClick={event=>{event.stopPropagation();clear(index)}}>×</span>}
-          <div className="option-picker-visual">{src?<img key={`${index}-${selection||"default"}`} src={src} alt=""/>:<span>{selection?selection.slice(0,1).toUpperCase():String(index+1)}</span>}</div>
-          <small>{config.label.toUpperCase()} {count>1?index+1:""}</small><strong>{selection||"Elige una opción"}</strong>{active===index&&<em>Seleccionando</em>}
-        </button>})}
-      </div>
-      <div className="option-picker-choice-head"><div><span>{count>1?`${config.label.toUpperCase()} ${active+1}`:config.label.toUpperCase()}</span><strong>Opciones disponibles</strong></div><b>{chosenCount}/{count} {ready?"listos":""}</b></div>
-      <div className="option-picker-choices">{choices.map(choice=>{const selected=current===choice.label,used=selections.includes(choice.label),disabled=config.allowRepeat===false&&used&&!selected;return <button key={choice.label} className={`${selected?"selected":""} ${used?"used":""}`} disabled={disabled} onClick={()=>choose(choice.label)}><i/><span>{choice.label}</span>{selected&&<b>✓</b>}</button>})}</div>
-      <footer className="option-picker-footer"><div className="option-picker-summary">{selections.map((selection,index)=><span key={index}>{selection||`${config.label} ${count>1?index+1:""}`}</span>)}</div><button className="option-picker-confirm" disabled={!ready} onClick={()=>{if(ready)onConfirm(selections)}}>{ready?`Agregar ${productName}`:`Elige ${count-chosenCount} ${count-chosenCount===1?"opción":"opciones"}`}</button></footer>
-    </section>
-  </div>;
+  return <div className="option-picker-backdrop" role="presentation" onMouseDown={event=>{if(event.target===event.currentTarget)onClose()}}><section className="option-picker" role="dialog" aria-modal="true" aria-label={`Personalizar ${productName}`}>
+    <button className="option-picker-close" onClick={onClose} aria-label="Cerrar">×</button>
+    <header className="option-picker-head"><span>PERSONALIZAR</span><h3>{productName}</h3><p>{count===1?`Elige 1 ${config.label.toLowerCase()}.`:`Elige ${count} ${plural.toLowerCase()}. Puedes repetir si el negocio lo permite.`}</p></header>
+    <div className={`option-picker-slots option-picker-slots-${Math.min(count,4)}`}>{selections.map((selection,index)=>{const src=selection?imageMap.get(selection):flavorMode?DEFAULT_YOGURT:undefined;return <button key={index} style={selection&&flavorMode?toneVars(selection):undefined} className={`option-picker-slot ${active===index?"active":""} ${selection?"filled":""} ${selection&&flavorMode?"flavor-toned":""}`} onClick={()=>setActive(index)}>{selection&&<span className="option-picker-clear" onClick={event=>{event.stopPropagation();clear(index)}}>×</span>}<div className="option-picker-visual">{src?<img key={`${index}-${selection||"default"}`} src={src} alt=""/>:<span>{selection?selection.slice(0,1).toUpperCase():String(index+1)}</span>}</div><small>{config.label.toUpperCase()} {count>1?index+1:""}</small><strong>{selection||"Elige una opción"}</strong>{selection&&flavorMode&&<span className="option-picker-flavor-chip" style={toneVars(selection)}><i/>{selection}</span>}{active===index&&<em>Seleccionando</em>}</button>})}</div>
+    <div className="option-picker-choice-head"><div><span>{count>1?`${config.label.toUpperCase()} ${active+1}`:config.label.toUpperCase()}</span><strong>Opciones disponibles</strong></div><b>{chosenCount}/{count} {ready?"listos":""}</b></div>
+    <div className="option-picker-choices">{choices.map(choice=>{const selected=current===choice.label,used=selections.includes(choice.label),disabled=config.allowRepeat===false&&used&&!selected;return <button key={choice.label} style={flavorMode?toneVars(choice.label):undefined} className={`${selected?"selected":""} ${used?"used":""} ${flavorMode?"flavor-choice":""}`} disabled={disabled} onClick={()=>choose(choice.label)}><i/><span>{choice.label}</span>{selected&&<b>✓</b>}</button>})}</div>
+    <footer className="option-picker-footer"><div className="option-picker-summary">{selections.map((selection,index)=><span className={selection&&flavorMode?"flavor-summary":""} style={selection&&flavorMode?toneVars(selection):undefined} key={index}>{selection||`${config.label} ${count>1?index+1:""}`}</span>)}</div><button className="option-picker-confirm" disabled={!ready} onClick={()=>{if(ready)onConfirm(selections)}}>{ready?`Agregar ${productName}`:`Elige ${count-chosenCount} ${count-chosenCount===1?"opción":"opciones"}`}</button></footer>
+  </section></div>;
 }
