@@ -1,0 +1,13 @@
+/* KIUBO experience v12 — neutral flavor tiles, colored flavor dots only. */
+
+/* YUKI yogurt choices stay visually clean: white tiles, color only in the flavor indicator. */
+.option-picker-choices button.flavor-choice{background:#fff!important;border-color:#dfe7e3!important;color:#30483d!important}
+.option-picker-choices button.flavor-choice>i{background:var(--option-tone,#7ca68f)!important;box-shadow:0 0 0 3px color-mix(in srgb,var(--option-tone,#7ca68f) 12%,transparent)!important}
+.option-picker-choices button.flavor-choice:hover{background:#fff!important;border-color:#bfcfc6!important;transform:translateY(-1px)}
+.option-picker-choices button.flavor-choice.selected{background:#fff!important;border-color:#2c8b61!important;box-shadow:0 0 0 2px rgba(44,139,97,.08)!important;color:#173e2e!important}
+.option-picker-choices button.flavor-choice.selected>b{color:#218356!important}
+.option-picker-slot.flavor-toned{background:#fff!important;border-color:#dbe6e0!important}
+.option-picker-flavor-chip{background:#fff!important;border-color:#dfe7e3!important;color:#42574c!important}
+.option-picker-flavor-chip>i{background:var(--option-tone,#6a9e82)!important;box-shadow:0 0 0 2px color-mix(in srgb,var(--option-tone,#6a9e82) 13%,transparent)!important}
+.option-picker-summary span.flavor-summary{background:#f6f8f7!important;border-color:#e1e8e4!important;color:#40554a!important}
+.option-picker-summary span.flavor-summary:before{background:var(--option-tone,#6a9e82)!important}

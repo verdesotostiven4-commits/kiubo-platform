@@ -27,6 +27,16 @@ export function WorkspaceSplash(){
     return()=>{stageTimers.forEach(window.clearTimeout);window.clearTimeout(closeTimer)};
   },[pathname]);
 
+  useEffect(()=>{
+    if(!show)return;
+    const root=document.documentElement,body=document.body;
+    const rootOverflow=root.style.overflow,bodyOverflow=body.style.overflow;
+    const rootOverscroll=root.style.overscrollBehavior,bodyOverscroll=body.style.overscrollBehavior;
+    root.style.overflow="hidden";body.style.overflow="hidden";
+    root.style.overscrollBehavior="none";body.style.overscrollBehavior="none";
+    return()=>{root.style.overflow=rootOverflow;body.style.overflow=bodyOverflow;root.style.overscrollBehavior=rootOverscroll;body.style.overscrollBehavior=bodyOverscroll};
+  },[show]);
+
   if(!show)return null;
   return <div className={styles.backdrop} role="status" aria-live="polite" aria-label="KIUBO está iniciando">
     <div className={styles.ambientOne}/><div className={styles.ambientTwo}/>
