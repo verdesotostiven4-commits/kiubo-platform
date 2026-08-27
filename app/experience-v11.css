@@ -1,0 +1,43 @@
+/* KIUBO experience v11 — calmer plan branding, stronger YUKI identity and flavor-coded choices. */
+
+/* YUKI: more presence without taking navigation space away. */
+@media(min-width:1001px){
+  .sidebar-top:has(.business-brand-yuki-type){padding:7px 8px 18px!important}
+  .business-brand-yuki-type{gap:3px!important;padding-left:5px!important}
+  .business-brand-yuki-type>small{font-size:8.5px!important;letter-spacing:.24em!important}
+  .yuki-type-wordmark{font-size:48px!important;line-height:.98!important;letter-spacing:.235em!important;font-weight:560!important}
+  .yuki-type-rule{width:166px!important;height:9px!important;margin-top:3px!important}
+  .yuki-type-signature{font-size:10.5px!important;margin-top:1px!important}
+  .yuki-type-signature .kiubo-wordmark{font-size:12px!important}
+}
+
+/* Keep instant table totals, remove the extra live-state decoration. */
+.table-selector-grid button.live.active:after{display:none!important}
+.table-selector-grid button.live.active{box-shadow:0 0 0 2px rgba(44,139,97,.07),0 8px 20px rgba(24,83,60,.065)!important}
+.table-selector-grid button.live.active>span{color:#315f4c!important}
+
+/* Yogurt flavor chips: each flavor gets a visual identity while remaining readable. */
+.option-picker-choices button.flavor-choice{background:var(--option-soft,#fff)!important;border-color:var(--option-border,#e0e8e3)!important;color:#30483d!important}
+.option-picker-choices button.flavor-choice>i{background:var(--option-tone,#7ca68f)!important;box-shadow:0 0 0 3px color-mix(in srgb,var(--option-tone,#7ca68f) 12%,transparent)}
+.option-picker-choices button.flavor-choice:hover{border-color:var(--option-tone,#7ca68f)!important;transform:translateY(-1px)}
+.option-picker-choices button.flavor-choice.selected{background:color-mix(in srgb,var(--option-soft,#fff) 84%,#fff)!important;border-color:var(--option-tone,#2e825e)!important;box-shadow:0 0 0 2px color-mix(in srgb,var(--option-tone,#2e825e) 10%,transparent)!important;color:#173e2e!important}
+.option-picker-choices button.flavor-choice.selected>b{color:var(--option-tone,#218356)!important}
+.option-picker-slot.flavor-toned{border-color:color-mix(in srgb,var(--option-tone,#5c9978) 46%,#dbe6e0)!important;background:linear-gradient(180deg,var(--option-soft,#f7faf8),#fff)!important}
+.option-picker-flavor-chip{display:inline-flex;align-items:center;gap:5px;margin-top:2px;padding:4px 7px;border:1px solid var(--option-border,#dfe7e3);border-radius:999px;background:var(--option-soft,#f2f6f4);font-size:7.5px;font-weight:900;color:#42574c}
+.option-picker-flavor-chip>i{width:7px;height:7px;border-radius:999px;background:var(--option-tone,#6a9e82);box-shadow:0 0 0 2px color-mix(in srgb,var(--option-tone,#6a9e82) 13%,transparent)}
+.option-picker-summary span.flavor-summary{display:inline-flex;align-items:center;gap:5px;border:1px solid var(--option-border,#e1e9e5);background:var(--option-soft,#f2f6f4)!important;color:#40554a!important}
+.option-picker-summary span.flavor-summary:before{content:"";width:7px;height:7px;border-radius:999px;background:var(--option-tone,#6a9e82)}
+
+/* Plans: one strong KIUBO lockup, then let the plans be the content. */
+.plan-studio-v5{gap:11px!important}
+.plan-hero-v5{grid-template-columns:minmax(0,1fr) 170px!important;padding:21px 25px!important;background:radial-gradient(circle at 88% 12%,rgba(244,160,0,.11),transparent 24%),radial-gradient(circle at 10% 100%,rgba(60,130,246,.09),transparent 30%),linear-gradient(135deg,#fff 0%,#f8fbfa 70%,#fffdf8 100%)!important}
+.plan-brand-lockup-v5{gap:11px!important;margin-bottom:8px!important}.plan-brand-lockup-v5>img{width:48px!important;height:48px!important;filter:drop-shadow(0 8px 15px rgba(16,36,61,.13))!important}.plan-brand-lockup-v5 .kiubo-wordmark{font-size:27px!important}.plan-brand-lockup-v5 small{font-size:7px!important;letter-spacing:.18em!important}
+.plan-hero-v5 h1{margin-top:5px!important}
+.plan-current-panel-v5{position:relative;z-index:2;display:grid;align-content:center;justify-items:start;gap:3px;min-height:132px;padding:17px 18px;border:1px solid #dce7e2;border-radius:19px;background:rgba(255,255,255,.82);box-shadow:0 9px 25px rgba(16,36,61,.06);backdrop-filter:blur(8px)}
+.plan-current-panel-v5:before{content:"";position:absolute;left:0;top:18px;bottom:18px;width:3px;border-radius:999px;background:linear-gradient(180deg,#3c82f6,#25a36c,#f4a000)}
+.plan-current-panel-v5>span{font-size:6.5px;letter-spacing:.17em;font-weight:950;color:#819087}.plan-current-panel-v5>strong{font-size:26px;letter-spacing:-.04em;color:#14392c}.plan-current-panel-v5>small{font-size:8px;color:#6e7f76}.plan-current-panel-v5>div{display:flex;align-items:center;gap:5px;margin-top:5px;padding:4px 7px;border-radius:999px;background:#eaf7ef;color:#26724f;font-size:7px;font-weight:900}.plan-current-panel-v5 i{width:6px;height:6px;border-radius:999px;background:#31b16f}
+.plan-section-heading-v5{padding-top:0!important}.plan-section-heading-v5>div>span{color:#3979dd!important}.plan-cards-v5{gap:10px!important}.plan-card-v5{min-height:360px!important;padding:18px!important}.plan-card-v5:after{top:55px!important;width:38px!important;box-shadow:none!important}.plan-card-kicker{display:flex;align-items:center;justify-content:space-between;gap:8px;min-height:24px}.plan-card-kicker>span{font-size:7px;letter-spacing:.08em;font-weight:850;color:#819087}.plan-card-kicker>b{padding:5px 7px;border-radius:999px;background:#e7f7ee;color:#1e7850;font-size:6.5px;white-space:nowrap}.plan-card-v5>h2{margin:22px 0 2px!important}.plan-card-v5 .plan-feature-stack{margin-top:8px!important}.plan-card-v5 .plan-request-button,.plan-card-v5 .plan-current-button{min-height:38px!important}
+
+@media(max-width:1200px){.plan-hero-v5{grid-template-columns:1fr 155px!important}.yuki-type-wordmark{font-size:44px!important}}
+@media(max-width:900px){.plan-hero-v5{grid-template-columns:1fr!important}.plan-current-panel-v5{min-height:0}.plan-cards-v5{grid-template-columns:1fr!important}}
+@media(max-width:640px){.plan-brand-lockup-v5>img{width:42px!important;height:42px!important}.plan-brand-lockup-v5 .kiubo-wordmark{font-size:23px!important}}
