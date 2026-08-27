@@ -34,7 +34,7 @@ export function WorkspaceSplash(){
     <div className={styles.stage}>
       <div className={styles.logoHalo}><img src={KIUBO_LOGO_DARK_BG_URL} className={styles.logo} alt="KIUBO" draggable={false}/></div>
       <div className={styles.tagline}>Todo tu negocio, <strong>en orden.</strong></div>
-      <div className={styles.pulseTrack} aria-hidden="true"><i/><i/><i/></div>
+      <div className={styles.progress} aria-hidden="true"><span/></div>
       <div className={styles.status} key={stage}>{STAGES[stage]}</div>
       <div className={styles.trustRow} aria-hidden="true"><span>Seguro</span><i/><span>En la nube</span><i/><span>Listo para vender</span></div>
     </div>

@@ -2,6 +2,7 @@
 
 import { useEffect } from "react";
 import { getTenantSettings,getWorkspaceContext,loadLocalDatabase,saveLocalDatabase,type TenantProduct } from "@/lib/local-store";
+import type { ProductOptionConfig } from "@/lib/product-options";
 import { runSyncCycle } from "@/lib/sync-engine";
 import { KIUBO_DATA_REFRESHED } from "./RealtimeSyncRuntime";
 
@@ -37,6 +38,8 @@ const YUKI_MENU=[
   {slug:"colas",name:"Colas",category:"Bebidas",price:2.25},
   {slug:"agua-gas",name:"Agua con gas",category:"Bebidas",price:2.65},
 ] as const;
+const YUKI_COMBO_OPTION_COUNTS:Record<string,number>={"YUKI-COMBO1":1,"YUKI-COMBO2":1,"YUKI-COMBO3":1,"YUKI-COMBO4":2};
+type ConfigurableProduct=TenantProduct&{optionConfig?:ProductOptionConfig};
 
 export function YukiPilotCatalogBootstrap(){
   useEffect(()=>{
@@ -65,7 +68,17 @@ export function YukiPilotCatalogBootstrap(){
       db.tenantProducts.push(...products);changed=true;
     }
 
-    const packagingProduct=branchProducts.find(product=>product.barcode===YUKI_PACKAGING_BARCODE);
+    const currentBranchProducts=db.tenantProducts.filter(product=>product.tenantId===ctx.tenantId&&product.branchId===ctx.branchId);
+    for(const product of currentBranchProducts){
+      const count=YUKI_COMBO_OPTION_COUNTS[product.barcode]||(/^combo\s*([1-4])$/i.test(product.name.trim())?(product.name.trim().endsWith("4")?2:1):0);
+      const configurable=product as ConfigurableProduct;
+      if(count&&!configurable.optionConfig){
+        configurable.optionConfig={label:"Yogur",selectionCount:count,source:"category",sourceCategory:"Yogurts",allowRepeat:true};
+        changed=true;
+      }
+    }
+
+    const packagingProduct=currentBranchProducts.find(product=>product.barcode===YUKI_PACKAGING_BARCODE);
     if(!packagingProduct){
       db.tenantProducts.push({
         id:"yuki-service-packaging",tenantId:ctx.tenantId,branchId:ctx.branchId,masterProductId:"custom-yuki-packaging",
