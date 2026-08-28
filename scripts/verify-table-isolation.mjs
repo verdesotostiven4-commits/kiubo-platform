@@ -4,8 +4,8 @@ const pos=fs.readFileSync("components/PosClientPro.tsx","utf8");
 const orders=fs.readFileSync("components/FoodOrdersClientPro.tsx","utf8");
 const checks=[
   [pos.includes("findOpenTableOrder"),"POS resolves one open order by tenant, branch and table"],
-  [pos.includes("activeExisting?.serviceMode==\"table\"&&activeExisting.tableLabel===tableLabel.trim()"),"POS refuses stale active order ids from another table"],
-  [pos.includes("existing.serviceMode==\"table\"&&existing.tableLabel&&existing.tableLabel!==label"),"POS blocks accidental table-to-table order reassignment"],
+  [pos.includes("activeExisting?.serviceMode===\"table\"&&activeExisting.tableLabel===tableLabel.trim()"),"POS refuses stale active order ids from another table"],
+  [pos.includes("existing.serviceMode===\"table\"&&existing.tableLabel&&existing.tableLabel!==label"),"POS blocks accidental table-to-table order reassignment"],
   [pos.includes("Cada mesa conserva su propio pedido"),"POS explains isolated table behavior"],
   [!pos.includes("Pedido vacío · En vivo"),"table cards no longer show noisy En vivo label"],
   [orders.includes("Cancelar pedido"),"unpaid orders can be cancelled explicitly"],
