@@ -3,6 +3,8 @@
 import { FormEvent,useEffect,useState } from "react";
 import { getTenantSettings,getWorkspaceContext,loadLocalDatabase,saveLocalDatabase,type KiuboLocalDatabase } from "@/lib/local-store";
 
+type FoodOrderWorkflow="simple"|"kitchen";
+
 export function BusinessAdminClient(){
   const[db,setDb]=useState<KiuboLocalDatabase|null>(null);
   const[message,setMessage]=useState("Configuración lista");
@@ -12,10 +14,15 @@ export function BusinessAdminClient(){
 
   const ctx=getWorkspaceContext(db);
   const settings=getTenantSettings(db,ctx.tenantId);
+  const settingsWithWorkflow=settings as typeof settings&{foodOrderWorkflow?:FoodOrderWorkflow};
+  const foodOrderWorkflow:FoodOrderWorkflow=settingsWithWorkflow.foodOrderWorkflow==="kitchen"?"kitchen":"simple";
 
   const saveSettings=(e:FormEvent<HTMLFormElement>)=>{
     e.preventDefault();
     const next=loadLocalDatabase(),workspace=getWorkspaceContext(next),current=getTenantSettings(next,workspace.tenantId),f=new FormData(e.currentTarget);
+    const currentWithWorkflow=current as typeof current&{foodOrderWorkflow?:FoodOrderWorkflow};
+    const previousWorkflow:FoodOrderWorkflow=currentWithWorkflow.foodOrderWorkflow==="kitchen"?"kitchen":"simple";
+    const requestedWorkflow=String(f.get("foodOrderWorkflow")||previousWorkflow)==="kitchen"?"kitchen":"simple";
     const updated={
       ...current,
       tradeName:String(f.get("tradeName")||"").trim(),
@@ -26,7 +33,8 @@ export function BusinessAdminClient(){
       receiptFooter:String(f.get("receiptFooter")||"").trim(),
       accent:String(f.get("accent")||"#ff5b55"),
       requireCashSession:f.get("requireCashSession")==="on",
-      allowCredit:f.get("allowCredit")==="on"
+      allowCredit:f.get("allowCredit")==="on",
+      foodOrderWorkflow:requestedWorkflow as FoodOrderWorkflow
     };
     if(!updated.tradeName){setMessage("Escribe el nombre comercial");return}
     next.settings=next.settings.filter(s=>s.tenantId!==workspace.tenantId);
@@ -49,6 +57,7 @@ export function BusinessAdminClient(){
         <label>Punto de emisión<input name="emissionPoint" defaultValue={settings.emissionPoint}/></label>
         <label>Color de marca<input name="accent" type="color" defaultValue={settings.accent}/></label>
         <label className="settings-wide">Pie de comprobante<input name="receiptFooter" defaultValue={settings.receiptFooter}/></label>
+        {settings.businessType==="food_service"&&<label className="settings-wide">Flujo de pedidos<select name="foodOrderWorkflow" defaultValue={foodOrderWorkflow}><option value="simple">Rápido · Pedido → Cobrar → Historial</option><option value="kitchen">Cocina por etapas · Preparar → Listo → Entregar</option></select><small>Modo rápido reduce clics. El modo cocina mantiene el seguimiento completo para negocios que sí lo necesitan.</small></label>}
         <label className="switch-row"><input name="requireCashSession" type="checkbox" defaultChecked={settings.requireCashSession}/>Exigir caja abierta para cobros en efectivo</label>
         <label className="switch-row"><input name="allowCredit" type="checkbox" defaultChecked={settings.allowCredit}/>Permitir ventas a crédito / fiado</label>
       </div>
