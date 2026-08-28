@@ -15,6 +15,7 @@ const activeMeta:{key:FoodOrderStatus;label:string;hint:string;next:FoodOrderSta
 ];
 const modeLabel:Record<FoodOrderRecord["serviceMode"],string>={counter:"Mostrador",table:"Mesa",takeaway:"Para llevar",delivery:"Domicilio"};
 type OrdersView="pending"|"kitchen"|"history";
+type FoodOrderWorkflow="simple"|"kitchen";
 
 export function FoodOrdersClientPro(){
   const router=useRouter();
@@ -31,12 +32,16 @@ export function FoodOrdersClientPro(){
   const ctx=getWorkspaceContext(db),settings=getTenantSettings(db,ctx.tenantId);
   if(settings.businessType!=="food_service")return <div className="panel"><h2>Pedidos no está activado</h2><p>Este espacio no utiliza el perfil Food Service.</p></div>;
 
+  const settingsWithWorkflow=settings as typeof settings&{foodOrderWorkflow?:FoodOrderWorkflow};
+  const workflow:FoodOrderWorkflow=settingsWithWorkflow.foodOrderWorkflow==="kitchen"?"kitchen":"simple";
+  const simpleFlow=workflow==="simple";
+  const activeView:OrdersView=simpleFlow&&view==="kitchen"?"pending":view;
   const orders=db.orders.filter(order=>order.tenantId===ctx.tenantId&&order.branchId===ctx.branchId&&order.status!=="cancelled").sort((a,b)=>Date.parse(b.updatedAt||b.createdAt)-Date.parse(a.updatedAt||a.createdAt));
   const filteredOrders=filter==="all"?orders:orders.filter(order=>order.serviceMode===filter);
   const pendingOrders=filteredOrders.filter(order=>order.paymentStatus==="unpaid"&&order.status!=="delivered");
   const kitchenOrders=filteredOrders.filter(order=>order.status!=="delivered");
-  const delivered=filteredOrders.filter(order=>order.status==="delivered");
-  const visibleActive=view==="pending"?pendingOrders:kitchenOrders;
+  const historyOrders=filteredOrders.filter(order=>order.status==="delivered"||(simpleFlow&&order.paymentStatus==="paid"));
+  const visibleActive=activeView==="pending"?pendingOrders:kitchenOrders;
   const grouped=new Map(activeMeta.map(meta=>[meta.key,visibleActive.filter(order=>order.status===meta.key)]));
   const paidInKitchen=kitchenOrders.filter(order=>order.paymentStatus==="paid").length;
 
@@ -47,7 +52,7 @@ export function FoodOrdersClientPro(){
     saveLocalDatabase(next);refresh();setMessage(`Pedido #${String(order.number).padStart(4,"0")} · ${status==="preparing"?"en preparación":status==="ready"?"listo":status==="delivered"?"finalizado":"actualizado"}.`);
   };
   const cancelPending=(order:FoodOrderRecord)=>{
-    if(order.paymentStatus==="paid"){setMessage("Un pedido pagado no se elimina: usa Finalizar para conservar la venta y pasarlo al historial.");return}
+    if(order.paymentStatus==="paid"){setMessage("Un pedido pagado no se elimina: permanece en el historial para conservar la venta.");return}
     if(cancelArmedId!==order.id){setCancelArmedId(order.id);setMessage(`Confirma la cancelación del pedido #${String(order.number).padStart(4,"0")}: toca “Cancelar pedido” otra vez.`);return}
     const next=loadLocalDatabase(),index=next.orders.findIndex(item=>item.id===order.id&&item.tenantId===ctx.tenantId&&item.branchId===ctx.branchId&&item.paymentStatus==="unpaid");if(index<0)return;
     next.orders[index]={...next.orders[index],status:"cancelled",updatedAt:new Date().toISOString()};
@@ -61,7 +66,7 @@ export function FoodOrdersClientPro(){
   };
   const openPos=()=>{window.sessionStorage.removeItem(CHECKOUT_KEY);router.push("/pos")};
 
-  const orderCard=(order:FoodOrderRecord,meta:typeof activeMeta[number])=><article className={styles.card} key={order.id}>
+  const orderCard=(order:FoodOrderRecord,meta?:typeof activeMeta[number])=><article className={styles.card} key={order.id}>
     <div className={styles.cardTop}><strong>#{String(order.number).padStart(4,"0")}</strong><span className={styles.mode}>{order.serviceMode==="table"&&order.tableLabel?`Mesa ${order.tableLabel}`:modeLabel[order.serviceMode]}</span></div>
     <div className={styles.customer}><strong>{order.customerName||order.tableLabel&&`Mesa ${order.tableLabel}`||"Cliente en local"}</strong>{order.phone&&<span>{order.phone}</span>}{order.address&&<span>{order.address}</span>}</div>
     <div className={styles.items}>{order.items.slice(0,6).map((item,index)=><div className={styles.item} key={`${item.productId}-${index}`}><span><b>{item.qty}×</b> {item.name}</span><span>{money(item.qty*item.unitPrice)}</span></div>)}{order.items.length>6&&<div className={styles.item}><span>+ {order.items.length-6} productos</span></div>}</div>
@@ -69,25 +74,27 @@ export function FoodOrdersClientPro(){
     <div className={styles.total}><span className={order.paymentStatus==="paid"?styles.paid:styles.pending}>{order.paymentStatus==="paid"?"✓ Pagado":"Pendiente de cobro"}</span><strong>{money(order.total)}</strong></div>
     <div className={styles.actions}>
       {order.paymentStatus!=="paid"&&<button className={styles.checkout} aria-label="Cobrar en POS" onClick={()=>checkout(order)}>Cobrar en POS</button>}
-      {view==="kitchen"&&<button className={styles.action} onClick={()=>changeStatus(order,meta.next)}>{meta.action}</button>}
-      {order.paymentStatus==="paid"&&order.status!=="delivered"&&<button className={styles.checkout} onClick={()=>changeStatus(order,"delivered")}>Finalizar</button>}
+      {!simpleFlow&&activeView==="kitchen"&&meta&&<button className={styles.action} onClick={()=>changeStatus(order,meta.next)}>{meta.action}</button>}
+      {!simpleFlow&&order.paymentStatus==="paid"&&order.status!=="delivered"&&<button className={styles.checkout} onClick={()=>changeStatus(order,"delivered")}>Finalizar</button>}
       {order.paymentStatus!=="paid"&&<button className={styles.print} onClick={()=>cancelPending(order)}>{cancelArmedId===order.id?"Confirmar cancelar":"Cancelar pedido"}</button>}
       <button className={styles.print} onClick={()=>print(order)}>Imprimir</button>
     </div>
   </article>;
 
   return <div className={styles.page}>
-    <section className={styles.hero}><div><span className={styles.kicker}>FOOD SERVICE · {ctx.branch?.code} {ctx.branch?.name}</span><h1>Pedidos</h1><p><strong>Pendientes</strong> muestra lo que todavía falta cobrar. <strong>Cocina</strong> conserva la preparación aunque el pedido ya esté pagado.</p></div><button className={styles.primary} onClick={openPos}>＋ Nuevo pedido</button></section>
+    <section className={styles.hero}><div><span className={styles.kicker}>FOOD SERVICE · {ctx.branch?.code} {ctx.branch?.name}</span><h1>Pedidos</h1><p>{simpleFlow?<><strong>Modo rápido:</strong> el pedido queda pendiente, se cobra y pasa al historial. Sin pasos extra de preparación.</>:<><strong>Pendientes</strong> muestra lo que todavía falta cobrar. <strong>Cocina</strong> conserva la preparación aunque el pedido ya esté pagado.</>}</p></div><button className={styles.primary} onClick={openPos}>＋ Nuevo pedido</button></section>
     {message&&<div className={styles.notice}>✓ {message}</div>}
-    {view==="pending"&&<div className={styles.notice}>Los pedidos pendientes <strong>no cuentan en caja hasta cobrarse</strong>. Si uno fue creado por error, puedes cancelarlo aquí sin borrar ninguna venta.</div>}
+    {activeView==="pending"&&<div className={styles.notice}>{simpleFlow?<><strong>Flujo rápido activo:</strong> Pedido → Cobrar → Historial. Menos clics para atender más rápido.</>:<>Los pedidos pendientes <strong>no cuentan en caja hasta cobrarse</strong>. Si uno fue creado por error, puedes cancelarlo aquí sin borrar ninguna venta.</>}</div>}
     <section className={styles.controlBar}><div className={styles.viewTabs}>
-      <button className={view==="pending"?styles.viewActive:""} onClick={()=>{setView("pending");setCancelArmedId("")}}>Pendientes <b>{pendingOrders.length}</b></button>
-      <button className={view==="kitchen"?styles.viewActive:""} onClick={()=>{setView("kitchen");setCancelArmedId("")}}>Cocina <b>{kitchenOrders.length}</b></button>
-      <button className={view==="history"?styles.viewActive:""} onClick={()=>{setView("history");setCancelArmedId("")}}>Historial <b>{delivered.length}</b></button>
+      <button className={activeView==="pending"?styles.viewActive:""} onClick={()=>{setView("pending");setCancelArmedId("")}}>Pendientes <b>{pendingOrders.length}</b></button>
+      {!simpleFlow&&<button className={activeView==="kitchen"?styles.viewActive:""} onClick={()=>{setView("kitchen");setCancelArmedId("")}}>Cocina <b>{kitchenOrders.length}</b></button>}
+      <button className={activeView==="history"?styles.viewActive:""} onClick={()=>{setView("history");setCancelArmedId("")}}>Historial <b>{historyOrders.length}</b></button>
     </div><div className={styles.filters}><button className={`${styles.filter} ${filter==="all"?styles.active:""}`} onClick={()=>setFilter("all")}>Todos</button>{settings.serviceModes.map(mode=><button key={mode} className={`${styles.filter} ${filter===mode?styles.active:""}`} onClick={()=>setFilter(mode)}>{modeLabel[mode]}</button>)}</div></section>
-    {view!=="history"?<>
-      {view==="kitchen"&&paidInKitchen>0&&<div className={styles.notice}>{paidInKitchen} {paidInKitchen===1?"pedido pagado sigue":"pedidos pagados siguen"} en cocina hasta finalizar su preparación. Si ya fueron entregados, usa <strong>Finalizar</strong> para pasarlos al historial sin alterar la venta.</div>}
-      <section className={styles.board}>{activeMeta.map(meta=>{const list=grouped.get(meta.key)??[];return <div className={styles.column} key={meta.key}><div className={styles.columnHead}><div><strong>{meta.label}</strong><small>{view==="pending"?"Solo pedidos que todavía faltan cobrar":meta.hint}</small></div><span className={styles.count}>{list.length}</span></div><div className={styles.columnBody}>{list.map(order=>orderCard(order,meta))}{!list.length&&<div className={styles.empty}><span>✓</span><strong>Todo al día</strong><small>{view==="pending"?"No hay pedidos pendientes de cobro en esta etapa.":"No hay pedidos en esta etapa."}</small></div>}</div></div>})}</section>
-    </>:<section className={styles.historyPanel}><div className={styles.historyHead}><div><span className={styles.kicker}>HISTORIAL</span><h2>Pedidos finalizados</h2></div><span>{delivered.length} pedidos</span></div><div className={styles.historyList}>{delivered.slice(0,80).map(order=><article className={styles.historyRow} key={order.id}><div><strong>#{String(order.number).padStart(4,"0")}</strong><span>{order.serviceMode==="table"&&order.tableLabel?`Mesa ${order.tableLabel}`:modeLabel[order.serviceMode]} · {new Date(order.updatedAt||order.createdAt).toLocaleString("es-EC")}</span></div><div className={styles.historyCustomer}><strong>{order.customerName||"Cliente"}</strong><span>{order.items.reduce((sum,item)=>sum+item.qty,0)} productos</span></div><strong>{money(order.total)}</strong><button className={styles.print} onClick={()=>print(order)}>Reimprimir</button></article>)}{!delivered.length&&<div className={styles.emptyHistory}>Todavía no hay pedidos finalizados con este filtro.</div>}</div></section>}
+    {activeView!=="history"?<>
+      {simpleFlow?<section className={styles.historyPanel}><div className={styles.historyHead}><div><span className={styles.kicker}>POR COBRAR</span><h2>Pedidos pendientes</h2></div><span>{pendingOrders.length} pedidos</span></div><div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(280px,1fr))",gap:"16px"}}>{pendingOrders.map(order=>orderCard(order))}{!pendingOrders.length&&<div className={styles.emptyHistory}>Todo al día. No hay pedidos pendientes de cobro con este filtro.</div>}</div></section>:<>
+        {activeView==="kitchen"&&paidInKitchen>0&&<div className={styles.notice}>{paidInKitchen} {paidInKitchen===1?"pedido pagado sigue":"pedidos pagados siguen"} en cocina hasta finalizar su preparación. Si ya fueron entregados, usa <strong>Finalizar</strong> para pasarlos al historial sin alterar la venta.</div>}
+        <section className={styles.board}>{activeMeta.map(meta=>{const list=grouped.get(meta.key)??[];return <div className={styles.column} key={meta.key}><div className={styles.columnHead}><div><strong>{meta.label}</strong><small>{activeView==="pending"?"Solo pedidos que todavía faltan cobrar":meta.hint}</small></div><span className={styles.count}>{list.length}</span></div><div className={styles.columnBody}>{list.map(order=>orderCard(order,meta))}{!list.length&&<div className={styles.empty}><span>✓</span><strong>Todo al día</strong><small>{activeView==="pending"?"No hay pedidos pendientes de cobro en esta etapa.":"No hay pedidos en esta etapa."}</small></div>}</div></div>})}</section>
+      </>}
+    </>:<section className={styles.historyPanel}><div className={styles.historyHead}><div><span className={styles.kicker}>HISTORIAL</span><h2>{simpleFlow?"Pedidos cobrados":"Pedidos finalizados"}</h2></div><span>{historyOrders.length} pedidos</span></div><div className={styles.historyList}>{historyOrders.slice(0,80).map(order=><article className={styles.historyRow} key={order.id}><div><strong>#{String(order.number).padStart(4,"0")}</strong><span>{order.serviceMode==="table"&&order.tableLabel?`Mesa ${order.tableLabel}`:modeLabel[order.serviceMode]} · {new Date(order.updatedAt||order.createdAt).toLocaleString("es-EC")}</span></div><div className={styles.historyCustomer}><strong>{order.customerName||"Cliente"}</strong><span>{order.items.reduce((sum,item)=>sum+item.qty,0)} productos</span></div><strong>{money(order.total)}</strong><button className={styles.print} onClick={()=>print(order)}>Reimprimir</button></article>)}{!historyOrders.length&&<div className={styles.emptyHistory}>Todavía no hay pedidos en el historial con este filtro.</div>}</div></section>}
   </div>;
 }
