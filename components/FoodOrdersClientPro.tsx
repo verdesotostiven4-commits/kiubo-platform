@@ -14,7 +14,6 @@ const activeMeta:{key:FoodOrderStatus;label:string;hint:string;next:FoodOrderSta
   {key:"ready",label:"Listos",hint:"Esperando entrega al cliente",next:"delivered",action:"Entregar"},
 ];
 const modeLabel:Record<FoodOrderRecord["serviceMode"],string>={counter:"Mostrador",table:"Mesa",takeaway:"Para llevar",delivery:"Domicilio"};
-
 type OrdersView="pending"|"kitchen"|"history";
 
 export function FoodOrdersClientPro(){
@@ -23,8 +22,10 @@ export function FoodOrdersClientPro(){
   const[filter,setFilter]=useState<"all"|FoodOrderRecord["serviceMode"]>("all");
   const[view,setView]=useState<OrdersView>("pending");
   const[message,setMessage]=useState("");
+  const[cancelArmedId,setCancelArmedId]=useState("");
   const refresh=()=>setDb(loadLocalDatabase());
   useEffect(()=>{refresh();window.addEventListener(KIUBO_DATA_REFRESHED,refresh);return()=>window.removeEventListener(KIUBO_DATA_REFRESHED,refresh)},[]);
+  useEffect(()=>{if(!cancelArmedId)return;const timer=window.setTimeout(()=>setCancelArmedId(""),3500);return()=>window.clearTimeout(timer)},[cancelArmedId]);
   if(!db)return <div className="loading-card">Preparando pedidos…</div>;
 
   const ctx=getWorkspaceContext(db),settings=getTenantSettings(db,ctx.tenantId);
@@ -40,9 +41,17 @@ export function FoodOrdersClientPro(){
   const paidInKitchen=kitchenOrders.filter(order=>order.paymentStatus==="paid").length;
 
   const changeStatus=(order:FoodOrderRecord,status:FoodOrderStatus)=>{
+    if(status==="delivered"&&order.paymentStatus!=="paid"){setMessage(`Pedido #${String(order.number).padStart(4,"0")} todavía está pendiente de cobro. Cóbalo antes de finalizarlo.`);setView("pending");return}
     const next=loadLocalDatabase(),index=next.orders.findIndex(item=>item.id===order.id&&item.tenantId===ctx.tenantId&&item.branchId===ctx.branchId);if(index<0)return;
     next.orders[index]={...next.orders[index],status,updatedAt:new Date().toISOString()};
     saveLocalDatabase(next);refresh();setMessage(`Pedido #${String(order.number).padStart(4,"0")} · ${status==="preparing"?"en preparación":status==="ready"?"listo":status==="delivered"?"finalizado":"actualizado"}.`);
+  };
+  const cancelPending=(order:FoodOrderRecord)=>{
+    if(order.paymentStatus==="paid"){setMessage("Un pedido pagado no se elimina: usa Finalizar para conservar la venta y pasarlo al historial.");return}
+    if(cancelArmedId!==order.id){setCancelArmedId(order.id);setMessage(`Confirma la cancelación del pedido #${String(order.number).padStart(4,"0")}: toca “Cancelar pedido” otra vez.`);return}
+    const next=loadLocalDatabase(),index=next.orders.findIndex(item=>item.id===order.id&&item.tenantId===ctx.tenantId&&item.branchId===ctx.branchId&&item.paymentStatus==="unpaid");if(index<0)return;
+    next.orders[index]={...next.orders[index],status:"cancelled",updatedAt:new Date().toISOString()};
+    saveLocalDatabase(next);setCancelArmedId("");refresh();setMessage(`Pedido #${String(order.number).padStart(4,"0")} cancelado. No modificó caja porque nunca fue cobrado.`);
   };
   const checkout=(order:FoodOrderRecord)=>{window.sessionStorage.setItem(CHECKOUT_KEY,order.id);router.push("/pos")};
   const print=(order:FoodOrderRecord)=>{
@@ -60,8 +69,9 @@ export function FoodOrdersClientPro(){
     <div className={styles.total}><span className={order.paymentStatus==="paid"?styles.paid:styles.pending}>{order.paymentStatus==="paid"?"✓ Pagado":"Pendiente de cobro"}</span><strong>{money(order.total)}</strong></div>
     <div className={styles.actions}>
       {order.paymentStatus!=="paid"&&<button className={styles.checkout} aria-label="Cobrar en POS" onClick={()=>checkout(order)}>Cobrar en POS</button>}
-      <button className={styles.action} onClick={()=>changeStatus(order,meta.next)}>{meta.action}</button>
+      {view==="kitchen"&&<button className={styles.action} onClick={()=>changeStatus(order,meta.next)}>{meta.action}</button>}
       {order.paymentStatus==="paid"&&order.status!=="delivered"&&<button className={styles.checkout} onClick={()=>changeStatus(order,"delivered")}>Finalizar</button>}
+      {order.paymentStatus!=="paid"&&<button className={styles.print} onClick={()=>cancelPending(order)}>{cancelArmedId===order.id?"Confirmar cancelar":"Cancelar pedido"}</button>}
       <button className={styles.print} onClick={()=>print(order)}>Imprimir</button>
     </div>
   </article>;
@@ -69,13 +79,14 @@ export function FoodOrdersClientPro(){
   return <div className={styles.page}>
     <section className={styles.hero}><div><span className={styles.kicker}>FOOD SERVICE · {ctx.branch?.code} {ctx.branch?.name}</span><h1>Pedidos</h1><p><strong>Pendientes</strong> muestra lo que todavía falta cobrar. <strong>Cocina</strong> conserva la preparación aunque el pedido ya esté pagado.</p></div><button className={styles.primary} onClick={openPos}>＋ Nuevo pedido</button></section>
     {message&&<div className={styles.notice}>✓ {message}</div>}
+    {view==="pending"&&<div className={styles.notice}>Los pedidos pendientes <strong>no cuentan en caja hasta cobrarse</strong>. Si uno fue creado por error, puedes cancelarlo aquí sin borrar ninguna venta.</div>}
     <section className={styles.controlBar}><div className={styles.viewTabs}>
-      <button className={view==="pending"?styles.viewActive:""} onClick={()=>setView("pending")}>Pendientes <b>{pendingOrders.length}</b></button>
-      <button className={view==="kitchen"?styles.viewActive:""} onClick={()=>setView("kitchen")}>Cocina <b>{kitchenOrders.length}</b></button>
-      <button className={view==="history"?styles.viewActive:""} onClick={()=>setView("history")}>Historial <b>{delivered.length}</b></button>
+      <button className={view==="pending"?styles.viewActive:""} onClick={()=>{setView("pending");setCancelArmedId("")}}>Pendientes <b>{pendingOrders.length}</b></button>
+      <button className={view==="kitchen"?styles.viewActive:""} onClick={()=>{setView("kitchen");setCancelArmedId("")}}>Cocina <b>{kitchenOrders.length}</b></button>
+      <button className={view==="history"?styles.viewActive:""} onClick={()=>{setView("history");setCancelArmedId("")}}>Historial <b>{delivered.length}</b></button>
     </div><div className={styles.filters}><button className={`${styles.filter} ${filter==="all"?styles.active:""}`} onClick={()=>setFilter("all")}>Todos</button>{settings.serviceModes.map(mode=><button key={mode} className={`${styles.filter} ${filter===mode?styles.active:""}`} onClick={()=>setFilter(mode)}>{modeLabel[mode]}</button>)}</div></section>
     {view!=="history"?<>
-      {view==="kitchen"&&paidInKitchen>0&&<div className={styles.notice}>{paidInKitchen} {paidInKitchen===1?"pedido pagado sigue":"pedidos pagados siguen"} en cocina hasta finalizar su preparación. Si ya fueron entregados, usa <strong>Finalizar</strong> para pasarlos al historial.</div>}
+      {view==="kitchen"&&paidInKitchen>0&&<div className={styles.notice}>{paidInKitchen} {paidInKitchen===1?"pedido pagado sigue":"pedidos pagados siguen"} en cocina hasta finalizar su preparación. Si ya fueron entregados, usa <strong>Finalizar</strong> para pasarlos al historial sin alterar la venta.</div>}
       <section className={styles.board}>{activeMeta.map(meta=>{const list=grouped.get(meta.key)??[];return <div className={styles.column} key={meta.key}><div className={styles.columnHead}><div><strong>{meta.label}</strong><small>{view==="pending"?"Solo pedidos que todavía faltan cobrar":meta.hint}</small></div><span className={styles.count}>{list.length}</span></div><div className={styles.columnBody}>{list.map(order=>orderCard(order,meta))}{!list.length&&<div className={styles.empty}><span>✓</span><strong>Todo al día</strong><small>{view==="pending"?"No hay pedidos pendientes de cobro en esta etapa.":"No hay pedidos en esta etapa."}</small></div>}</div></div>})}</section>
     </>:<section className={styles.historyPanel}><div className={styles.historyHead}><div><span className={styles.kicker}>HISTORIAL</span><h2>Pedidos finalizados</h2></div><span>{delivered.length} pedidos</span></div><div className={styles.historyList}>{delivered.slice(0,80).map(order=><article className={styles.historyRow} key={order.id}><div><strong>#{String(order.number).padStart(4,"0")}</strong><span>{order.serviceMode==="table"&&order.tableLabel?`Mesa ${order.tableLabel}`:modeLabel[order.serviceMode]} · {new Date(order.updatedAt||order.createdAt).toLocaleString("es-EC")}</span></div><div className={styles.historyCustomer}><strong>{order.customerName||"Cliente"}</strong><span>{order.items.reduce((sum,item)=>sum+item.qty,0)} productos</span></div><strong>{money(order.total)}</strong><button className={styles.print} onClick={()=>print(order)}>Reimprimir</button></article>)}{!delivered.length&&<div className={styles.emptyHistory}>Todavía no hay pedidos finalizados con este filtro.</div>}</div></section>}
   </div>;
