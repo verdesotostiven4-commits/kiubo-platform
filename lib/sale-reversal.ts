@@ -37,29 +37,28 @@ export function reverseSaleLocally(db:KiuboLocalDatabase,saleId:string,rawReason
   if(sale.payment==="mixed")return{ok:false as const,message:"Las ventas mixtas históricas no se pueden anular hasta reconstruir su reparto de pago"};
   const reason=rawReason.replace(/\s+/g," ").trim().slice(0,240);
   if(reason.length<3)return{ok:false as const,message:"Escribe un motivo de anulación de al menos 3 caracteres"};
-  const products=sale.items.map(item=>db.tenantProducts.find(product=>product.id===item.productId&&product.tenantId===sale.tenantId&&product.branchId===sale.branchId));
-  if(products.some(product=>!product))return{ok:false as const,message:"No se puede anular porque uno de los productos ya no existe en esta sucursal"};
   const session=sale.payment==="cash"?getOpenCashSession(db,sale.tenantId,sale.branchId):undefined;
   if(sale.payment==="cash"&&!session)return{ok:false as const,message:"Abre caja antes de devolver efectivo por una venta anulada"};
+
+  // The physical truth is the stock movement written by the original sale. This supports both
+  // legacy direct-product stock and the new shared recipe/ingredient inventory without guessing.
+  const originalMovements=db.stockMovements.filter(movement=>movement.tenantId===sale.tenantId&&movement.branchId===sale.branchId&&movement.reference===sale.id&&movement.type==="sale"&&movement.quantity<0);
+  const restoreByProduct=new Map<string,number>();
+  for(const movement of originalMovements)restoreByProduct.set(movement.productId,(restoreByProduct.get(movement.productId)||0)+Math.abs(movement.quantity));
+  const products=[...restoreByProduct].map(([productId])=>db.tenantProducts.find(product=>product.id===productId&&product.tenantId===sale.tenantId&&product.branchId===sale.branchId));
+  if(products.some(product=>!product))return{ok:false as const,message:"No se puede anular porque un insumo afectado por la venta ya no existe en esta sucursal"};
 
   const reversedAt=new Date().toISOString(),saleBefore={...sale,items:sale.items.map(item=>({...item}))};
   const saleAfter:SaleWithLifecycle={...saleBefore,status:"voided",voidedAt:reversedAt,voidReason:reason};
   const productBeforeSnapshots:TenantProduct[]=[],productAfterSnapshots:TenantProduct[]=[],stockMovements:StockMovementRecord[]=[];
-  sale.items.forEach((item,index)=>{
-    const product=products[index]!;
+  for(const [productId,restoreQty] of restoreByProduct){
+    const product=db.tenantProducts.find(candidate=>candidate.id===productId&&candidate.tenantId===sale.tenantId&&candidate.branchId===sale.branchId)!;
     productBeforeSnapshots.push({...product});
-    const previous=product.stock,newStock=Number((previous+item.qty).toFixed(4));
-    product.stock=newStock;
-    productAfterSnapshots.push({...product});
+    const previous=product.stock,newStock=Number((previous+restoreQty).toFixed(4));product.stock=newStock;productAfterSnapshots.push({...product});
     const movementId=makeId("stock-void");
-    stockMovements.push({
-      id:movementId,tenantId:sale.tenantId,branchId:sale.branchId,productId:product.id,
-      type:"adjustment_in",quantity:item.qty,previousStock:previous,newStock,reference:`VOID:${sale.id}`,
-      clientOperationId:movementId,createdAt:reversedAt,
-    });
-  });
-  db.sales=db.sales.map(current=>current.id===sale.id?saleAfter:current);
-  db.stockMovements.unshift(...stockMovements);
+    stockMovements.push({id:movementId,tenantId:sale.tenantId,branchId:sale.branchId,productId:product.id,type:"adjustment_in",quantity:restoreQty,previousStock:previous,newStock,reference:`VOID:${sale.id}`,clientOperationId:movementId,createdAt:reversedAt});
+  }
+  db.sales=db.sales.map(current=>current.id===sale.id?saleAfter:current);db.stockMovements.unshift(...stockMovements);
 
   let cashMovement:CashMovementRecord|undefined;
   if(sale.payment==="cash"&&session){
@@ -72,7 +71,7 @@ export function reverseSaleLocally(db:KiuboLocalDatabase,saleId:string,rawReason
   const now=reversedAt,existing=db.syncQueue.find(item=>item.tenantId===sale.tenantId&&item.entityType==="saleReversalTransactions"&&item.entityId===sale.id&&(item.status==="pending"||item.status==="failed"));
   if(existing){existing.payload=payload;existing.branchId=sale.branchId;existing.status="pending";existing.attempts=0;existing.updatedAt=now;delete existing.lastError}
   else db.syncQueue.push({id:makeId("queue"),operationId:makeId("op-sale-void"),tenantId:sale.tenantId,branchId:sale.branchId,entityType:"saleReversalTransactions",entityId:sale.id,action:"upsert",payload,status:"pending",attempts:0,createdAt:now,updatedAt:now});
-  db.auditLogs.push({id:makeId("audit"),tenantId:sale.tenantId,branchId:sale.branchId,actorUserId:localSession?.userId,action:"sales.reversal_queued",entityType:"saleReversalTransactions",entityId:sale.id,metadata:{deviceId:getLocalDeviceId(),payment:sale.payment,total:sale.total,reason,cashOutflow:cashMovement?.amount||0},createdAt:now});
+  db.auditLogs.push({id:makeId("audit"),tenantId:sale.tenantId,branchId:sale.branchId,actorUserId:localSession?.userId,action:"sales.reversal_queued",entityType:"saleReversalTransactions",entityId:sale.id,metadata:{deviceId:getLocalDeviceId(),payment:sale.payment,total:sale.total,reason,cashOutflow:cashMovement?.amount||0,restoredInventory:[...restoreByProduct.entries()]},createdAt:now});
   db.auditLogs=db.auditLogs.slice(-1500);
-  return{ok:true as const,message:`Venta anulada localmente · $${sale.total.toFixed(2)} · pendiente de confirmación Cloud`};
+  return{ok:true as const,message:`Venta anulada · $${sale.total.toFixed(2)} · devolución e inventario registrados`};
 }
