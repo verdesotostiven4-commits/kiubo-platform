@@ -1,0 +1,49 @@
+name: Apply one-click POS clear
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/apply-one-click-clear.yml
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - name: Make Limpiar pedido single-click
+        shell: python
+        run: |
+          from pathlib import Path
+          path = Path('components/PosClientPro.tsx')
+          text = path.read_text()
+          old_fn = '''  const clearCurrent=()=>{if(!cart.length)return;if(!clearArmed){setClearArmed(true);setMessage("Confirmación activada · toca otra vez para limpiar este pedido.");return}setClearArmed(false);if(activeOrderId)cancelActiveOrder();setCart([]);setActiveOrderId("");resetCustomer();setLastSaleId("");setMessage(activeServiceMode==="table"&&tableLabel?`Mesa ${tableLabel} · pedido cancelado y liberado`:`${serviceLabel[activeServiceMode]} · pedido cancelado y limpio`)};'''
+          new_fn = '''  const clearCurrent=()=>{if(!cart.length)return;setClearArmed(false);if(activeOrderId)cancelActiveOrder();setCart([]);setActiveOrderId("");resetCustomer();setLastSaleId("");setMessage(activeServiceMode==="table"&&tableLabel?`Mesa ${tableLabel} · pedido cancelado y liberado`:`${serviceLabel[activeServiceMode]} · pedido cancelado y limpio`)};'''
+          old_button = '''<button className={`pos-clear-order ${clearArmed?"armed":""}`} onClick={clearCurrent} disabled={!cart.length} aria-live="polite">{clearArmed?<><span className="pos-clear-confirm-icon">!</span><span className="pos-clear-confirm-copy"><b>Confirmar limpieza</b><small>Toca otra vez · 3 s</small></span><i className="pos-clear-confirm-progress"/></>:<><span className="pos-clear-normal-icon">✕</span><span>Limpiar pedido</span></>}</button>'''
+          new_button = '''<button className="pos-clear-order" onClick={clearCurrent} disabled={!cart.length}><span className="pos-clear-normal-icon">✕</span><span>Limpiar pedido</span></button>'''
+          if text.count(old_fn) != 1:
+              raise SystemExit(f'Expected one clearCurrent target, found {text.count(old_fn)}')
+          if text.count(old_button) != 1:
+              raise SystemExit(f'Expected one clear button target, found {text.count(old_button)}')
+          text = text.replace(old_fn, new_fn).replace(old_button, new_button)
+          path.write_text(text)
+      - run: npm ci
+      - run: npm run verify:tables
+      - run: npm run build
+      - name: Commit tested change and remove temporary workflow
+        run: |
+          git config user.name "kiubo-automation"
+          git config user.email "actions@users.noreply.github.com"
+          git rm .github/workflows/apply-one-click-clear.yml
+          git add components/PosClientPro.tsx
+          git commit -m "fix: clear POS order with one click"
+          git push
