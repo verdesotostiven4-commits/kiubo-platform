@@ -1,0 +1,17 @@
+export const DEFAULT_YUKI_YOGURT="https://blogger.googleusercontent.com/img/a/AVvXsEg_L3dUljGZBrjFX-1Nv-wUwqc9J37Dk2MlgL_HsLWYGPfccp8OSkeVItlthfRP9M0SqiUt6B07Xk7cG2rGxhKLRT0z7yyV-drSgPNRODjH676spZ0ZP7j2RCmUiAc6oryev9kl-1-c6wPhpbM04DqvQAGLeFcnK41ANXM6NKQKliFNx8ymF0fBJOcVlMQ";
+
+export const YUKI_YOGURT_ASSETS:Record<string,string>={
+  mora:"https://blogger.googleusercontent.com/img/a/AVvXsEilt8lsN_JcJcHtvoetBzy7iiMAS-GKglc-UkziB8MbRtA9i2P56q777IoDpNRt1FEqi5eQ2s_8p761AASEKfpM7BOcXqPlNsZmUCCIsft00JillZJIcklm5pCks-JIlZf-9m-FgxSNsIPyJXN6UwEwJS7vs_d1fwKGXe1w8fdEx2wmqscU-ODYZ_GGdQg",
+  fresa:"https://blogger.googleusercontent.com/img/a/AVvXsEhvMduk36pael28kbrh_Y0MHwnYXQlrK59m8VkLVOpaASS0tEqYAnfYI8Nb9DFIAXtLhlhY69HAo8mLc535W1IF2_-yAT3U0QUNpPpmZLOUOOdP2LqMEYN2dYdoNqHUW5qJ4zKOX0HpZfU7gJN_GI5gRL-q1Hzk3S0mgafQk8vbaVzGqtqLfo2jds4OMwk",
+  frutilla:"https://blogger.googleusercontent.com/img/a/AVvXsEhvMduk36pael28kbrh_Y0MHwnYXQlrK59m8VkLVOpaASS0tEqYAnfYI8Nb9DFIAXtLhlhY69HAo8mLc535W1IF2_-yAT3U0QUNpPpmZLOUOOdP2LqMEYN2dYdoNqHUW5qJ4zKOX0HpZfU7gJN_GI5gRL-q1Hzk3S0mgafQk8vbaVzGqtqLfo2jds4OMwk",
+  melon:"https://blogger.googleusercontent.com/img/a/AVvXsEjrLv-9zlOn0iu-iTVHq0cXG9bPnaeYE9wRx1jxoCESgYix2k9TogMm_v7D5DLryerpcFdyrTwyyTl_HifiRM-0fhEl3u_ZiGARDeh1a-TbmpAWBtuukDxru2spVdOHoJXbRIAgYB7-DcjqQXA4mdoeL4W6qWf9V9OSoJb57bJdStNgxndLKFyyJI94EUw",
+  "tomate-de-arbol":"https://blogger.googleusercontent.com/img/a/AVvXsEgA-PQE2TqUV1QyY0CqcXrcxEobqnwtLPaQHwOhgfb2H8_mxvwmdYMWSnag2HeKoUyT5XM-x9AptAoYGc6iA86da5vZXDIMsHxu9T4R-0wvZjP5g9H-WkXdBv8dm5dQhhkVTYXVOjvS6bSxj3H44JKgQpFtZfKStAgXYAkFyJ2OYkEiYIjKpOXs1eZR_U0",
+  banana:"https://blogger.googleusercontent.com/img/a/AVvXsEha3BOmizsoZ5Y40icn8JoOJiST1ckn8BVOjxC68x3FZff9grvvCuJrI5qOoQmzN3jJ6uczs8jvNV_Cx00hu62FZnGEl4cl5kXr_mc7blvog0XOEad0XyUyASpdyS09HiI9Zx_bLM9dziHvRNwvZe2weSgKAuDkkl1F4DykU_DtOSwo585UrT0M-iW2rqA",
+  naranjilla:"https://blogger.googleusercontent.com/img/a/AVvXsEgaavO4_POGcQv3F9mC2zErI1B7RvwEaTYvx_fH-hhSCe404e0VqA9VADqi9P-VqtNWNEzlwrnTIbDRkuf8-fXQlWSGgUCSp7Vsut5hxDlHJXhnzZ0m68CjvzR7p0vvNcnnfOwxUyuRvBkS9bnKvi2Zv-gBRymqOBfA0euzJgrpgDeTLKVcpvKTgeRezmY",
+  maracuya:"https://blogger.googleusercontent.com/img/a/AVvXsEg0cFkXkqLJVHNhrVerv31TH3rhPVQ2XPtw5wNnP14DrI412mLnLjDs4xh6vqsooaxUfMe6_yMI0-_KePEnMPx00WvVEyt_w5spkdXZiUsjXco6bl-BbGiYKDvVmk3Aqhoq5k4ldBNh3plSpvICZ16L7CWVAup5ahjvlzLAdluvIvEJKk8NMJe1G8FoNys",
+  mango:"https://blogger.googleusercontent.com/img/a/AVvXsEi8WcDA6TkxZOTPcN8ob8hOdi0Rglp1_0W6cmvzeZ9KhYXziPFwR-7Cgrh-pDbGApjhRj78MzjS5Er4O9bdqBCJu_4u-txGoPwfTJqglKqVH90Kk9j6NtBDIEMwSVnoAC0uWU_yC0irXxQF958B1Nj9f-SUrZ2QST538uvULlIP239rc_wTPoq9O-ga0XQ",
+  coco:"https://blogger.googleusercontent.com/img/a/AVvXsEiv07v-ruXVIQ8V8l1DhDNdrL8k7RWh8hIk1oWsz1oyhZpk6oWWR5OU7WafhAA_A6fj0lBiOAmG3r8zpiB2CUOD4nn7gUvJ1AVZ6zNHPg1s-1jKN6t2YutjWSSq_uF4NY40hxleLS-VvK7jQa86nYbelg9ASElDiFzEJwTeBKJgUS1GY1V5d7d9JT4FSBg"
+};
+
+export const yukiFlavorSlug=(value:string)=>value.normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/^-|-$/g,"");
+export const yukiFlavorImage=(value:string)=>YUKI_YOGURT_ASSETS[yukiFlavorSlug(value)];
