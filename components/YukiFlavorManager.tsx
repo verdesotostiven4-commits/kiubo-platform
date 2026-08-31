@@ -3,6 +3,7 @@
 import { FormEvent,useEffect,useState } from "react";
 import { getTenantSettings,getWorkspaceContext,loadLocalDatabase,makeId,saveLocalDatabase,type TenantProduct } from "@/lib/local-store";
 import { KIUBO_DATA_REFRESHED } from "./RealtimeSyncRuntime";
+import styles from "./YukiFlavorManager.module.css";
 
 const VIRTUAL_STOCK=1_000_000;
 const normalize=(value:string)=>value.normalize("NFD").replace(/[\u0300-\u036f]/g,"").trim().toLocaleLowerCase("es");
@@ -23,10 +24,14 @@ export function YukiFlavorManager(){
   const addFlavor=(event:FormEvent<HTMLFormElement>)=>{
     event.preventDefault();const form=event.currentTarget,data=new FormData(form),name=clean(String(data.get("flavor")||""));if(!name)return;
     const next=loadLocalDatabase(),workspace=getWorkspaceContext(next),existing=next.tenantProducts.find(product=>product.tenantId===workspace.tenantId&&product.branchId===workspace.branchId&&normalize(product.category||"")==="yogurts"&&normalize(product.name.replace(/^yogurt\s+/i,""))===normalize(name));
-    if(existing){existing.active=true;persist(next,`${name} quedó disponible otra vez.`);form.reset();return}
+    if(existing){existing.active=true;persist(next,`${name} volvió a estar disponible.`);form.reset();return}
     const key=slug(name),product:TenantProduct={id:makeId("tp"),tenantId:workspace.tenantId,branchId:workspace.branchId,masterProductId:`custom-yuki-yogurt-${key}`,barcode:`YUKI-YOG-${key.replace(/-/g,"").toUpperCase().slice(0,20)}`,name:`Yogurt ${name}`,price:Number(defaultPrice.toFixed(2)),cost:0,stock:VIRTUAL_STOCK,active:true,category:"Yogurts",trackStock:false};
-    next.tenantProducts.push(product);persist(next,`${name} agregado. Ya aparece en yogures y combos.`);form.reset();
+    next.tenantProducts.push(product);persist(next,`${name} agregado al menú y a los combos.`);form.reset();
   };
-  const removeFlavor=(product:TenantProduct)=>{const next=loadLocalDatabase(),target=next.tenantProducts.find(item=>item.id===product.id&&item.tenantId===ctx.tenantId&&item.branchId===ctx.branchId);if(!target)return;target.active=false;persist(next,`${flavorName(product)} dejó de aparecer para nuevas ventas. El historial se conserva.`)};
-  return <section className="panel flavor-manager"><div className="panel-head"><div><span className="eyebrow">MENÚ · SABORES</span><h3>Sabores de yogurt</h3></div><span className="pill">{active.length} activos</span></div><p>Agrega o retira sabores sin tocar los combos. Los selectores se acomodan automáticamente y las ventas anteriores no cambian.</p><div className="flavor-manager-list">{active.map(product=><div className="flavor-manager-chip" key={product.id}><i/><strong>{flavorName(product)}</strong><button type="button" onClick={()=>removeFlavor(product)} aria-label={`Quitar ${flavorName(product)}`}>×</button></div>)}</div><form className="flavor-manager-form" onSubmit={addFlavor}><input name="flavor" placeholder="Nuevo sabor, por ejemplo Coco" maxLength={60} required/><button className="button secondary" type="submit">＋ Agregar sabor</button></form>{message&&<small className="flavor-manager-message">✓ {message}</small>}<small>La foto se puede cargar después editando el producto del yogurt. Si no tiene foto, KIUBO usa la imagen neutra en el selector.</small></section>;
+  const removeFlavor=(product:TenantProduct)=>{const next=loadLocalDatabase(),target=next.tenantProducts.find(item=>item.id===product.id&&item.tenantId===ctx.tenantId&&item.branchId===ctx.branchId);if(!target)return;target.active=false;persist(next,`${flavorName(product)} retirado de nuevas ventas. El historial se conserva.`)};
+  return <section className={styles.shell}>
+    <div className={styles.head}><div className={styles.copy}><span className={styles.eyebrow}>MENÚ DE YUKI</span><h3 className={styles.title}>Sabores disponibles</h3><p className={styles.subtitle}>Los cambios se reflejan automáticamente en yogures y combos.</p></div><span className={styles.count}>{active.length} activos</span></div>
+    <div className={styles.body}><div className={styles.list}>{active.map(product=><div className={styles.chip} key={product.id}><i className={styles.chipDot}/><strong>{flavorName(product)}</strong><button type="button" onClick={()=>removeFlavor(product)} aria-label={`Quitar ${flavorName(product)}`}>×</button></div>)}</div><form className={styles.form} onSubmit={addFlavor}><input name="flavor" placeholder="Agregar sabor" maxLength={60} required/><button className="button secondary" type="submit">＋ Agregar</button></form></div>
+    <div className={styles.foot}><span className={styles.note}>Las fotos de producto del POS se administran por separado. La imagen visual del selector de sabores es independiente.</span>{message&&<span className={styles.message}>✓ {message}</span>}</div>
+  </section>;
 }
