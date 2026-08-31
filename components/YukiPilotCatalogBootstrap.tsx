@@ -18,6 +18,7 @@ const YUKI_MENU=[
   {slug:"yogurt-naranjilla",name:"Yogurt Naranjilla",category:"Yogurts",price:4.50},
   {slug:"yogurt-maracuya",name:"Yogurt Maracuyá",category:"Yogurts",price:4.50},
   {slug:"yogurt-mango",name:"Yogurt Mango",category:"Yogurts",price:4.50},
+  {slug:"yogurt-coco",name:"Yogurt Coco",category:"Yogurts",price:4.50},
   {slug:"sandwich-pollo-cremoso",name:"Pollo Cremoso",category:"Sánduches",price:8.95},
   {slug:"sandwich-carne-brava",name:"Carne Brava",category:"Sánduches",price:9.90},
   {slug:"sandwich-la-fresca",name:"La Fresca",category:"Sánduches",price:7.75},
@@ -66,6 +67,14 @@ export function YukiPilotCatalogBootstrap(){
         barcode:`YUKI-${item.slug.replace(/-/g,"").slice(0,22).toUpperCase()}`,name:item.name,price:item.price,cost:0,stock:VIRTUAL_STOCK,active:true,category:item.category,trackStock:false,
       }));
       db.tenantProducts.push(...products);changed=true;
+    }
+
+    // Additive pilot upgrade: existing YUKI branches receive Coco once. If the business later archives it,
+    // the inactive record remains and this bootstrap will not bring it back unexpectedly.
+    const coconutExists=db.tenantProducts.some(product=>product.tenantId===ctx.tenantId&&product.branchId===ctx.branchId&&(product.barcode==="YUKI-YOGURTCOCO"||product.name.trim().toLocaleLowerCase("es")==="yogurt coco"));
+    if(!coconutExists){
+      db.tenantProducts.push({id:"yuki-menu-yogurt-coco",tenantId:ctx.tenantId,branchId:ctx.branchId,masterProductId:"custom-yuki-yogurt-coco",barcode:"YUKI-YOGURTCOCO",name:"Yogurt Coco",price:4.50,cost:0,stock:VIRTUAL_STOCK,active:true,category:"Yogurts",trackStock:false});
+      changed=true;
     }
 
     const currentBranchProducts=db.tenantProducts.filter(product=>product.tenantId===ctx.tenantId&&product.branchId===ctx.branchId);

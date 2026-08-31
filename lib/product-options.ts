@@ -54,3 +54,15 @@ export function formatProductOptionSelection(config:ProductOptionConfig,selectio
   if(cleanSelections.length<=1)return cleanSelections.length?`${config.label} ${cleanSelections[0]}`:"";
   return cleanSelections.map((value,index)=>`${config.label} ${index+1}: ${value}`).join(" · ");
 }
+
+export function parseProductOptionSelection(config:ProductOptionConfig|undefined,value:unknown){
+  if(!config)return[];
+  const text=clean(value,500);if(!text)return[];
+  if(config.selectionCount<=1){
+    const prefix=new RegExp(`^${config.label.replace(/[.*+?^${}()|[\]\\]/g,"\\$&")}\\s+`,"i");
+    const selection=clean(text.replace(prefix,""),80);return selection?[selection]:[];
+  }
+  const label=config.label.replace(/[.*+?^${}()|[\]\\]/g,"\\$&"),matcher=new RegExp(`${label}\\s+\\d+\\s*:\\s*([^·/]+)`,"gi"),result:string[]=[];let match:RegExpExecArray|null;
+  while((match=matcher.exec(text))!==null){const selection=clean(match[1],80);if(selection)result.push(selection)}
+  return result.slice(0,Math.max(1,config.selectionCount));
+}
