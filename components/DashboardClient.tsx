@@ -3,6 +3,7 @@ import Link from "next/link";
 import { useEffect,useMemo,useState } from "react";
 import { getOpenCashSession,getWorkspaceContext,loadLocalDatabase } from "@/lib/local-store";
 import { PLAN_CATALOG,type CommercialPlan } from "@/lib/entitlements";
+import { lowStockThreshold } from "@/lib/recipe-inventory";
 import { KIUBO_DATA_REFRESHED } from "./RealtimeSyncRuntime";
 
 const money=(value:number)=>`$${value.toFixed(2)}`;
@@ -58,7 +59,7 @@ export function DashboardClient(){
 
   if(!db||!ctx||!dashboard)return <div className="loading-card">Preparando inicio…</div>;
   const tenant=ctx.tenant;if(!tenant||tenant.plan==="Internal")return <div className="loading-card">Selecciona un negocio comercial.</div>;
-  const products=db.tenantProducts.filter(p=>p.tenantId===ctx.tenantId&&p.branchId===ctx.branchId&&p.active&&p.barcode!=="YUKI-ENVASE"),customers=db.customers.filter(c=>c.tenantId===ctx.tenantId),low=products.filter(p=>p.trackStock!==false&&p.stock<=5),cash=getOpenCashSession(db,ctx.tenantId,ctx.branchId),max=Math.max(1,...dashboard.chart.map(x=>x.total));
+  const products=db.tenantProducts.filter(p=>p.tenantId===ctx.tenantId&&p.branchId===ctx.branchId&&p.active&&p.barcode!=="YUKI-ENVASE"),customers=db.customers.filter(c=>c.tenantId===ctx.tenantId),low=products.filter(p=>p.trackStock!==false&&p.stock<=lowStockThreshold(p)),cash=getOpenCashSession(db,ctx.tenantId,ctx.branchId),max=Math.max(1,...dashboard.chart.map(x=>x.total));
   const recent=[...dashboard.sales].sort((a,b)=>b.createdAt.localeCompare(a.createdAt)).slice(0,5),today=startOfDay(),salesToday=dashboard.sales.filter(s=>new Date(s.createdAt)>=today),cashSales=salesToday.filter(s=>s.payment==="cash").reduce((n,s)=>n+s.total,0),transferSales=salesToday.filter(s=>s.payment==="transfer").reduce((n,s)=>n+s.total,0),todayTotal=salesToday.reduce((n,s)=>n+s.total,0),plan=PLAN_CATALOG[tenant.plan as CommercialPlan];
   const paymentGrand=Math.max(.01,Object.values(dashboard.paymentTotals).reduce((sum,value)=>sum+value,0)),cashPct=dashboard.paymentTotals.cash/paymentGrand*100,transferPct=dashboard.paymentTotals.transfer/paymentGrand*100,creditPct=dashboard.paymentTotals.credit/paymentGrand*100,mixedPct=dashboard.paymentTotals.mixed/paymentGrand*100;
   const donut=`conic-gradient(#123f31 0 ${cashPct}%, #3c82f6 ${cashPct}% ${cashPct+transferPct}%, #f4a000 ${cashPct+transferPct}% ${cashPct+transferPct+creditPct}%, #ff5b55 ${cashPct+transferPct+creditPct}% ${cashPct+transferPct+creditPct+mixedPct}%, #eef3f0 0)`;
