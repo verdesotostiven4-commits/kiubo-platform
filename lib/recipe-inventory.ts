@@ -42,6 +42,16 @@ function optionChoiceProduct(product:TenantProduct,label:string,products:TenantP
   });
 }
 
+export function usesRecipeInventory(lines:InventorySelectionLine[],products:TenantProduct[]){
+  const byId=new Map(products.map(product=>[product.id,product]));
+  for(const line of lines){
+    const product=byId.get(line.productId);if(!product)continue;
+    if(hasRecipe(product))return true;
+    for(const selection of line.optionSelections||[]){const choice=optionChoiceProduct(product,selection,products);if(choice&&hasRecipe(choice))return true}
+  }
+  return false;
+}
+
 export function resolveInventoryImpact(lines:InventorySelectionLine[],products:TenantProduct[]):InventoryImpact[]{
   const byId=new Map(products.map(product=>[product.id,product]));
   const impacts=new Map<string,InventoryImpact>();
