@@ -6,7 +6,9 @@ const root=process.cwd();
 function text(path){const full=join(root,path);assert.ok(existsSync(full),`Missing ${path}`);return readFileSync(full,"utf8")}
 function requireText(path,needles){const source=text(path);for(const needle of needles)assert.ok(source.includes(needle),`${path} missing Pilot Readiness guard: ${needle}`);console.log(`✓ ${path}`)}
 
-requireText("lib/permissions.ts",["if(permission===\"control\"||permission===\"leads\")return platformAdmin","cashier:[\"dashboard\",\"upgrade\",\"pos\",\"cash\"","if(path.startsWith(\"/orders\")||path.startsWith(\"/order-print\")||path.startsWith(\"/receipt\"))return\"pos\"","if(path.startsWith(\"/cash\"))return\"cash\""]);
+requireText("lib/permissions.ts",["if(permission===\"control\"||permission===\"leads\")return platformAdmin","cashier:[\"dashboard\",\"pos\",\"cash\"","inventory:[\"dashboard\",\"inventory\",\"purchases\",\"catalog\",\"reports\"]","viewer:[\"dashboard\",\"reports\"]","if(path.startsWith(\"/orders\")||path.startsWith(\"/order-print\")||path.startsWith(\"/receipt\"))return\"pos\"","if(path.startsWith(\"/cash\"))return\"cash\""]);
+const permissions=text("lib/permissions.ts");
+for(const role of ["cashier","inventory","viewer"]){const match=permissions.match(new RegExp(`${role}:\\[([^\\]]*)\\]`));assert.ok(match,`Missing ${role} permission list`);assert.ok(!match[1].includes("\"upgrade\""),`${role} must not access plan settings`)}
 requireText("components/SessionEnforcer.tsx",["canAccess(user.role,permission,Boolean(user.platformAdmin))","session.role!==user.role","b.tenantId===tenantId&&b.active"]);
 requireText("components/Sidebar.tsx",["platformOnly:true","canAccess(user.role,item.permission,Boolean(user.platformAdmin))","href:\"/orders\"","businessTypes:[\"food_service\"]","href:\"/cash\"","label:\"Administración\""]);
 requireText("components/MobileNav.tsx",["platformOnly:true","canAccess(user.role,item.permission,Boolean(user.platformAdmin))","href:\"/orders\"","businessTypes:[\"food_service\"]","href:\"/cash\""]);
@@ -43,4 +45,4 @@ assert.equal(vercel?.git?.deploymentEnabled?.main,true,"vercel.json must allow p
 assert.equal(vercel?.git?.deploymentEnabled?.["*"],false,"vercel.json must keep feature branch deployments disabled");
 console.log("✓ vercel.json production-only deployment policy");
 
-console.log("✓ Pilot Readiness V12 passed: coupled money/stock commands stay atomic-only, Food Service private routes remain protected, revoked order data is purged, and only main can deploy to Vercel.");
+console.log("✓ Pilot Readiness V12 passed: coupled money/stock commands stay atomic-only, Food Service private routes remain protected, revoked order data is purged, employee roles stay out of plan settings, and only main can deploy to Vercel.");
