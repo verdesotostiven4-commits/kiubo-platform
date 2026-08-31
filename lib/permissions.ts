@@ -3,9 +3,9 @@ export type Permission="control"|"leads"|"dashboard"|"onboarding"|"upgrade"|"pos
 const grants:Record<UserRole,Permission[]>={
   owner:["control","leads","dashboard","onboarding","upgrade","pos","cash","inventory","purchases","catalog","customers","invoices","reports","branding","operations"],
   admin:["dashboard","onboarding","upgrade","pos","cash","inventory","purchases","catalog","customers","invoices","reports","branding","operations"],
-  cashier:["dashboard","upgrade","pos","cash","customers","invoices","reports"],
-  inventory:["dashboard","upgrade","inventory","purchases","catalog","reports"],
-  viewer:["dashboard","upgrade","reports"]
+  cashier:["dashboard","pos","cash","customers","invoices","reports"],
+  inventory:["dashboard","inventory","purchases","catalog","reports"],
+  viewer:["dashboard","reports"]
 };
 export function canAccess(role:UserRole,permission:Permission,platformAdmin=false){
   if(permission==="control"||permission==="leads")return platformAdmin;
