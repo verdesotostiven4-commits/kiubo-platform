@@ -7,6 +7,7 @@ import { runSyncCycle } from "@/lib/sync-engine";
 import { KIUBO_DATA_REFRESHED } from "./RealtimeSyncRuntime";
 
 const VIRTUAL_STOCK=1_000_000;
+const YUKI_COCO_IMAGE_URL="https://blogger.googleusercontent.com/img/a/AVvXsEiv07v-ruXVIQ8V8l1DhDNdrL8k7RWh8hIk1oWsz1oyhZpk6oWWR5OU7WafhAA_A6fj0lBiOAmG3r8zpiB2CUOD4nn7gUvJ1AVZ6zNHPg1s-1jKN6t2YutjWSSq_uF4NY40hxleLS-VvK7jQa86nYbelg9ASElDiFzEJwTeBKJgUS1GY1V5d7d9JT4FSBg";
 export const YUKI_PACKAGING_BARCODE="YUKI-ENVASE";
 export const YUKI_PACKAGING_PRICE=.50;
 const YUKI_MENU=[
@@ -65,15 +66,19 @@ export function YukiPilotCatalogBootstrap(){
       const products:TenantProduct[]=YUKI_MENU.map(item=>({
         id:`yuki-menu-${item.slug}`,tenantId:ctx.tenantId,branchId:ctx.branchId,masterProductId:`custom-yuki-${item.slug}`,
         barcode:`YUKI-${item.slug.replace(/-/g,"").slice(0,22).toUpperCase()}`,name:item.name,price:item.price,cost:0,stock:VIRTUAL_STOCK,active:true,category:item.category,trackStock:false,
+        imageUrl:item.slug==="yogurt-coco"?YUKI_COCO_IMAGE_URL:undefined,
       }));
       db.tenantProducts.push(...products);changed=true;
     }
 
     // Additive pilot upgrade: existing YUKI branches receive Coco once. If the business later archives it,
     // the inactive record remains and this bootstrap will not bring it back unexpectedly.
-    const coconutExists=db.tenantProducts.some(product=>product.tenantId===ctx.tenantId&&product.branchId===ctx.branchId&&(product.barcode==="YUKI-YOGURTCOCO"||product.name.trim().toLocaleLowerCase("es")==="yogurt coco"));
-    if(!coconutExists){
-      db.tenantProducts.push({id:"yuki-menu-yogurt-coco",tenantId:ctx.tenantId,branchId:ctx.branchId,masterProductId:"custom-yuki-yogurt-coco",barcode:"YUKI-YOGURTCOCO",name:"Yogurt Coco",price:4.50,cost:0,stock:VIRTUAL_STOCK,active:true,category:"Yogurts",trackStock:false});
+    const coconutProduct=db.tenantProducts.find(product=>product.tenantId===ctx.tenantId&&product.branchId===ctx.branchId&&(product.barcode==="YUKI-YOGURTCOCO"||product.name.trim().toLocaleLowerCase("es")==="yogurt coco"));
+    if(!coconutProduct){
+      db.tenantProducts.push({id:"yuki-menu-yogurt-coco",tenantId:ctx.tenantId,branchId:ctx.branchId,masterProductId:"custom-yuki-yogurt-coco",barcode:"YUKI-YOGURTCOCO",name:"Yogurt Coco",price:4.50,cost:0,stock:VIRTUAL_STOCK,active:true,category:"Yogurts",trackStock:false,imageUrl:YUKI_COCO_IMAGE_URL});
+      changed=true;
+    }else if(coconutProduct.imageUrl!==YUKI_COCO_IMAGE_URL){
+      coconutProduct.imageUrl=YUKI_COCO_IMAGE_URL;
       changed=true;
     }
 
