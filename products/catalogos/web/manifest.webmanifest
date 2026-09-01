@@ -1,0 +1,13 @@
+{
+  "name": "Hakuna Matata · Catálogo",
+  "short_name": "Hakuna Matata",
+  "description": "Catálogo digital y pedidos rápidos.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#f7f5ef",
+  "theme_color": "#122018",
+  "icons": [
+    { "src": "/assets/brand-mark.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
+  ]
+}

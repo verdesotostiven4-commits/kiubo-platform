@@ -1,0 +1,143 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#101a14">
+  <meta name="robots" content="noindex,nofollow">
+  <title>Panel · Hakuna Matata</title>
+  <link rel="icon" href="/assets/brand-mark.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="/styles.css">
+  <link rel="stylesheet" href="/panel.css">
+</head>
+<body class="panel-page">
+  <div id="pinGate" class="auth-screen" hidden>
+    <div class="auth-ambient auth-ambient--one"></div><div class="auth-ambient auth-ambient--two"></div>
+    <section class="pin-card" aria-labelledby="pinTitle">
+      <div class="pin-card__top"><span class="gate-logo" id="gateLogo"><img src="/assets/brand-mark.svg" alt=""></span><span class="private-badge"><svg class="icon"><use href="#i-lock"/></svg>Panel privado</span></div>
+      <span class="auth-kicker">ACCESO DEL PROVEEDOR</span><h1 id="pinTitle">Hakuna Matata</h1><p>Ingresa tu PIN de 4 dígitos para administrar productos y pedidos.</p>
+      <div class="pin-dots" id="pinDots" aria-label="PIN ingresado"><i></i><i></i><i></i><i></i></div>
+      <input id="pinInput" type="password" inputmode="numeric" maxlength="4" autocomplete="one-time-code" aria-label="PIN" class="sr-pin-input">
+      <div class="pin-pad" id="pinPad">
+        <button data-pin="1">1</button><button data-pin="2">2</button><button data-pin="3">3</button>
+        <button data-pin="4">4</button><button data-pin="5">5</button><button data-pin="6">6</button>
+        <button data-pin="7">7</button><button data-pin="8">8</button><button data-pin="9">9</button>
+        <button class="pin-utility" id="pinClear">C</button><button data-pin="0">0</button><button class="pin-utility" id="pinBack" aria-label="Borrar"><svg class="icon"><use href="#i-delete"/></svg></button>
+      </div>
+      <button class="button button--primary pin-submit" id="pinSubmit" disabled>Entrar al panel <svg class="icon"><use href="#i-arrow"/></svg></button>
+      <div class="auth-security"><svg class="icon"><use href="#i-shield"/></svg><span>Acceso cifrado · sesión protegida</span></div>
+    </section>
+  </div>
+
+  <div id="masterGate" class="auth-screen master-auth" hidden>
+    <div class="auth-ambient auth-ambient--one"></div><div class="auth-ambient auth-ambient--two"></div>
+    <section class="master-card" aria-labelledby="masterTitle">
+      <span class="master-crown"><svg class="icon"><use href="#i-spark"/></svg></span><span class="auth-kicker">KIUBO PLATFORM</span><h1 id="masterTitle">Centro de control</h1><p>Acceso exclusivo para soporte y administración de todos los catálogos.</p>
+      <form id="masterForm" class="master-form">
+        <div class="field"><label for="masterEmail">Correo administrador</label><input id="masterEmail" type="email" autocomplete="username" placeholder="administrador@kiubo.app" required></div>
+        <div class="field"><label for="masterPassword">Contraseña</label><input id="masterPassword" type="password" autocomplete="current-password" placeholder="••••••••" required></div>
+        <button class="button button--primary" id="masterSubmit">Ingresar a KIUBO Master <svg class="icon"><use href="#i-arrow"/></svg></button>
+      </form>
+      <a class="back-catalog" href="/"><svg class="icon"><use href="#i-back"/></svg>Volver al catálogo</a>
+    </section>
+  </div>
+
+  <div id="panelLoading" class="panel-loading" hidden><span class="loading-logo"><img src="/assets/brand-mark.svg" alt=""></span><span class="loading-bar"><i></i></span><p>Preparando tu panel…</p></div>
+
+  <div id="adminApp" class="admin-app" hidden>
+    <aside class="side-nav">
+      <div class="side-brand"><span id="sideLogo"><img src="/assets/brand-mark.svg" alt=""></span><div><b id="sideBusiness">Hakuna Matata</b><small id="sideRole">Panel del proveedor</small></div></div>
+      <nav aria-label="Navegación principal">
+        <button class="active" data-nav="home"><svg class="icon"><use href="#i-home"/></svg><span>Inicio</span></button>
+        <button data-nav="products"><svg class="icon"><use href="#i-box"/></svg><span>Productos</span></button>
+        <button data-nav="orders"><svg class="icon"><use href="#i-receipt"/></svg><span>Pedidos</span><b class="nav-badge" id="orderBadge" hidden>0</b></button>
+        <button data-nav="customers"><svg class="icon"><use href="#i-users"/></svg><span>Clientes</span></button>
+        <button data-nav="business"><svg class="icon"><use href="#i-store"/></svg><span>Mi negocio</span></button>
+      </nav>
+      <div class="side-nav__foot"><button id="openCatalogSide"><svg class="icon"><use href="#i-external"/></svg><span>Ver catálogo</span></button><button id="logoutBtn"><svg class="icon"><use href="#i-logout"/></svg><span>Cerrar sesión</span></button></div>
+    </aside>
+
+    <div class="admin-main">
+      <header class="admin-topbar">
+        <div class="mobile-brand"><span id="mobileLogo"><img src="/assets/brand-mark.svg" alt=""></span><div><b id="mobileBusiness">Hakuna Matata</b><small id="mobileViewTitle">Resumen</small></div></div>
+        <div class="desktop-heading"><span class="section-kicker" id="viewKicker">PANEL DE CONTROL</span><h1 id="viewTitle">Buenos días</h1></div>
+        <div class="topbar-actions"><button class="connection-chip" id="connectionChip"><i></i><span>En línea</span></button><button class="icon-button" id="refreshBtn" aria-label="Actualizar"><svg class="icon"><use href="#i-refresh"/></svg></button><button class="avatar-button" id="profileBtn">HM</button></div>
+      </header>
+
+      <main class="admin-content">
+        <section class="admin-view active" data-view="home">
+          <div class="welcome-card"><div><span class="eyebrow"><span class="live-dot"></span>Todo funcionando</span><h2 id="welcomeTitle">Tu catálogo está listo para recibir pedidos.</h2><p id="welcomeCopy">Revisa lo nuevo, actualiza disponibilidad y mantén informados a tus clientes.</p></div><button class="button button--light" id="shareCatalogAdmin"><svg class="icon"><use href="#i-share"/></svg>Compartir catálogo</button></div>
+          <div class="stats-grid">
+            <article class="stat-card stat-card--accent"><span class="stat-icon"><svg class="icon"><use href="#i-receipt"/></svg></span><small>Pedidos nuevos</small><strong id="statNewOrders">0</strong><em id="statOrderTrend">Hoy</em></article>
+            <article class="stat-card"><span class="stat-icon"><svg class="icon"><use href="#i-box"/></svg></span><small>Productos visibles</small><strong id="statProducts">0</strong><em>En el catálogo</em></article>
+            <article class="stat-card"><span class="stat-icon"><svg class="icon"><use href="#i-alert"/></svg></span><small>Por revisar</small><strong id="statStock">0</strong><em>Agotados o bajos</em></article>
+            <article class="stat-card"><span class="stat-icon"><svg class="icon"><use href="#i-chart"/></svg></span><small>Pedidos abiertos</small><strong id="statOpenValue">$0.00</strong><em>Valor estimado</em></article>
+          </div>
+          <div class="dashboard-grid">
+            <section class="panel-card quick-actions-card"><header><div><span class="section-kicker">ATAJOS</span><h3>Acciones rápidas</h3></div></header><div class="quick-actions"><button data-quick="new-product"><span><svg class="icon"><use href="#i-plus"/></svg></span><b>Nuevo producto</b><small>Agregar al catálogo</small></button><button data-quick="orders"><span><svg class="icon"><use href="#i-receipt"/></svg></span><b>Ver pedidos</b><small>Gestionar pendientes</small></button><button data-quick="stock"><span><svg class="icon"><use href="#i-alert"/></svg></span><b>Actualizar stock</b><small>Revisar agotados</small></button><button data-quick="business"><span><svg class="icon"><use href="#i-palette"/></svg></span><b>Personalizar</b><small>Logo, textos y color</small></button></div></section>
+            <section class="panel-card recent-card"><header><div><span class="section-kicker">EN TIEMPO REAL</span><h3>Pedidos recientes</h3></div><button data-go="orders">Ver todos</button></header><div id="recentOrders" class="recent-list"></div></section>
+          </div>
+          <section class="panel-card attention-card"><header><div><span class="section-kicker">ATENCIÓN</span><h3>Productos que necesitan revisión</h3></div><button data-go="products">Gestionar</button></header><div id="attentionProducts" class="attention-list"></div></section>
+        </section>
+
+        <section class="admin-view" data-view="products">
+          <div class="view-toolbar"><label class="admin-search"><svg class="icon"><use href="#i-search"/></svg><input id="productSearch" type="search" placeholder="Buscar nombre, marca o código…"></label><button class="button button--primary" id="newProductBtn"><svg class="icon"><use href="#i-plus"/></svg>Nuevo producto</button></div>
+          <div class="filter-row"><button class="filter-chip active" data-product-filter="all">Todos <b id="countAll">0</b></button><button class="filter-chip" data-product-filter="available">Disponibles</button><button class="filter-chip" data-product-filter="low">Pocas unidades</button><button class="filter-chip" data-product-filter="out">Agotados</button><button class="filter-chip" data-product-filter="hidden">Ocultos</button><button class="filter-chip" data-product-filter="archived">Archivados</button></div>
+          <div class="products-admin-list" id="adminProductList"></div>
+        </section>
+
+        <section class="admin-view" data-view="orders">
+          <div class="order-toolbar"><div class="segmented"><button class="active" data-order-filter="open">Activos</button><button data-order-filter="new">Nuevos</button><button data-order-filter="done">Finalizados</button><button data-order-filter="all">Todos</button></div><label class="admin-search compact"><svg class="icon"><use href="#i-search"/></svg><input id="orderSearch" type="search" placeholder="Pedido o cliente…"></label></div>
+          <div class="orders-board" id="adminOrderList"></div>
+        </section>
+
+        <section class="admin-view" data-view="customers">
+          <div class="view-toolbar"><label class="admin-search"><svg class="icon"><use href="#i-search"/></svg><input id="customerSearch" type="search" placeholder="Buscar negocio, persona o teléfono…"></label></div>
+          <div class="customer-grid" id="customerList"></div>
+        </section>
+
+        <section class="admin-view" data-view="business">
+          <div class="settings-layout">
+            <nav class="settings-tabs"><button class="active" data-settings="identity">Identidad</button><button data-settings="catalog">Catálogo</button><button data-settings="categories">Categorías</button><button data-settings="security">Seguridad</button></nav>
+            <div class="settings-content">
+              <section class="settings-panel active" data-settings-panel="identity"><div class="panel-card"><header><div><span class="section-kicker">MARCA</span><h3>Identidad del negocio</h3><p>Estos datos aparecen en el catálogo que reciben tus clientes.</p></div></header><form id="identityForm" class="settings-form"><div class="logo-uploader"><div class="logo-preview" id="logoPreview"><img src="/assets/brand-mark.svg" alt=""></div><div><b>Logo del negocio</b><small>PNG, JPG o WebP · máximo 5 MB</small><label class="button button--secondary">Cambiar logo<input id="logoFile" type="file" accept="image/png,image/jpeg,image/webp" hidden></label></div></div><div class="field"><label for="businessName">Nombre comercial</label><input id="businessName" maxlength="80" required></div><div class="field"><label for="businessTagline">Descripción corta</label><input id="businessTagline" maxlength="100" placeholder="Catálogo mayorista · pedidos fáciles"></div><div class="field"><label for="businessWhatsapp">WhatsApp que recibe pedidos</label><input id="businessWhatsapp" inputmode="numeric" maxlength="15" placeholder="099 114 4790"></div><div class="field color-field"><label for="businessAccent">Color principal</label><input id="businessAccent" type="color" value="#f06a3a"><output id="accentOutput">#f06a3a</output></div><button class="button button--primary" type="submit">Guardar identidad</button></form></div></section>
+              <section class="settings-panel" data-settings-panel="catalog"><div class="panel-card"><header><div><span class="section-kicker">EXPERIENCIA DEL CLIENTE</span><h3>Portada y condiciones</h3><p>Personaliza el mensaje y las reglas visibles al hacer pedidos.</p></div></header><form id="catalogSettingsForm" class="settings-form"><div class="field"><label for="heroTitleInput">Título principal</label><input id="heroTitleInput" maxlength="110"></div><div class="field"><label for="heroSubtitleInput">Texto de apoyo</label><textarea id="heroSubtitleInput" maxlength="240" rows="3"></textarea></div><div class="field"><label for="minimumOrder">Pedido mínimo</label><input id="minimumOrder" type="number" min="0" step="0.01" inputmode="decimal"></div><label class="switch-row"><span><b>Catálogo abierto</b><small>Los clientes pueden registrar pedidos.</small></span><input id="catalogOpen" type="checkbox"><i></i></label><label class="switch-row"><span><b>Mostrar precios</b><small>Oculta precios si trabajas bajo cotización.</small></span><input id="showPrices" type="checkbox"><i></i></label><button class="button button--primary" type="submit">Guardar configuración</button></form></div></section>
+              <section class="settings-panel" data-settings-panel="categories"><div class="panel-card"><header><div><span class="section-kicker">ORGANIZACIÓN</span><h3>Categorías</h3><p>Ordena el catálogo para que tus clientes encuentren todo rápido.</p></div><button class="button button--secondary" id="newCategoryBtn"><svg class="icon"><use href="#i-plus"/></svg>Agregar</button></header><div class="category-admin-list" id="categoryAdminList"></div></div></section>
+              <section class="settings-panel" data-settings-panel="security"><div class="panel-card security-panel"><header><div><span class="section-kicker">ACCESO</span><h3>PIN del proveedor</h3><p>El PIN debe tener exactamente 4 números. Cambiarlo cerrará todas las sesiones abiertas.</p></div></header><form id="pinChangeForm" class="settings-form"><div class="pin-change-grid"><div class="field"><label for="newPin">Nuevo PIN</label><input id="newPin" type="password" inputmode="numeric" maxlength="4" pattern="[0-9]{4}" placeholder="••••" required></div><div class="field"><label for="confirmPin">Confirmar PIN</label><input id="confirmPin" type="password" inputmode="numeric" maxlength="4" pattern="[0-9]{4}" placeholder="••••" required></div></div><div class="security-note"><svg class="icon"><use href="#i-shield"/></svg><span>El PIN no se almacena como texto y los intentos incorrectos se bloquean temporalmente.</span></div><button class="button button--primary" type="submit">Actualizar PIN</button></form></div><div class="panel-card danger-card"><header><div><span class="section-kicker">SESIÓN</span><h3>Dispositivos conectados</h3><p>Cierra las demás sesiones si crees que alguien conoce el PIN.</p></div></header><button class="button button--danger" id="revokeSessionsBtn">Cerrar todas las demás sesiones</button></div></section>
+            </div>
+          </div>
+        </section>
+      </main>
+    </div>
+
+    <nav class="bottom-nav" aria-label="Navegación móvil"><button class="active" data-nav="home"><svg class="icon"><use href="#i-home"/></svg><span>Inicio</span></button><button data-nav="products"><svg class="icon"><use href="#i-box"/></svg><span>Productos</span></button><button class="bottom-nav__create" id="mobileCreateBtn" aria-label="Crear producto"><svg class="icon"><use href="#i-plus"/></svg></button><button data-nav="orders"><svg class="icon"><use href="#i-receipt"/></svg><span>Pedidos</span><b class="nav-badge" id="mobileOrderBadge" hidden>0</b></button><button data-nav="business"><svg class="icon"><use href="#i-store"/></svg><span>Negocio</span></button></nav>
+  </div>
+
+  <div class="modal-backdrop" id="modalBackdrop" hidden></div>
+  <section class="admin-modal" id="productModal" role="dialog" aria-modal="true" aria-labelledby="productModalTitle" hidden>
+    <header><div><span class="section-kicker">CATÁLOGO</span><h2 id="productModalTitle">Nuevo producto</h2></div><button class="sheet-close" data-close-modal aria-label="Cerrar"><svg class="icon"><use href="#i-close"/></svg></button></header>
+    <form id="productForm" class="modal-form">
+      <div class="product-image-upload"><div id="productImagePreview" class="product-image-preview"><svg class="icon"><use href="#i-image"/></svg></div><label><b>Fotografía del producto</b><small>Cuadrada o vertical · máximo 5 MB</small><span class="button button--secondary">Elegir imagen</span><input id="productImage" type="file" accept="image/png,image/jpeg,image/webp" hidden></label></div>
+      <div class="field full"><label for="productName">Nombre del producto <span>*</span></label><input id="productName" maxlength="120" required></div>
+      <div class="field"><label for="productCategory">Categoría</label><select id="productCategory"></select></div><div class="field"><label for="productBrand">Marca</label><input id="productBrand" maxlength="80"></div>
+      <div class="field"><label for="productPrice">Precio <span>*</span></label><input id="productPrice" type="number" min="0" step="0.01" inputmode="decimal" required></div><div class="field"><label for="productComparePrice">Precio anterior</label><input id="productComparePrice" type="number" min="0" step="0.01" inputmode="decimal"></div>
+      <div class="field"><label for="productUnit">Presentación</label><input id="productUnit" maxlength="100" placeholder="Caja x 12 unidades"></div><div class="field"><label for="productSku">Código / SKU</label><input id="productSku" maxlength="60"></div>
+      <div class="field full"><label for="productDescription">Descripción</label><textarea id="productDescription" maxlength="500" rows="3"></textarea></div>
+      <div class="field"><label for="productStatus">Disponibilidad</label><select id="productStatus"><option value="available">Disponible</option><option value="low">Pocas unidades</option><option value="out">Agotado</option></select></div><div class="field"><label for="productSort">Orden</label><input id="productSort" type="number" min="0" step="1" value="0"></div>
+      <label class="switch-row full"><span><b>Visible en el catálogo</b><small>Puedes ocultarlo sin eliminarlo.</small></span><input id="productVisible" type="checkbox" checked><i></i></label><label class="switch-row full"><span><b>Producto destacado</b><small>Aparece primero en búsquedas y recomendaciones.</small></span><input id="productFeatured" type="checkbox"><i></i></label>
+    </form>
+    <footer><button class="button button--danger" id="archiveProductBtn" hidden>Archivar</button><span></span><button class="button button--ghost" data-close-modal>Cancelar</button><button class="button button--primary" id="saveProductBtn">Guardar producto</button></footer>
+  </section>
+
+  <section class="admin-modal order-modal" id="orderModal" role="dialog" aria-modal="true" aria-labelledby="orderModalTitle" hidden><header><div><span class="section-kicker">DETALLE DEL PEDIDO</span><h2 id="orderModalTitle">Pedido</h2></div><button class="sheet-close" data-close-modal aria-label="Cerrar"><svg class="icon"><use href="#i-close"/></svg></button></header><div id="orderModalContent" class="order-modal-content"></div></section>
+
+  <section class="admin-modal compact-modal" id="categoryModal" role="dialog" aria-modal="true" aria-labelledby="categoryModalTitle" hidden><header><div><span class="section-kicker">ORGANIZACIÓN</span><h2 id="categoryModalTitle">Nueva categoría</h2></div><button class="sheet-close" data-close-modal aria-label="Cerrar"><svg class="icon"><use href="#i-close"/></svg></button></header><form id="categoryForm" class="modal-form"><div class="field full"><label for="categoryName">Nombre <span>*</span></label><input id="categoryName" maxlength="60" required autofocus></div><div class="field"><label for="categoryIcon">Ícono</label><select id="categoryIcon"><option value="box">Productos</option><option value="drink">Bebidas</option><option value="food">Alimentos</option><option value="clean">Limpieza</option><option value="home">Hogar</option></select></div><div class="field"><label for="categorySort">Orden</label><input id="categorySort" type="number" min="0" step="1" value="0"></div></form><footer><span></span><span></span><button class="button button--ghost" data-close-modal>Cancelar</button><button class="button button--primary" id="saveCategoryBtn">Guardar</button></footer></section>
+
+  <div class="toast-stack" id="toastStack" aria-live="polite" aria-atomic="true"></div>
+
+  <svg class="svg-sprite" aria-hidden="true">
+    <symbol id="i-lock" viewBox="0 0 24 24"><rect x="4" y="10" width="16" height="11" rx="3"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></symbol><symbol id="i-delete" viewBox="0 0 24 24"><path d="M21 6H8l-5 6 5 6h13V6Z"/><path d="m14 9-5 6m0-6 5 6"/></symbol><symbol id="i-arrow" viewBox="0 0 24 24"><path d="M5 12h14m-5-5 5 5-5 5"/></symbol><symbol id="i-shield" viewBox="0 0 24 24"><path d="M12 3 4 6v5c0 5 3.4 8.6 8 10 4.6-1.4 8-5 8-10V6l-8-3Z"/><path d="m9 12 2 2 4-4"/></symbol><symbol id="i-spark" viewBox="0 0 24 24"><path d="m12 2 2.2 6.8L21 11l-6.8 2.2L12 20l-2.2-6.8L3 11l6.8-2.2L12 2Z"/></symbol><symbol id="i-back" viewBox="0 0 24 24"><path d="m15 18-6-6 6-6"/></symbol><symbol id="i-home" viewBox="0 0 24 24"><path d="m3 11 9-8 9 8v10h-6v-6H9v6H3V11Z"/></symbol><symbol id="i-box" viewBox="0 0 24 24"><path d="m4 7 8-4 8 4-8 4-8-4Z"/><path d="m4 7v10l8 4 8-4V7M12 11v10"/></symbol><symbol id="i-receipt" viewBox="0 0 24 24"><path d="M5 3h14v18l-3-2-4 2-4-2-3 2V3Z"/><path d="M8 8h8m-8 4h8m-8 4h5"/></symbol><symbol id="i-users" viewBox="0 0 24 24"><circle cx="9" cy="8" r="4"/><path d="M3 21v-2a6 6 0 0 1 12 0v2M16 4a4 4 0 0 1 0 8m2 3a6 6 0 0 1 3 5"/></symbol><symbol id="i-store" viewBox="0 0 24 24"><path d="M4 10v10h16V10M3 4h18l-2 6H5L3 4Z"/><path d="M8 20v-6h8v6"/></symbol><symbol id="i-external" viewBox="0 0 24 24"><path d="M14 4h6v6M20 4l-9 9"/><path d="M18 13v7H4V6h7"/></symbol><symbol id="i-logout" viewBox="0 0 24 24"><path d="M10 5H4v14h6M14 8l4 4-4 4m4-4H9"/></symbol><symbol id="i-refresh" viewBox="0 0 24 24"><path d="M20 7v5h-5M4 17v-5h5"/><path d="M6.1 8a7 7 0 0 1 11.4-2L20 8M4 16l2.5 2a7 7 0 0 0 11.4-2"/></symbol><symbol id="i-share" viewBox="0 0 24 24"><circle cx="18" cy="5" r="2.4"/><circle cx="6" cy="12" r="2.4"/><circle cx="18" cy="19" r="2.4"/><path d="m8.2 10.9 7.6-4.5M8.2 13.1l7.6 4.5"/></symbol><symbol id="i-alert" viewBox="0 0 24 24"><path d="M12 3 2 21h20L12 3Z"/><path d="M12 9v5m0 3h.01"/></symbol><symbol id="i-chart" viewBox="0 0 24 24"><path d="M4 20V10m6 10V4m6 16v-7m6 7H2"/></symbol><symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol><symbol id="i-palette" viewBox="0 0 24 24"><path d="M12 3a9 9 0 0 0 0 18h1.5a2 2 0 0 0 0-4H12a2 2 0 0 1 0-4h3a6 6 0 0 0 0-12h-3Z"/><circle cx="7" cy="10" r="1"/><circle cx="9" cy="6" r="1"/></symbol><symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></symbol><symbol id="i-close" viewBox="0 0 24 24"><path d="m6 6 12 12M18 6 6 18"/></symbol><symbol id="i-image" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="3"/><circle cx="9" cy="10" r="2"/><path d="m21 15-4-4L7 20"/></symbol><symbol id="i-message" viewBox="0 0 24 24"><path d="M21 15a4 4 0 0 1-4 4H8l-5 3V7a4 4 0 0 1 4-4h10a4 4 0 0 1 4 4v8Z"/></symbol><symbol id="i-check" viewBox="0 0 24 24"><path d="m5 12 4 4L19 6"/></symbol><symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></symbol>
+  </svg>
+  <script src="/config.js"></script><script type="module" src="/panel.js"></script>
+</body>
+</html>
