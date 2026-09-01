@@ -1,9 +1,10 @@
 {
   "client": "Hakuna Matata",
   "slug": "hakuna-matata",
-  "catalogVersion": "4.3.0",
+  "catalogVersion": "4.4.0",
   "positioning": "Mayorista simple, rápido y claro para negocios que necesitan abastecerse sin perder tiempo entre chats y listas.",
-  "voice": ["clara", "ágil", "cercana", "comercial", "sin tecnicismos innecesarios"],
+  "brandIdea": "Abastecerte sin complicarte.",
+  "voice": ["clara", "ágil", "cercana", "comercial", "confiable", "sin tecnicismos innecesarios"],
   "copy": {
     "tagline": "Mayorista · pedidos simples, rápidos y claros",
     "heroTitle": "Tu negocio, mejor abastecido.",
@@ -14,16 +15,29 @@
     "brandDeep": "#C94C2B",
     "brandSoft": "#FFF0E9",
     "ink": "#122018",
+    "inkSecondary": "#2B392F",
     "canvas": "#F7F4EE",
     "surface": "#FFFDFA"
   },
+  "typography": {
+    "interface": "Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont, Segoe UI, sans-serif",
+    "personality": "limpia, compacta, muy legible, comercial"
+  },
   "logo": {
-    "status": "temporary-mark",
-    "currentAsset": "/assets/brand-mark.svg",
-    "note": "Replace with approved Hakuna Matata master logo before final commercial handoff."
+    "status": "production-candidate-v1",
+    "markAsset": "/assets/brand-mark.svg",
+    "lockupAsset": "/assets/brand-lockup.svg",
+    "concept": "Monograma H geométrico dentro de un contenedor cálido; el pequeño gesto superior aporta movimiento sin convertir la marca en algo infantil o tropical genérico.",
+    "usage": "Usar el símbolo solo en iconos y espacios compactos; usar el nombre Hakuna Matata junto al símbolo cuando exista espacio suficiente."
   },
   "experience": {
     "customer": ["mobile-first", "search-first", "persistent cart", "three-step checkout", "WhatsApp confirmation", "order tracking", "offline cart persistence"],
     "provider": ["4-digit PIN", "mobile bottom navigation", "desktop sidebar", "dashboard", "product and category CRUD", "orders", "customers", "brand settings", "security session controls"]
+  },
+  "handoff": {
+    "technicalStatus": "ready",
+    "demoContent": true,
+    "clientContentPending": ["productos reales", "fotografías reales", "precios reales", "aprobación final de identidad"],
+    "note": "El contenido demo no es un bloqueo técnico y puede reemplazarse desde el panel sin deployment."
   }
 }

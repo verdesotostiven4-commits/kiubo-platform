@@ -1,11 +1,12 @@
 {
-  "name": "Hakuna Matata · Catálogo",
+  "id": "/",
+  "name": "Hakuna Matata · Catálogo Mayorista",
   "short_name": "Hakuna Matata",
-  "description": "Catálogo digital y pedidos rápidos.",
+  "description": "Catálogo mayorista para explorar productos, preparar pedidos y coordinar entregas de forma rápida y clara.",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
-  "background_color": "#f7f5ef",
+  "background_color": "#F7F4EE",
   "theme_color": "#122018",
   "icons": [
     { "src": "/assets/brand-mark.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }

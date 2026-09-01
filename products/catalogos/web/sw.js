@@ -1,5 +1,5 @@
-const CACHE = "kiubo-catalog-v4-20260901b";
-const SHELL = ["/","/index.html","/panel.html","/pedido.html","/styles.css","/catalog.css","/panel.css","/pedido.css","/core.js","/catalog.js","/panel.js","/pedido.js","/config.js","/assets/brand-mark.svg","/manifest.webmanifest"];
+const CACHE = "kiubo-catalog-hakuna-v4.4.0-20260901";
+const SHELL = ["/","/index.html","/panel.html","/pedido.html","/styles.css","/catalog.css","/panel.css","/pedido.css","/hakuna.theme.css","/core.js","/catalog.js","/panel.js","/pedido.js","/config.js","/assets/brand-mark.svg","/assets/brand-lockup.svg","/manifest.webmanifest"];
 self.addEventListener("install", event => { event.waitUntil(caches.open(CACHE).then(cache => cache.addAll(SHELL)).then(() => self.skipWaiting())); });
 self.addEventListener("activate", event => { event.waitUntil(caches.keys().then(keys => Promise.all(keys.filter(key => key !== CACHE).map(key => caches.delete(key)))).then(() => self.clients.claim())); });
 self.addEventListener("fetch", event => {
