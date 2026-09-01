@@ -1,0 +1,249 @@
+/* Hakuna Matata · client visual layer
+   Loaded only by the Hakuna deployment. Keep generic Catalogos styles reusable. */
+
+:root {
+  --brand: #f36f45;
+  --brand-deep: #c94c2b;
+  --brand-soft: #fff0e9;
+  --ink: #122018;
+  --ink-2: #2b392f;
+  --muted: #68736c;
+  --muted-2: #9aa29d;
+  --canvas: #f7f4ee;
+  --surface: #fffdfa;
+  --surface-2: #f0ede6;
+  --line: rgba(18, 32, 24, .105);
+  --shadow-sm: 0 2px 3px rgba(18,32,24,.025), 0 10px 30px rgba(18,32,24,.055);
+  --shadow-md: 0 22px 64px rgba(15,28,20,.14);
+  --shadow-lg: 0 34px 100px rgba(10,20,14,.24);
+}
+
+body.catalog-page,
+body.panel-page {
+  background-image:
+    radial-gradient(circle at 0 0, rgba(243,111,69,.055), transparent 27rem),
+    radial-gradient(circle at 100% 18%, rgba(54,110,77,.045), transparent 30rem);
+  background-attachment: fixed;
+}
+
+/* Customer catalog */
+.catalog-header.scrolled {
+  background: rgba(247,244,238,.9);
+  box-shadow: 0 10px 34px rgba(18,32,24,.07);
+}
+
+.brand-avatar,
+.gate-logo,
+.avatar-button,
+.side-brand > span,
+.mobile-brand > span {
+  background: linear-gradient(145deg, #ff9d70 0%, var(--brand) 54%, var(--brand-deep) 100%);
+  box-shadow: 0 12px 30px rgba(201,76,43,.2);
+}
+
+.hero-card {
+  min-height: 360px;
+  background:
+    linear-gradient(132deg, rgba(12,24,17,.98) 0%, rgba(23,48,32,.98) 58%, rgba(47,83,55,.97) 100%);
+  box-shadow: 0 28px 78px rgba(14,30,20,.2);
+}
+
+.hero-card::before {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  width: 410px;
+  height: 410px;
+  right: -145px;
+  top: -205px;
+  border-radius: 50%;
+  border: 1px solid rgba(255,255,255,.08);
+  box-shadow: 0 0 0 55px rgba(255,255,255,.025), 0 0 0 110px rgba(255,255,255,.018);
+}
+
+.hero-orb--one {
+  background: radial-gradient(circle at 30% 30%, rgba(255,181,134,.54), rgba(243,111,69,.14) 55%, transparent 72%);
+}
+
+.hero-content h1 {
+  max-width: 700px;
+  font-weight: 790;
+  text-wrap: balance;
+}
+
+.hero-content h1 em {
+  color: #ffad83;
+}
+
+.hero-content p {
+  max-width: 650px;
+  color: rgba(255,255,255,.74);
+}
+
+.hero-meta span {
+  border: 1px solid rgba(255,255,255,.08);
+  background: rgba(255,255,255,.085);
+}
+
+.hero-cta {
+  border: 1px solid rgba(255,255,255,.72);
+  background: rgba(255,253,250,.97);
+  box-shadow: 0 16px 38px rgba(0,0,0,.2);
+}
+
+.category-chip,
+.view-toggle,
+.icon-button {
+  transition: transform .18s ease, background .18s ease, border-color .18s ease, box-shadow .18s ease;
+}
+
+.category-chip:hover,
+.view-toggle:hover,
+.icon-button:hover {
+  transform: translateY(-1px);
+  border-color: rgba(18,32,24,.18);
+}
+
+.category-chip.active {
+  background: linear-gradient(135deg, #17251d, #0d1711);
+  box-shadow: 0 12px 28px rgba(18,32,24,.18);
+}
+
+.product-card {
+  border-color: rgba(18,32,24,.09);
+  box-shadow: 0 12px 34px rgba(18,32,24,.06);
+}
+
+.product-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 22px 48px rgba(18,32,24,.105);
+}
+
+.product-media {
+  background:
+    linear-gradient(145deg, color-mix(in srgb,var(--product-color,#e8c39a) 15%,#fbf8f1), #ede8de);
+}
+
+.add-button,
+.button--primary {
+  background: linear-gradient(135deg, #18271f, #0c1510);
+}
+
+.add-button:hover,
+.button--primary:hover {
+  background: linear-gradient(135deg, #22352a, #101c15);
+}
+
+.favorite-button.active {
+  background: #fff7f3;
+}
+
+.trust-strip article {
+  background: rgba(255,253,250,.82);
+  backdrop-filter: blur(10px);
+  box-shadow: 0 10px 30px rgba(18,32,24,.035);
+}
+
+.cart-dock {
+  border-color: rgba(255,255,255,.11);
+  background: linear-gradient(135deg, rgba(15,27,19,.975), rgba(24,42,30,.975));
+  box-shadow: 0 24px 64px rgba(9,18,12,.34);
+}
+
+.cart-dock__count {
+  background: linear-gradient(145deg,#ff9c6c,var(--brand-deep));
+}
+
+.bottom-sheet {
+  border: 1px solid rgba(18,32,24,.08);
+}
+
+/* Provider experience */
+.auth-screen {
+  background:
+    radial-gradient(circle at 10% 88%, rgba(41,92,60,.68) 0, transparent 36%),
+    radial-gradient(circle at 88% 12%, rgba(126,64,55,.54) 0, transparent 31%),
+    linear-gradient(145deg,#07110b,#0d1b12 56%,#17120f);
+}
+
+.auth-ambient--one {
+  background: radial-gradient(circle, rgba(255,132,83,.95), transparent 69%);
+}
+
+.auth-ambient--two {
+  background: radial-gradient(circle, rgba(55,137,84,.9), transparent 69%);
+}
+
+.pin-card,
+.master-card {
+  border-color: rgba(255,255,255,.78);
+  box-shadow: 0 46px 130px rgba(0,0,0,.46);
+}
+
+.pin-pad button {
+  box-shadow: 0 7px 18px rgba(18,32,24,.045);
+}
+
+.pin-pad button:not(.pin-utility):hover {
+  border-color: rgba(243,111,69,.32);
+  background: #fffaf7;
+}
+
+.side-nav {
+  background:
+    radial-gradient(circle at 40% -5%, rgba(243,111,69,.11), transparent 16rem),
+    linear-gradient(180deg,#101c15,#0b1510);
+}
+
+.side-nav nav button.active {
+  background: linear-gradient(110deg,rgba(243,111,69,.25),rgba(243,111,69,.065));
+  box-shadow: inset 3px 0 var(--brand);
+}
+
+.admin-topbar {
+  background: rgba(239,241,237,.91);
+  box-shadow: 0 8px 28px rgba(18,32,24,.03);
+}
+
+.welcome-card {
+  background: linear-gradient(125deg,#122219 0%,#1e3b29 62%,#365f41);
+  box-shadow: 0 24px 58px rgba(18,36,25,.18);
+}
+
+.welcome-card::after {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  inset: 0;
+  background-image: radial-gradient(rgba(255,255,255,.055) 1px, transparent 1px);
+  background-size: 19px 19px;
+  mask-image: linear-gradient(to left,#000,transparent 72%);
+}
+
+.stat-card,
+.panel-card {
+  border-color: rgba(18,32,24,.085);
+  background: rgba(255,255,255,.88);
+  box-shadow: 0 10px 32px rgba(18,32,24,.045);
+}
+
+.stat-card--accent {
+  background: linear-gradient(145deg,#f58252,var(--brand-deep));
+  box-shadow: 0 18px 38px rgba(201,76,43,.18);
+}
+
+@media (min-width: 760px) {
+  .hero-card { padding: 42px 42px 28px; }
+  .hero-cta { max-width: 620px; }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .hero-card,
+  .welcome-card,
+  .pin-card {
+    animation: hakuna-rise .55s cubic-bezier(.2,.8,.2,1) both;
+  }
+  @keyframes hakuna-rise {
+    from { opacity: 0; transform: translateY(10px); }
+  }
+}
