@@ -1,0 +1,29 @@
+{
+  "client": "Hakuna Matata",
+  "slug": "hakuna-matata",
+  "catalogVersion": "4.3.0",
+  "positioning": "Mayorista simple, rápido y claro para negocios que necesitan abastecerse sin perder tiempo entre chats y listas.",
+  "voice": ["clara", "ágil", "cercana", "comercial", "sin tecnicismos innecesarios"],
+  "copy": {
+    "tagline": "Mayorista · pedidos simples, rápidos y claros",
+    "heroTitle": "Tu negocio, mejor abastecido.",
+    "heroSubtitle": "Explora productos, arma tu pedido en minutos y coordina la entrega sin perder tiempo entre chats y listas."
+  },
+  "palette": {
+    "brand": "#F36F45",
+    "brandDeep": "#C94C2B",
+    "brandSoft": "#FFF0E9",
+    "ink": "#122018",
+    "canvas": "#F7F4EE",
+    "surface": "#FFFDFA"
+  },
+  "logo": {
+    "status": "temporary-mark",
+    "currentAsset": "/assets/brand-mark.svg",
+    "note": "Replace with approved Hakuna Matata master logo before final commercial handoff."
+  },
+  "experience": {
+    "customer": ["mobile-first", "search-first", "persistent cart", "three-step checkout", "WhatsApp confirmation", "order tracking", "offline cart persistence"],
+    "provider": ["4-digit PIN", "mobile bottom navigation", "desktop sidebar", "dashboard", "product and category CRUD", "orders", "customers", "brand settings", "security session controls"]
+  }
+}
