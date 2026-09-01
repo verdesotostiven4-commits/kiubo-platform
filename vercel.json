@@ -3,6 +3,6 @@
   "framework": "nextjs",
   "ignoreCommand": "git diff --quiet HEAD^ HEAD -- . ':(exclude)products/catalogos/**' ':(exclude)supabase/**' ':(exclude)docs/**'",
   "git": {
-    "deploymentEnabled": { "main": true, "*": false }
+    "deploymentEnabled": false
   }
 }
