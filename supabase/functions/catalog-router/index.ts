@@ -19,6 +19,7 @@ const platformOrigins = new Set([
 
 type Json = Record<string, unknown>;
 type CatalogRoute = { id: string; slug: string; public_base_url: string | null; allowed_origins: string[] | null };
+type OrderItem = { product_name: string; quantity: number; line_total: number | string; item_note?: string | null };
 
 function validSlug(value: unknown) {
   const slug = String(value ?? "").toLowerCase();
@@ -72,8 +73,6 @@ function routeAllowsOrigin(route: CatalogRoute, origin: string) {
   if (baseOrigin) allowed.add(baseOrigin);
   if (allowed.has(origin)) return true;
 
-  // Vercel previews derived from the configured production hostname are accepted
-  // without opening CORS to unrelated Vercel projects.
   try {
     const base = new URL(route.public_base_url || "");
     if (base.hostname.endsWith(".vercel.app")) {
@@ -112,6 +111,44 @@ function rewriteWhatsapp(value: unknown, baseUrl: string | null) {
   } catch { return value; }
 }
 
+function addItemNotesToWhatsapp(value: unknown, items: OrderItem[]) {
+  if (!value || !items.length) return value;
+  try {
+    const whatsapp = new URL(String(value));
+    const text = whatsapp.searchParams.get("text");
+    if (!text) return value;
+    const lines = text.split("\n");
+    const productsIndex = lines.findIndex(line => line.trim() === "*Productos:*");
+    const totalIndex = lines.findIndex((line, index) => index > productsIndex && /^\*Total estimado:\*/.test(line.trim()));
+    if (productsIndex < 0 || totalIndex < 0) return value;
+
+    const itemLines = items.flatMap(item => {
+      const note = String(item.item_note || "").replace(/\s+/g, " ").trim().slice(0, 180);
+      const line = `${Number(item.quantity)}× ${String(item.product_name || "Producto")} — $${Number(item.line_total || 0).toFixed(2)}`;
+      return note ? [line, `   ↳ ${note}`] : [line];
+    });
+
+    lines.splice(productsIndex + 1, totalIndex - productsIndex - 1, ...itemLines, "");
+    whatsapp.searchParams.set("text", lines.join("\n"));
+    return whatsapp.toString();
+  } catch { return value; }
+}
+
+async function enrichCreateOrderPayload(payload: Json, route: CatalogRoute) {
+  payload.whatsapp_url = rewriteWhatsapp(payload.whatsapp_url, route.public_base_url);
+  const order = payload.order as Json | undefined;
+  const orderId = String(order?.id || "");
+  if (!/^[0-9a-f-]{36}$/i.test(orderId)) return;
+
+  const { data, error } = await db.from("catalog_order_items")
+    .select("product_name,quantity,line_total,item_note,created_at")
+    .eq("order_id", orderId)
+    .order("created_at");
+  if (!error && Array.isArray(data)) {
+    payload.whatsapp_url = addItemNotesToWhatsapp(payload.whatsapp_url, data as OrderItem[]);
+  }
+}
+
 async function forwardJson(req: Request, body: Json, route: CatalogRoute) {
   const upstream = await fetch(CORE_URL, {
     method: "POST",
@@ -122,8 +159,7 @@ async function forwardJson(req: Request, body: Json, route: CatalogRoute) {
   let payload: unknown;
   try { payload = JSON.parse(raw); } catch { payload = { error: "invalid_upstream_response" }; }
   if (upstream.ok && body.action === "create_order" && payload && typeof payload === "object") {
-    const json = payload as Json;
-    json.whatsapp_url = rewriteWhatsapp(json.whatsapp_url, route.public_base_url);
+    await enrichCreateOrderPayload(payload as Json, route);
   }
   return response(req, payload, upstream.status, true);
 }
