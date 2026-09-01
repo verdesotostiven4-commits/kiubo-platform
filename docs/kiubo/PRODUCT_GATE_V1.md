@@ -1,38 +1,21 @@
-# KIUBO — Product Gate v1
+# KIUBO — Product Gate v1 (histórico)
 
-Fecha: 2026-08-20
+> Este documento conserva la decisión comercial Start / Pro / Custom, pero su nota original de “backend todavía local” ya no aplica. El estado técnico vigente está en `CURRENT_STATUS.md` y `PRODUCTION_GATE_2026_09_01.md`.
 
-## Este hito añade
-- Inicio/dashboard real para cada negocio (`/app`).
-- Separación de módulos por Start / Pro / Custom.
-- Factura como módulo independiente del plan.
-- Cambio de plan desde KIUBO Control sin borrar información.
-- Onboarding guiado persistente por negocio.
-- Pantalla interna Plan y módulos.
-- Navegación móvil inferior para la PWA.
-- Control de acceso a rutas según rol + plan.
+## Planes
 
-## Reglas de preview
 ### Start
-POS, productos, inventario, caja/equipo, clientes y reportes esenciales. Sin fiado habilitado por defecto, sin compras profesionales, sin branding Custom ni múltiples sucursales.
+POS, productos, inventario, caja/equipo, clientes y reportes esenciales. Una sucursal por defecto.
 
 ### Pro
-Todo Start + compras/proveedores, fiados/CxC/CxP y Catalog inteligente.
+Start + compras/proveedores, fiados/CxC/CxP y módulos avanzados habilitados por plan.
 
 ### Custom
-Todo Pro + branding y múltiples sucursales. Configuraciones especiales se cotizan sin crear forks del producto.
+Pro + branding, múltiples sucursales y configuraciones especiales cotizadas sin crear forks del producto.
 
 ### Factura
-Add-on separado. El flag `invoice` debe estar activo. La Foundation fiscal todavía no firma/transmite al SRI en producción.
+Add-on separado. No se declara productivo únicamente por activar el flag: firma, SRI, contingencia y validación fiscal tienen su propio gate.
 
-## Importante
-El aislamiento actual de UI no sustituye RLS. La seguridad real se completa únicamente con Auth + backend multi-tenant + RLS. El almacenamiento sigue local en este preview.
+## Estado cloud
 
-## Siguiente gate técnico
-1. backend dedicado;
-2. Supabase/Auth provider real;
-3. RLS multiempresa y sucursal;
-4. sync offline/cloud idempotente;
-5. invitaciones de usuarios;
-6. CRM y onboarding cloud;
-7. luego completar SRI server-side.
+Auth, backend multi-tenant, RLS, sync y transacciones críticas ya están activos. Los cambios de plan desde KIUBO Control no eliminan datos; los permisos efectivos se resuelven por suscripción + overrides + rol.

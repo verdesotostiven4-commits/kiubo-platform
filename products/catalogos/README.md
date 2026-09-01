@@ -1,25 +1,30 @@
 # KIUBO Catálogos
 
-Producto de KIUBO para catálogos digitales, pedidos y operación de proveedores.
+Producto KIUBO para catálogos digitales, pedidos, seguimiento y operación de proveedores.
 
-## Estado
+## Estructura
 
-La carpeta `web/` conserva el snapshot recuperable de la versión de producción validada el 1 de septiembre de 2026. Corresponde al demo/tenant Hakuna Matata y contiene catálogo público, panel de proveedor, seguimiento de pedidos, PWA y configuración de despliegue.
+- `web/`: snapshot estático/PWA del catálogo, checkout, tracking y panel proveedor.
+- `supabase/functions/catalog-api/`: core de negocio compatible.
+- `supabase/functions/catalog-router/`: routing multi-tenant, CORS por cuenta y normalización de URLs.
+- `supabase/migrations/`: esquema, seguridad y hardening versionados.
 
-El backend está versionado en:
+## Modelo
 
-- `supabase/functions/catalog-api/`
-- `supabase/migrations/20260901160609_kiubo_catalogos_v4_initial.sql`
-- `supabase/migrations/20260901161954_kiubo_catalogos_v4_order_rate_limit.sql`
-- `supabase/migrations/20260901162412_kiubo_catalogos_v4_fk_indexes.sql`
-- `supabase/migrations/20260901170712_kiubo_catalogos_v4_pin_global_throttle.sql`
+Hakuna Matata es el primer catálogo operativo, no una copia del producto. Nuevos clientes se crean como cuentas `catalog_accounts`; pueden funcionar de forma independiente o vincularse a un tenant KIUBO.
 
-## Separación correcta
+Productos, categorías, clientes, pedidos, identidad y disponibilidad viven en Supabase. Cambiar esos datos no reconstruye la aplicación.
 
-Hakuna Matata no es una copia independiente del producto. Es un tenant de KIUBO Catálogos. Productos, categorías, clientes, pedidos, identidad y disponibilidad viven en Supabase y cambian sin reconstruir la aplicación.
+## Snapshot 4.2
+
+La configuración canónica apunta a `catalog-router`. El router usa `public_base_url` y `allowed_origins` por cuenta, por lo que un segundo cliente no requiere editar el backend para cambiar dominio o seguimiento.
+
+El deployment vigente de Hakuna puede continuar temporalmente con `catalog-api` 4.1 hasta su siguiente lote visual. Ambos caminos usan el mismo core y la misma base; la transición no exige migración de datos.
 
 ## Deploy
 
-`web/vercel.json` desactiva deployments automáticos por Git para este producto. La política actual es revisar y agrupar cambios y hacer un deployment manual de producción únicamente cuando el lote esté listo.
+El `vercel.json` del producto desactiva deployments automáticos por Git. Un lote aprobado se publica una sola vez. Cambios de contenido del proveedor no consumen Vercel.
 
-Antes de incorporar un segundo tenant público se debe generalizar la lista de orígenes CORS y la URL de seguimiento de WhatsApp que el snapshot v4.1 aún fija a la URL actual de Hakuna Matata. Esto no bloquea la operación actual, pero sí es requisito de escalado multi-tenant.
+## Seguridad
+
+Nunca poner service role, PIN real, contraseña o token de sesión dentro de `web/config.js`, Git o documentación pública. El navegador usa únicamente publishable key; las operaciones privilegiadas viven en Edge Functions/RPCs protegidos.

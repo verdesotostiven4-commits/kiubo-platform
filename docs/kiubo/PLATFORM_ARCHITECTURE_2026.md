@@ -2,47 +2,54 @@
 
 ## Principio
 
-**KIUBO es la cabeza del ecosistema.** POS, Catálogos, Control, Sites, Apps y futuros productos pertenecen a KIUBO, pero no deben convertirse en un único programa difícil de mantener.
+**KIUBO es la cabeza del ecosistema.** POS, Control, Catálogos, Sites, Apps y futuros productos pertenecen a KIUBO, pero cada producto conserva límites técnicos y ciclos de despliegue independientes.
 
-El repositorio `kiubo-platform` funciona como fuente privada de verdad. La separación se hace por producto, contratos de datos y despliegues, no creando una copia del código por cada cliente.
+El repositorio privado `kiubo-platform` es la fuente de verdad. Los clientes no reciben forks del producto: se aíslan por tenant/cuenta y configuración.
 
-## Modelo de producto
+## Modelo
 
 ```text
 KIUBO
-├─ KIUBO POS / Control       (aplicación principal Next.js)
-├─ KIUBO Catálogos          (catálogo + pedidos + proveedor)
-│  ├─ tenant: Hakuna Matata
-│  └─ futuros tenants
-├─ KIUBO Sites              (futuro)
-├─ KIUBO Apps               (futuro)
+├─ KIUBO POS / Control       aplicación principal Next.js
+├─ KIUBO Catálogos          catálogo + pedidos + proveedor
+│  ├─ Hakuna Matata          primer catálogo operativo
+│  └─ futuros catálogos      standalone o vinculados a tenant
+├─ KIUBO Sites              futuro
+├─ KIUBO Apps               futuro
 └─ Soluciones personalizadas
 ```
 
-## Estrategia de repositorio
+## Repositorio
 
-La aplicación existente de POS/Control permanece en la raíz para evitar una migración destructiva. KIUBO Catálogos se incorpora en `products/catalogos/`. Cuando la escala justifique un monorepo formal con `apps/*` y `packages/*`, la migración se hará como hito propio con pruebas de regresión, no mezclada con trabajo comercial de clientes.
+POS/Control permanece en la raíz para evitar una migración destructiva. Catálogos vive en `products/catalogos/`. Una migración futura a `apps/*`/`packages/*` solo se hará cuando el volumen lo justifique y como hito probado, no mientras se entrega un cliente.
 
-## Estrategia de despliegue
+## Cloud
 
-Un repositorio puede alimentar varios proyectos de Vercel. Cada producto puede tener su propio Root Directory, dominio y ciclo de publicación. Por tanto, compartir repositorio no obliga a desplegar POS al publicar Catálogos ni viceversa.
+Supabase es la capa operativa real. Auth, tenants, branches, roles, planes, settings y sync cloud están activos. Las transacciones críticas se ejecutan mediante RPCs server-side con autenticación, branch scope, validación de rol e idempotencia.
 
-Para KIUBO Catálogos, la fuente se guarda en Git y la publicación se mantiene manual mientras exista una cuota diaria de deployments que conviene proteger.
+La aplicación mantiene capacidad offline/local como caché y cola, pero Supabase es la fuente cloud en producción.
 
-## Datos
+## Catálogos
 
-Supabase es la capa operativa. KIUBO Catálogos utiliza tablas y funciones `catalog_*` y una Edge Function dedicada. El `account_id`/`slug` separa tenants. Los proveedores administran contenido en tiempo real desde el panel; esa operación no modifica Git ni dispara Vercel.
+`catalog_accounts` separa identidad y operación de cada catálogo. Una cuenta puede ser standalone o vincularse a un tenant KIUBO. Routing guarda `public_base_url` y `allowed_origins` por cuenta.
+
+`catalog-api` es el core de negocio compatible. `catalog-router` es la entrada canónica desde snapshot 4.2: valida CORS por cuenta, conserva el contexto del cliente y normaliza enlaces de seguimiento al dominio configurado. Esto permite publicar nuevos proveedores sin hardcodes específicos de Hakuna.
+
+## Despliegues
+
+Un mismo repositorio puede alimentar productos distintos. KIUBO Platform ignora commits que solo cambian Catálogos, Supabase o documentación. Catálogos mantiene deployment controlado/manual. El contenido del proveedor vive en Supabase y nunca necesita rebuild por sí mismo.
 
 ## Seguridad
 
-- El navegador solo recibe la clave publicable de Supabase.
-- Claves de servicio quedan en variables seguras de la Edge Function.
-- Tablas `catalog_*` tienen RLS y no se exponen directamente a `anon`/`authenticated`.
-- Pedidos se recalculan en servidor.
-- Pedidos tienen idempotencia y rate limit.
-- PIN de proveedor se almacena como hash, tiene bloqueo por cliente y límite global por cuenta.
-- Sesiones del proveedor son revocables y expiran.
+- El navegador usa exclusivamente URL + publishable key.
+- Service roles quedan en Edge Functions/backend.
+- RLS separa tenants; Catálogos no expone sus tablas directamente al navegador.
+- Pedidos recalculan precios en servidor.
+- Operaciones críticas usan idempotencia.
+- PIN de proveedor se guarda como hash con throttling individual/global.
+- Sesiones son revocables y expiran.
+- RPCs de plataforma verifican `is_platform_admin()` dentro del servidor.
 
-## Escalado pendiente antes del segundo tenant público
+## Entrega
 
-El snapshot v4.1 fue construido primero para Hakuna Matata. La Edge Function aún contiene orígenes CORS y URL de seguimiento asociados a ese deployment. Antes de publicar un segundo proveedor se debe parametrizar el dominio/base URL por entorno/tenant y ampliar CORS de forma controlada.
+KIUBO es SaaS administrado. Se entrega acceso/URLs/configuración/capacitación y soporte, no secretos ni infraestructura. El estándar está en `CLIENT_DELIVERY_STANDARD.md` y recuperación en `RECOVERY_RUNBOOK.md`.

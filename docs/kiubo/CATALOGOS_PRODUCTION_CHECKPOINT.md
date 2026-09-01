@@ -1,30 +1,46 @@
 # KIUBO Catálogos — Checkpoint de producción
 
-Fecha del checkpoint: 2026-09-01.
+Fecha: 2026-09-01.
 
 ## Producción revisada
 
-- Proyecto Vercel: `hakuna-matata-catalogo`.
+- Proyecto Vercel actual: `hakuna-matata-catalogo`.
 - Catálogo público, panel de proveedor y seguimiento responden en producción.
-- Edge Function `catalog-api` activa.
-- Migraciones `kiubo_catalogos_v4_*` presentes en Supabase.
-- Bucket `catalog-assets-v4`: público para lectura de imágenes, 5 MB máximo, PNG/JPEG/WebP.
-- Demo Hakuna Matata con 12 productos y 6 categorías al momento del checkpoint; son datos de prueba y no constituyen catálogo definitivo.
+- `catalog-api` continúa activo como core compatible.
+- `catalog-router` v1 está ACTIVE como nueva capa multi-tenant de routing/CORS.
+- Bucket `catalog-assets-v4`: lectura pública de imágenes, 5 MB máximo, PNG/JPEG/WebP.
+- Hakuna Matata conserva 12 productos y 6 categorías demo mientras se valida la experiencia; no son catálogo definitivo.
 
-## Pruebas efectuadas
+## Production Gate 4.2
 
-Se verificó carga pública, código desplegado, configuración, panel, API y logs. Se validó el PIN contra el hash sin guardar el PIN en Git. Se ejecutó una creación de pedido dentro de una transacción con `ROLLBACK`; el flujo de servidor pasó y no dejó pedidos de prueba persistidos. Se confirmó que el cálculo de precios se realiza con productos del servidor y que existe idempotencia.
+La base de datos ahora guarda `public_base_url`, `allowed_origins` y vínculo opcional `tenant_id` por cuenta de catálogo. Los platform admins disponen de RPCs protegidos para listar, crear, vincular y cambiar routing sin editar tablas manualmente.
 
-También se revisaron RLS/permisos de objetos `catalog_*`, rate limit de pedidos, sesiones de proveedor, almacenamiento de imágenes y protección de intentos de PIN. El 2026-09-01 se añadió un throttle global por cuenta además del bloqueo por cliente.
+El router valida el origen contra la cuenta, admite previews derivados del hostname configurado, conserva IP de cliente al reenviar al core y reemplaza el enlace de seguimiento de WhatsApp con el dominio propio del catálogo. Esto elimina la necesidad de hardcodear Hakuna para futuros clientes.
+
+El snapshot canónico en `products/catalogos/web/` pasa a versión 4.2 y apunta a `catalog-router`. El deployment actual de Hakuna permanece deliberadamente en 4.1/core hasta el próximo lote visual de branding. Así no se consume un deployment adicional solo para un cambio invisible; el siguiente release de Hakuna incorporará routing 4.2 junto con su identidad final.
+
+## Seguridad validada
+
+- Pedidos recalculan precios en servidor.
+- Idempotencia por pedido y rate limit público.
+- PIN de proveedor hasheado con bloqueo individual y global.
+- Sesiones expiran y son revocables.
+- Tablas `catalog_*` no se exponen directamente a `anon`/`authenticated`; la Edge Function opera con service role en servidor.
+- Uploads limitados a 5 MB y PNG/JPEG/WebP.
+- Routing/CORS se configura por cuenta; no forma parte de los campos editables por el proveedor.
 
 ## Operación del proveedor
 
-El proveedor puede administrar productos, imágenes, disponibilidad, categorías, pedidos, clientes, identidad, textos y ajustes desde el panel. Esos cambios son datos y no consumen deployments de Vercel. El catálogo refresca datos periódicamente y el panel consulta pedidos nuevos de forma automática.
+El proveedor puede administrar productos, fotografías, precios, disponibilidad, categorías, pedidos, clientes, identidad, portada y condiciones desde el panel. Estos son cambios de datos en Supabase y no generan deployments.
 
 ## Estado de respaldo
 
-El frontend desplegado se conserva en `products/catalogos/web/`; la Edge Function en `supabase/functions/catalog-api/`; y las cuatro migraciones de producción en `supabase/migrations/`. Este checkpoint permite reconstruir el producto sin depender únicamente del artefacto alojado en Vercel.
+- Frontend: `products/catalogos/web/`.
+- Core: `supabase/functions/catalog-api/`.
+- Router: `supabase/functions/catalog-router/`.
+- Esquema/hardening: migraciones versionadas en `supabase/migrations/`.
+- GitHub es la fuente de verdad de código; los datos productivos requieren la política de backup/restore de Supabase descrita en `docs/kiubo/RECOVERY_RUNBOOK.md`.
 
-## Pendientes deliberados
+## Siguiente fase
 
-Branding definitivo de Hakuna Matata, logo, fotografías y catálogo real pertenecen a la siguiente fase comercial. Antes de un segundo tenant público se debe convertir el origen CORS y la URL de seguimiento hardcodeados en configuración multi-tenant.
+Branding definitivo de Hakuna Matata: logo, paleta, fotografías, textos, datos reales y revisión final cliente/proveedor. Ese lote será también el momento adecuado para publicar el snapshot 4.2 sin gastar un deployment separado hoy.

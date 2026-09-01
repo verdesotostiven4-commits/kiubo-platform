@@ -2,28 +2,47 @@
 
 ## Objetivo
 
-Proteger cuota de Vercel, mantener historial útil y evitar una secuencia de publicaciones por cambios pequeños.
+Proteger cuota de Vercel, mantener un historial útil y evitar una secuencia de publicaciones por microcambios.
 
 ## Regla principal
 
 **Una solicitud/lote de trabajo → validación completa → un único deployment de producción por producto, cuando sea técnicamente posible.**
 
-No se publica después de cada ajuste visual, texto o línea de código. Se agrupan los cambios, se revisan juntos y recién entonces se publica el checkpoint.
+No se publica después de cada ajuste visual, texto o línea. Se agrupan los cambios, se revisan juntos y recién entonces se mueve producción.
 
 ## Git
 
-Los commits deben representar hitos coherentes, no cada microcambio. Crear blobs/trees internos o revisar localmente no equivale a publicar. Cuando sea posible, se prepara un checkpoint atómico y se mueve `main` una sola vez.
+Los commits representan hitos coherentes. Crear blobs/trees, trabajar en una rama con deploys desactivados o preparar una migración no equivale a publicar. Cuando el lote está listo se crea un checkpoint atómico y se actualiza `main` una sola vez.
 
-## Vercel
+## KIUBO Platform en Vercel
 
-KIUBO Catálogos mantiene `git.deploymentEnabled=false` en su `vercel.json` para evitar que cada push del repositorio principal consuma un deployment del catálogo. La publicación del catálogo se realiza manualmente al cerrar un lote aprobado.
+`main` es la única rama con Git deployment habilitado. Además, `vercel.json` usa `ignoreCommand` para saltar el build de la aplicación principal cuando el commit solo contiene cambios en:
 
-La aplicación principal puede conservar su integración Git; si el repositorio se formaliza como monorepo con varios proyectos Vercel, cada proyecto deberá tener Root Directory/Ignore Build Step correctamente configurado para ignorar cambios ajenos.
+- `products/catalogos/**`
+- `supabase/**`
+- `docs/**`
 
-## Lo que NO requiere deploy
+Así un cambio de Edge Function, SQL, documentación o snapshot de Catálogos no consume un deployment de KIUBO POS / Control.
 
-Crear/editar/archivar productos, cargar fotografías, cambiar precio, stock/estado, categorías, textos de portada, logo, color, pedido mínimo, visibilidad de precios o estado abierto/cerrado son cambios de datos en Supabase. Deben reflejarse en el catálogo sin rebuild.
+## KIUBO Catálogos
 
-## Emergencias
+El snapshot de Catálogos mantiene `git.deploymentEnabled=false` en su configuración propia. Su publicación es deliberada: se hace cuando el lote visual/funcional está aprobado. Hakuna Matata no se redeploya por cada cambio de backend o por subir datos.
 
-Un hotfix crítico puede romper la regla de un deployment por lote si evita pérdida de datos, caída de pedidos o una vulnerabilidad. Se documenta el motivo y se vuelve al flujo normal después.
+Crear/editar/archivar productos, cargar fotografías, cambiar precios, disponibilidad, categorías, textos, logo, pedido mínimo, visibilidad de precios o estado abierto/cerrado son operaciones de Supabase y **no requieren deployment**.
+
+## Backend
+
+Migraciones de Supabase y Edge Functions se aplican como cambios versionados y auditables, pero no deben forzar un rebuild de la UI si ésta no cambió. El código desplegado en Supabase debe quedar reflejado en el mismo checkpoint de GitHub.
+
+## Hotfix
+
+Un hotfix crítico puede romper la regla de un deployment por lote si evita pérdida de datos, caída de pedidos, corrupción de stock/caja o una vulnerabilidad. Se documenta el motivo y después se vuelve al flujo normal.
+
+## Antes de publicar
+
+- Guards/typecheck/build cuando aplique.
+- Health check.
+- Revisión de logs/runtime errors.
+- Verificación del flujo afectado.
+- Confirmar que el commit no contiene secretos.
+- Confirmar que el cambio realmente requiere deployment y no era solo un cambio de datos.

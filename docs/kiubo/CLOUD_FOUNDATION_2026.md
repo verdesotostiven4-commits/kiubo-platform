@@ -1,34 +1,18 @@
-# KIUBO Cloud Foundation — 2026-08-20
+# KIUBO Cloud Foundation — estado actualizado
 
-## Estado
-La aplicación pública continúa en modo local por defecto. La rama `cloud-foundation-v1` introduce el adaptador real para Supabase sin activar cloud en producción hasta completar migraciones, usuarios de prueba y validaciones RLS.
+> Documento histórico de la transición local → cloud. El cloud ya está activo en producción. Ver `CURRENT_STATUS.md` para la fuente vigente.
 
-## Variables
-- `NEXT_PUBLIC_KIUBO_AUTH_MODE=supabase`
-- `NEXT_PUBLIC_KIUBO_DATA_MODE=supabase`
-- `NEXT_PUBLIC_SUPABASE_URL`
-- `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`
+La Foundation introdujo Supabase Auth, RLS multi-tenant, sync por operaciones y cursor, y el contrato Data/Auth Provider. Desde entonces se añadieron transacciones de dominio atómicas para ventas, caja/finanzas, compras, reversos e inventario.
 
-Nunca colocar `service_role` en una variable `NEXT_PUBLIC_*` ni en el navegador.
+## Arquitectura vigente
 
-## Auth
-Cloud usa Supabase Auth email+contraseña. Al iniciar sesión se resuelve membresía, tenant, sucursal, suscripción y rol; luego se hidrata el cache local para conservar la UI/offline existente.
+- Auth: Supabase.
+- Data: Supabase.
+- Caché/offline: cliente local + cola sincronizable.
+- Aislamiento: tenant + branch + roles/RLS.
+- Operaciones críticas: RPCs server-side idempotentes.
+- Administración: KIUBO Control + funciones de provisioning protegidas.
 
-## Aislamiento
-RLS se apoya en `tenant_members`, `tenant_member_branches`, `has_tenant_access`, `has_tenant_role` y `has_branch_access`. `platform_admins` no tiene lectura directa para usuarios normales; se consulta mediante función controlada.
+## Regla permanente
 
-## Sync
-El primer sustrato cloud usa `sync_entities` + `sync_receipts`. `apply_sync_operations` aplica cada `operationId` una sola vez y `pull_sync_changes` devuelve cambios incrementales por cursor. Esto permite probar continuidad entre dispositivos sin exponer una service role.
-
-## Límite consciente
-Este sustrato NO reemplaza las transacciones de dominio finales. Antes del piloto, venta+stock, compra+stock/costo, caja y facturación deben pasar por RPC/handlers transaccionales específicos para evitar conflictos entre dispositivos concurrentes.
-
-## Orden de activación
-1. aplicar migraciones 0001 y 0002 en Supabase KIUBO vacío;
-2. crear usuario técnico de prueba mediante Auth;
-3. bootstrap tenant de prueba;
-4. ejecutar pruebas RLS tenant A/B;
-5. configurar publishable URL/key en Preview Vercel, no Production todavía;
-6. probar login y sync desde dos navegadores;
-7. construir transacciones de dominio;
-8. recién entonces activar cloud en producción/piloto.
+El sustrato genérico `apply_sync_operations` no debe sustituir una transacción de dominio cuando una operación cambia varias verdades de negocio (por ejemplo venta+stock, compra+stock/costo o cierre de caja). Esos flujos deben continuar usando su RPC atómico dedicado.

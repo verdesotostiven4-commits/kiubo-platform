@@ -11,7 +11,10 @@ function projectHost(raw?: string) {
   }
 }
 
-async function probeSupabaseAuth(url: string, publishableKey: string) {
+type Probe = { reachable: boolean; status: number | null };
+type RouterProbe = Probe & { ready: boolean | null };
+
+async function probeSupabaseAuth(url: string, publishableKey: string): Promise<Probe> {
   try {
     const response = await fetch(`${url.replace(/\/$/, "")}/auth/v1/health`, {
       cache: "no-store",
@@ -21,6 +24,20 @@ async function probeSupabaseAuth(url: string, publishableKey: string) {
     return { reachable: response.ok, status: response.status };
   } catch {
     return { reachable: false, status: null };
+  }
+}
+
+async function probeCatalogRouter(url: string, publishableKey: string): Promise<RouterProbe> {
+  try {
+    const response = await fetch(`${url.replace(/\/$/, "")}/functions/v1/catalog-router?health=1`, {
+      cache: "no-store",
+      headers: { apikey: publishableKey },
+      signal: AbortSignal.timeout(3500),
+    });
+    const payload = (await response.json().catch(() => null)) as { ready?: boolean } | null;
+    return { reachable: response.ok, status: response.status, ready: payload?.ready === true };
+  } catch {
+    return { reachable: false, status: null, ready: false };
   }
 }
 
@@ -34,10 +51,19 @@ export async function GET() {
     ? "supabase"
     : "local";
   const cloudRequested = authMode === "supabase" || dataMode === "supabase";
-  const probe = configured
-    ? await probeSupabaseAuth(supabaseUrl, publishableKey)
-    : { reachable: false, status: null as number | null };
-  const ready = cloudRequested ? configured && probe.reachable : true;
+
+  const [authProbe, routerProbe] = configured
+    ? await Promise.all([
+        probeSupabaseAuth(supabaseUrl, publishableKey),
+        probeCatalogRouter(supabaseUrl, publishableKey),
+      ])
+    : [
+        { reachable: false, status: null as number | null },
+        { reachable: false, status: null as number | null, ready: false as boolean | null },
+      ];
+
+  const cloudReady = configured && authProbe.reachable && routerProbe.reachable && routerProbe.ready === true;
+  const ready = cloudRequested ? cloudReady : true;
 
   return NextResponse.json(
     {
@@ -48,8 +74,11 @@ export async function GET() {
         requested: cloudRequested,
         configured,
         projectHost: projectHost(supabaseUrl),
-        authReachable: configured ? probe.reachable : null,
-        authStatus: configured ? probe.status : null,
+        authReachable: configured ? authProbe.reachable : null,
+        authStatus: configured ? authProbe.status : null,
+        dataPlaneReachable: configured ? routerProbe.reachable : null,
+        dataPlaneReady: configured ? routerProbe.ready : null,
+        dataPlaneStatus: configured ? routerProbe.status : null,
       },
       checkedAt: new Date().toISOString(),
     },
