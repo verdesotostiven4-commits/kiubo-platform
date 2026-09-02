@@ -1,6 +1,7 @@
 import { recoverRejectedCommand,shouldRecoverRejectedCommand } from "./command-recovery";
 import { getDataProvider,type KiuboDataProvider } from "./data-provider";
-import { getSyncSummary,getWorkspaceContext,loadLocalDatabase,saveLocalDatabase,updateSyncOperation,type FoodOrderRecord } from "./local-store";
+import { enqueueCashTransaction } from "./finance-transaction";
+import { getSyncSummary,getWorkspaceContext,loadLocalDatabase,saveLocalDatabase,updateSyncOperation,type CashMovementRecord,type FoodOrderRecord } from "./local-store";
 import { queueFoodOrder } from "./order-sync";
 import type { SyncEntity,SyncPullResult,SyncPushResult,SyncQueueRecord } from "./sync-types";
 
@@ -166,16 +167,17 @@ async function runSyncCycleCore():Promise<SyncCycleResult>{
 
   const byId=new Map(results.map(result=>[result.operationId,result]));
   let pushed=0,failed=0,recovered=0;
-  const completedOrders:{operationId:string;order:FoodOrderRecord}[]=[];
+  const completedCommands:{operationId:string;order?:FoodOrderRecord;cashMovement?:CashMovementRecord}[]=[];
   for(const item of pending){
     const result=byId.get(item.operationId);
     if(result?.ok){
-      if(item.entityType==="saleTransactions"&&item.payload&&typeof item.payload==="object"){
-        const order=(item.payload as {orderAfter?:FoodOrderRecord}).orderAfter;
-        if(order){
-          // Keep the sale operation in "syncing" until its paid-order follow-up is durably queued.
-          // A crash before that point makes the stale operation retry safely and the sale RPC is idempotent.
-          completedOrders.push({operationId:item.operationId,order});
+      if((item.entityType==="saleTransactions"||item.entityType==="saleReversalTransactions")&&item.payload&&typeof item.payload==="object"){
+        const payload=item.payload as {orderAfter?:FoodOrderRecord;cashMovement?:CashMovementRecord};
+        const order=item.entityType==="saleTransactions"?payload.orderAfter:undefined;
+        if(order||payload.cashMovement){
+          // Keep the protected command in "syncing" until dependent order/cash follow-ups are durably queued.
+          // A crash before that point makes the stale command retry safely; the Cloud RPC itself is idempotent.
+          completedCommands.push({operationId:item.operationId,order,cashMovement:payload.cashMovement});
           continue;
         }
       }
@@ -203,13 +205,15 @@ async function runSyncCycleCore():Promise<SyncCycleResult>{
     }
   }
 
-  // A paid Food Service order is published only after its protected sale command is confirmed.
-  // Existing unpaid-order writes from the same batch have already been settled before this follow-up is queued.
-  if(completedOrders.length){
-    const orderDb=loadLocalDatabase();
-    for(const completed of completedOrders)queueFoodOrder(orderDb,completed.order);
-    saveLocalDatabase(orderDb,{trackChanges:false});
-    for(const completed of completedOrders){updateSyncOperation(completed.operationId,"synced");pushed++}
+  // Publish paid Food Service orders and mixed-payment cash only after their protected parent command is confirmed.
+  if(completedCommands.length){
+    const followupDb=loadLocalDatabase();
+    for(const completed of completedCommands){
+      if(completed.order)queueFoodOrder(followupDb,completed.order);
+      if(completed.cashMovement)enqueueCashTransaction(followupDb,{kind:"movement",movement:completed.cashMovement});
+    }
+    saveLocalDatabase(followupDb,{trackChanges:false});
+    for(const completed of completedCommands){updateSyncOperation(completed.operationId,"synced");pushed++}
   }
 
   let afterPush=loadLocalDatabase();
