@@ -3,7 +3,7 @@ window.KIUBO_CATALOG_CONFIG = Object.freeze({
   publishableKey: "sb_publishable_hnsAgTsI1c_wErMMwAYwMQ_crWdOBpT",
   apiUrl: "https://hysrlckmnzlmscwwbibn.supabase.co/functions/v1/catalog-router",
   defaultSlug: "hakuna-matata",
-  version: "4.5.0"
+  version: "4.6.0"
 });
 
 (() => {
@@ -16,9 +16,19 @@ window.KIUBO_CATALOG_CONFIG = Object.freeze({
     link.dataset.kiuboLayer = marker;
     document.head.append(link);
   };
+  const addScript = (src, marker) => {
+    if (document.querySelector(`script[data-kiubo-layer="${marker}"]`)) return;
+    const script = document.createElement("script");
+    script.src = src;
+    script.async = false;
+    script.dataset.kiuboLayer = marker;
+    document.head.append(script);
+  };
 
-  addStyle("/hakuna.theme.css?v=4.5.0", "hakuna-theme");
-  addStyle("/ux-v4.5.css?v=4.5.0", "catalog-ux");
+  addStyle("/hakuna.theme.css?v=4.6.0", "hakuna-theme");
+  addStyle("/ux-v4.5.css?v=4.6.0", "catalog-ux");
+  addStyle("/inventory-v4.6.css?v=4.6.0", "catalog-inventory");
+  addScript("/inventory-v4.6.js?v=4.6.0", "catalog-inventory-runtime");
 
   const slugFromPage = () => {
     const querySlug = new URLSearchParams(location.search).get("slug");
@@ -45,7 +55,7 @@ window.KIUBO_CATALOG_CONFIG = Object.freeze({
 
   const writeNotes = notes => {
     try { localStorage.setItem(noteKey, JSON.stringify(notes)); }
-    catch { /* storage can be unavailable in privacy mode */ }
+    catch { }
   };
 
   const itemNote = productId => String(readNotes()[productId] || "");
@@ -91,7 +101,7 @@ window.KIUBO_CATALOG_CONFIG = Object.freeze({
           requestBody = { ...requestBody, items };
           nextInit = { ...init, body: JSON.stringify(requestBody) };
         }
-      } catch { /* not a JSON KIUBO request */ }
+      } catch { }
     }
 
     const response = await originalFetch(input, nextInit);
@@ -109,7 +119,7 @@ window.KIUBO_CATALOG_CONFIG = Object.freeze({
         if (response.ok && requestBody.action === "create_order") {
           clearSubmittedNotes(requestBody.items);
         }
-      } catch { /* keep the original response untouched */ }
+      } catch { }
     }
 
     return response;
