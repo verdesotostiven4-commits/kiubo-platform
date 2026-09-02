@@ -48,6 +48,7 @@ function recoverExpiredSyncing(db:ReturnType<typeof loadLocalDatabase>,tenantId:
 async function runSyncCycleCore():Promise<SyncCycleResult>{
   const provider=getDataProvider(),health=await provider.healthcheck();
   if(provider.mode==="local"||!provider.configured||!health.ok)return{ok:health.ok,mode:provider.mode,pushed:0,failed:0,pulled:0,message:health.message||"Backend cloud pendiente"};
+  // One sync cycle belongs to exactly one active workspace
   const db=loadLocalDatabase(),ctx=getWorkspaceContext(db),activeTenantId=ctx.tenant&&ctx.tenant.plan!=="Internal"&&UUID_RE.test(ctx.tenantId)?ctx.tenantId:null;
   if(!activeTenantId)return{ok:true,mode:provider.mode,pushed:0,failed:0,pulled:0,message:"Sin negocio cloud activo para sincronizar"};
 
