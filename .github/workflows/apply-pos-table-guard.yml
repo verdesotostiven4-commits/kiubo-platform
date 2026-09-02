@@ -41,3 +41,5 @@ jobs:
           git add components/PosClientPro.tsx
           git commit -m "test: preserve POS table isolation guards"
           git push
+
+# Triggered intentionally after the workflow became visible on main.
