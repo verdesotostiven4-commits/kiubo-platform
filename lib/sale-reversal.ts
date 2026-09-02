@@ -9,7 +9,6 @@ import {
   type StockMovementRecord,
   type TenantProduct,
 } from "./local-store";
-import { enqueueCashTransaction } from "./finance-transaction";
 import { mixedRefundMovementReason,paymentBreakdownForSale } from "./mixed-payment";
 
 export type SaleLifecycle="completed"|"voided";
@@ -44,8 +43,6 @@ export function reverseSaleLocally(db:KiuboLocalDatabase,saleId:string,rawReason
   const session=refundCash>0?getOpenCashSession(db,sale.tenantId,sale.branchId):undefined;
   if(refundCash>0&&!session)return{ok:false as const,message:"Abre caja antes de devolver la parte pagada en efectivo"};
 
-  // The physical truth is the stock movement written by the original sale. This supports both
-  // legacy direct-product stock and the new shared recipe/ingredient inventory without guessing.
   const originalMovements=db.stockMovements.filter(movement=>movement.tenantId===sale.tenantId&&movement.branchId===sale.branchId&&movement.reference===sale.id&&movement.type==="sale"&&movement.quantity<0);
   const restoreByProduct=new Map<string,number>();
   for(const movement of originalMovements)restoreByProduct.set(movement.productId,(restoreByProduct.get(movement.productId)||0)+Math.abs(movement.quantity));
@@ -69,9 +66,6 @@ export function reverseSaleLocally(db:KiuboLocalDatabase,saleId:string,rawReason
     const movementId=makeId("movement");
     cashMovement={id:movementId,tenantId:sale.tenantId,branchId:sale.branchId,sessionId:session.id,type:"out",amount:refundCash,reason:sale.payment==="mixed"?mixedRefundMovementReason(sale.id):`Anulación venta · ${reason}`,clientOperationId:movementId,createdAt:reversedAt};
     db.cashMovements.unshift(cashMovement);
-    // Cloud v2 reverses ordinary cash atomically. For mixed sales the exact cash part travels
-    // through the protected cash command, while the sale reversal still restores stock/status atomically.
-    if(sale.payment==="mixed")enqueueCashTransaction(db,{kind:"movement",movement:cashMovement});
   }
 
   const payload:SaleReversalPayload={saleBefore,saleAfter,productBeforeSnapshots,productAfterSnapshots,stockMovements,cashMovement,reason,reversedAt};
