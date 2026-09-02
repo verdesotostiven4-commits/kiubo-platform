@@ -29,6 +29,7 @@ window.KIUBO_CATALOG_CONFIG = Object.freeze({
   addStyle("/ux-v4.5.css?v=4.6.0", "catalog-ux");
   addStyle("/inventory-v4.6.css?v=4.6.0", "catalog-inventory");
   addScript("/inventory-v4.6.js?v=4.6.0", "catalog-inventory-runtime");
+  addScript("/organization-v4.7.js?v=4.7.0", "catalog-section-runtime");
 
   const slugFromPage = () => {
     const querySlug = new URLSearchParams(location.search).get("slug");
