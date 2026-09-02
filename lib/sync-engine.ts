@@ -39,8 +39,6 @@ function applyPulled(db:ReturnType<typeof loadLocalDatabase>,changes:SyncPullRes
   for(const change of changes){
     const collection=mutable[change.entityType];
     if(!Array.isArray(collection))continue;
-    // Entity ids are only unique inside a tenant in KIUBO Cloud. Platform-admin devices can
-    // cache multiple businesses at once, so never let a record from tenant A replace tenant B.
     const index=collection.findIndex(record=>samePulledIdentity(change.entityType,record,change.tenantId,change.entityId));
     if(change.action==="delete"){
       if(index>=0)collection.splice(index,1);
@@ -119,8 +117,6 @@ async function runSyncCycleCore():Promise<SyncCycleResult>{
   const now=Date.now();
   const activeQueue=db.syncQueue.filter(item=>isActiveQueueItem(item,activeTenantId));
   const waitingRetry=activeQueue.filter(item=>item.status==="failed"&&!retryDue(item,now));
-
-  // Never push cached data from another tenant/account. One sync cycle belongs to exactly one active workspace.
   const pending=activeQueue
     .filter(item=>item.status==="pending"||(item.status==="failed"&&retryDue(item,now)))
     .slice(0,100);
@@ -130,25 +126,15 @@ async function runSyncCycleCore():Promise<SyncCycleResult>{
       try{
         const repaired=await repairTenantIsolation(provider,db,activeTenantId);
         if(repaired)return{
-          ok:!repaired.hasMore,
-          mode:provider.mode,
-          pushed:0,
-          failed:0,
-          pulled:repaired.changes.length,
+          ok:!repaired.hasMore,mode:provider.mode,pushed:0,failed:0,pulled:repaired.changes.length,
           message:repaired.hasMore?"KIUBO sigue verificando el negocio en Cloud":"Datos del negocio verificados y aislados correctamente"
         };
-      }catch{
-        // The ordinary incremental pull below remains available even if the one-time replay fails.
-      }
+      }catch{}
     }
     const pulled=await pullAvailable(provider);
     persistPulled(provider,db,pulled);
     return{
-      ok:waitingRetry.length===0,
-      mode:provider.mode,
-      pushed:0,
-      failed:waitingRetry.length,
-      pulled:pulled.changes.length,
+      ok:waitingRetry.length===0,mode:provider.mode,pushed:0,failed:waitingRetry.length,pulled:pulled.changes.length,
       message:waitingRetry.length
         ? `Hay ${waitingRetry.length} cambio${waitingRetry.length===1?"":"s"} protegido${waitingRetry.length===1?"":"s"}; KIUBO reintentará automáticamente`
         : pulled.hasMore?"KIUBO sigue poniéndose al día":pulled.changes.length?"Datos cloud actualizados":"Todo sincronizado"
@@ -172,12 +158,11 @@ async function runSyncCycleCore():Promise<SyncCycleResult>{
     const result=byId.get(item.operationId);
     if(result?.ok){
       if((item.entityType==="saleTransactions"||item.entityType==="saleReversalTransactions")&&item.payload&&typeof item.payload==="object"){
-        const payload=item.payload as {orderAfter?:FoodOrderRecord;cashMovement?:CashMovementRecord};
+        const payload=item.payload as {orderAfter?:FoodOrderRecord;cashMovement?:CashMovementRecord;saleBefore?:{payment?:string}};
         const order=item.entityType==="saleTransactions"?payload.orderAfter:undefined;
-        if(order||payload.cashMovement){
-          // Keep the protected command in "syncing" until dependent order/cash follow-ups are durably queued.
-          // A crash before that point makes the stale command retry safely; the Cloud RPC itself is idempotent.
-          completedCommands.push({operationId:item.operationId,order,cashMovement:payload.cashMovement});
+        const cashMovement=item.entityType==="saleTransactions"?payload.cashMovement:payload.saleBefore?.payment==="mixed"?payload.cashMovement:undefined;
+        if(order||cashMovement){
+          completedCommands.push({operationId:item.operationId,order,cashMovement});
           continue;
         }
       }
@@ -192,7 +177,6 @@ async function runSyncCycleCore():Promise<SyncCycleResult>{
       recoverRejectedCommand(recoveryDb,item,error);
       const queued=recoveryDb.syncQueue.find(candidate=>candidate.operationId===item.operationId);
       if(queued){
-        // Terminal business rejection: keep the audit trail but do not retry forever.
         queued.status="synced";
         queued.updatedAt=new Date().toISOString();
         queued.lastError=`Rechazada y recuperada: ${error}`.slice(0,600);
@@ -205,7 +189,6 @@ async function runSyncCycleCore():Promise<SyncCycleResult>{
     }
   }
 
-  // Publish paid Food Service orders and mixed-payment cash only after their protected parent command is confirmed.
   if(completedCommands.length){
     const followupDb=loadLocalDatabase();
     for(const completed of completedCommands){
@@ -222,8 +205,6 @@ async function runSyncCycleCore():Promise<SyncCycleResult>{
     (item.status==="pending"||item.status==="syncing"||item.status==="failed")
   );
 
-  // A rejected optimistic command is removed locally. When the queue is otherwise clean,
-  // force a canonical pull from revision 0 so stale absolute stock/cash snapshots cannot survive.
   if(recovered&&!unresolved){
     try{
       const canonical=await pullAvailable(provider,"0");
@@ -231,21 +212,13 @@ async function runSyncCycleCore():Promise<SyncCycleResult>{
       afterPush=loadLocalDatabase();
       if(!canonical.hasMore)markTenantIsolationRepairDone(activeTenantId);
       return{
-        ok:false,
-        mode:provider.mode,
-        pushed,
-        failed:0,
-        pulled:canonical.changes.length,
+        ok:false,mode:provider.mode,pushed,failed:0,pulled:canonical.changes.length,
         message:`KIUBO recuperó ${recovered} operación${recovered===1?"":"es"} rechazada${recovered===1?"":"s"} y restauró el estado cloud`
       };
     }catch(error){
       const message=error instanceof Error?error.message:"No se pudo confirmar el estado cloud";
       return{
-        ok:false,
-        mode:provider.mode,
-        pushed,
-        failed:0,
-        pulled:0,
+        ok:false,mode:provider.mode,pushed,failed:0,pulled:0,
         message:`KIUBO recuperó ${recovered} operación${recovered===1?"":"es"}; falta confirmar la nube: ${message}`
       };
     }
@@ -253,11 +226,7 @@ async function runSyncCycleCore():Promise<SyncCycleResult>{
 
   if(unresolved){
     return{
-      ok:false,
-      mode:provider.mode,
-      pushed,
-      failed,
-      pulled:0,
+      ok:false,mode:provider.mode,pushed,failed,pulled:0,
       message:failed?"Quedaron cambios protegidos; KIUBO volverá a intentarlo":"Cambios locales enviados"
     };
   }
@@ -266,26 +235,16 @@ async function runSyncCycleCore():Promise<SyncCycleResult>{
     try{
       const repaired=await repairTenantIsolation(provider,afterPush,activeTenantId);
       if(repaired)return{
-        ok:failed===0&&!repaired.hasMore,
-        mode:provider.mode,
-        pushed,
-        failed,
-        pulled:repaired.changes.length,
+        ok:failed===0&&!repaired.hasMore,mode:provider.mode,pushed,failed,pulled:repaired.changes.length,
         message:repaired.hasMore?"Cambios enviados; KIUBO sigue verificando el negocio":"Cambios enviados y datos del negocio verificados"
       };
-    }catch{
-      // Fall through to the regular incremental pull.
-    }
+    }catch{}
   }
 
   const pulled=await pullAvailable(provider);
   persistPulled(provider,afterPush,pulled);
   return{
-    ok:true,
-    mode:provider.mode,
-    pushed,
-    failed,
-    pulled:pulled.changes.length,
+    ok:true,mode:provider.mode,pushed,failed,pulled:pulled.changes.length,
     message:pulled.hasMore?"Cambios enviados; KIUBO sigue poniéndose al día":"Sincronización completada"
   };
 }
