@@ -3,7 +3,7 @@ window.KIUBO_CATALOG_CONFIG = Object.freeze({
   publishableKey: "sb_publishable_hnsAgTsI1c_wErMMwAYwMQ_crWdOBpT",
   apiUrl: "https://hysrlckmnzlmscwwbibn.supabase.co/functions/v1/catalog-router",
   defaultSlug: "hakuna-matata",
-  version: "4.6.0"
+  version: "4.7.0"
 });
 
 (() => {
@@ -25,10 +25,12 @@ window.KIUBO_CATALOG_CONFIG = Object.freeze({
     document.head.append(script);
   };
 
-  addStyle("/hakuna.theme.css?v=4.6.0", "hakuna-theme");
-  addStyle("/ux-v4.5.css?v=4.6.0", "catalog-ux");
-  addStyle("/inventory-v4.6.css?v=4.6.0", "catalog-inventory");
-  addScript("/inventory-v4.6.js?v=4.6.0", "catalog-inventory-runtime");
+  addStyle("/hakuna.theme.css?v=4.7.0", "hakuna-theme");
+  addStyle("/ux-v4.5.css?v=4.7.0", "catalog-ux");
+  addStyle("/inventory-v4.6.css?v=4.7.0", "catalog-inventory");
+  addStyle("/brands-v4.7.css?v=4.7.0", "catalog-brands");
+  addScript("/inventory-v4.6.js?v=4.7.0", "catalog-inventory-runtime");
+  addScript("/brands-v4.7.js?v=4.7.0", "catalog-brands-runtime");
 
   const slugFromPage = () => {
     const querySlug = new URLSearchParams(location.search).get("slug");
