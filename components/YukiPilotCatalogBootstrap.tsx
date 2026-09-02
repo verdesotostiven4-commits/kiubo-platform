@@ -3,10 +3,12 @@
 import { useEffect } from "react";
 import { getTenantSettings,getWorkspaceContext,loadLocalDatabase,saveLocalDatabase,type TenantProduct } from "@/lib/local-store";
 import type { ProductOptionConfig } from "@/lib/product-options";
+import { tableLabelsFromSettings,withTableLabels,type TableAwareSettings } from "@/lib/table-settings";
 import { runSyncCycle } from "@/lib/sync-engine";
 import { KIUBO_DATA_REFRESHED } from "./RealtimeSyncRuntime";
 
 const VIRTUAL_STOCK=1_000_000;
+const YUKI_TABLE_SETUP_VERSION=2;
 // Esta URL pertenece únicamente al selector visual de sabores. Se conserva aquí solo para reparar el dato que se guardó por error como foto comercial del producto Coco.
 const LEGACY_COCO_SELECTOR_IMAGE_URL="https://blogger.googleusercontent.com/img/a/AVvXsEiv07v-ruXVIQ8V8l1DhDNdrL8k7RWh8hIk1oWsz1oyhZpk6oWWR5OU7WafhAA_A6fj0lBiOAmG3r8zpiB2CUOD4nn7gUvJ1AVZ6zNHPg1s-1jKN6t2YutjWSSq_uF4NY40hxleLS-VvK7jQa86nYbelg9ASElDiFzEJwTeBKJgUS1GY1V5d7d9JT4FSBg";
 export const YUKI_PACKAGING_BARCODE="YUKI-ENVASE";
@@ -54,10 +56,11 @@ export function YukiPilotCatalogBootstrap(){
 
     const settingsIndex=db.settings.findIndex(item=>item.tenantId===ctx.tenantId);
     if(settingsIndex>=0){
-      const current=db.settings[settingsIndex];
-      const serviceModes:["table","takeaway","delivery"]=["table","takeaway","delivery"];
-      if(current.tableCount!==5||JSON.stringify(current.serviceModes)!==JSON.stringify(serviceModes)){
-        db.settings[settingsIndex]={...current,tableCount:5,serviceModes};
+      const current=db.settings[settingsIndex],version=Number((current as TableAwareSettings).tableSetupVersion||0);
+      if(version<YUKI_TABLE_SETUP_VERSION){
+        const existing=tableLabelsFromSettings(current),base=existing.length?existing:["1","2","3","4","5"],upgraded=[...new Set([...base,"6","7"])];
+        const serviceModes=current.serviceModes.length?current.serviceModes:["table","takeaway","delivery"];
+        db.settings[settingsIndex]={...withTableLabels(current,upgraded,{tableSetupVersion:YUKI_TABLE_SETUP_VERSION}),serviceModes};
         changed=true;
       }
     }
