@@ -1,0 +1,109 @@
+name: Apply simple YUKI inventory UX
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/apply-inventory-simple-ux.yml
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Simplify inventory and POS stock feedback
+        shell: python
+        run: |
+          from pathlib import Path
+
+          inv = Path('components/InventoryClient.tsx')
+          text = inv.read_text()
+
+          old = 'const[db,setDb]=useState<KiuboLocalDatabase|null>(null),[message,setMessage]=useState("Inventario listo"),[recipeProductId,setRecipeProductId]=useState(""),[recipeComponentId,setRecipeComponentId]=useState(""),[automationOpen,setAutomationOpen]=useState(false);'
+          new = 'const[db,setDb]=useState<KiuboLocalDatabase|null>(null),[message,setMessage]=useState("Inventario listo"),[recipeProductId,setRecipeProductId]=useState(""),[recipeComponentId,setRecipeComponentId]=useState(""),[automationOpen,setAutomationOpen]=useState(false),[editIngredientId,setEditIngredientId]=useState("");'
+          assert text.count(old) == 1, 'inventory state target missing'
+          text = text.replace(old, new)
+
+          marker = '  const recipeProduct=sellableProducts.find(product=>product.id===recipeProductId)||sellableProducts[0],recipe=recipeProduct?productRecipe(recipeProduct):[];'
+          insert = '  const isYuki=ctx.tenant?.name.trim().toUpperCase()==="YUKI",quantityStep=isYuki?"1":"0.001",quantityMin=isYuki?"1":"0.001";\n'
+          assert text.count(marker) == 1, 'recipe marker missing'
+          text = text.replace(marker, insert + marker)
+
+          old = 'if(!name){setMessage("Escribe el nombre del ingrediente");return}if(!Number.isFinite(stock)||stock<0||!Number.isFinite(cost)||cost<0||!Number.isFinite(threshold)||threshold<0){setMessage("Revisa stock, costo y mínimo del ingrediente");return}'
+          new = 'if(!name){setMessage("Escribe el nombre del ingrediente");return}if(isYuki&&(!Number.isInteger(stock)||!Number.isInteger(threshold))){setMessage("En YUKI las cantidades se registran por unidades completas");return}if(!Number.isFinite(stock)||stock<0||!Number.isFinite(cost)||cost<0||!Number.isFinite(threshold)||threshold<0){setMessage("Revisa stock, costo y mínimo del ingrediente");return}'
+          assert text.count(old) == 1, 'create ingredient validation target missing'
+          text = text.replace(old, new)
+
+          old = 'if(!Number.isFinite(qty)||qty<=0){setMessage("La cantidad del ajuste debe ser mayor que cero");return}\n    if(!reason)'
+          new = 'if(!Number.isFinite(qty)||qty<=0){setMessage("La cantidad del ajuste debe ser mayor que cero");return}\n    if(isYuki&&!Number.isInteger(qty)){setMessage("En YUKI usa cantidades completas: 1, 2, 3…");return}\n    if(!reason)'
+          assert text.count(old) == 1, 'adjust validation target missing'
+          text = text.replace(old, new)
+
+          old = 'const addRecipeComponent=(e:FormEvent<HTMLFormElement>)=>{e.preventDefault();if(!recipeProduct){setMessage("Selecciona el producto que vas a configurar");return}const f=new FormData(e.currentTarget),componentId=String(f.get("componentId")||""),qty=Number(f.get("qty")||0);if(!componentId||!Number.isFinite(qty)||qty<=0){setMessage("Selecciona un ingrediente y escribe una cantidad válida");return}'
+          new = 'const addRecipeComponent=(e:FormEvent<HTMLFormElement>)=>{e.preventDefault();if(!recipeProduct){setMessage("Selecciona el producto que vas a configurar");return}const f=new FormData(e.currentTarget),componentId=String(f.get("componentId")||""),qty=Number(f.get("qty")||0);if(!componentId||!Number.isFinite(qty)||qty<=0){setMessage("Selecciona un ingrediente y escribe una cantidad válida");return}if(isYuki&&!Number.isInteger(qty)){setMessage("En YUKI usa cantidades completas: 1, 2, 3…");return}'
+          assert text.count(old) == 1, 'recipe validation target missing'
+          text = text.replace(old, new)
+
+          marker = '  const addRecipeComponent='
+          update_fn = '''  const updateIngredient=(e:FormEvent<HTMLFormElement>,productId:string)=>{e.preventDefault();const f=new FormData(e.currentTarget),name=clean(String(f.get("name")||"")),unit=clean(String(f.get("unit")||"u"))||"u",cost=Number(f.get("cost")||0),threshold=Number(f.get("threshold")||0);if(!name||!Number.isFinite(cost)||cost<0||!Number.isFinite(threshold)||threshold<0){setMessage("Revisa los datos del ingrediente");return}if(isYuki&&!Number.isInteger(threshold)){setMessage("En YUKI el mínimo debe ser una unidad completa");return}const next=loadLocalDatabase(),workspace=getWorkspaceContext(next),product=next.tenantProducts.find(p=>p.id===productId&&p.tenantId===workspace.tenantId&&p.branchId===workspace.branchId&&inventoryOnly(p));if(!product){setMessage("Ingrediente no encontrado");return}const duplicate=next.tenantProducts.find(p=>p.id!==productId&&p.tenantId===workspace.tenantId&&p.branchId===workspace.branchId&&inventoryOnly(p)&&p.name.toLocaleLowerCase("es")===name.toLocaleLowerCase("es"));if(duplicate){setMessage(`${name} ya existe como ingrediente`);return}product.name=name;product.cost=cost;const editable=asInventoryProduct(product);editable.stockUnit=unit;editable.lowStockThreshold=threshold;persist(next,`${name} actualizado`);setEditIngredientId("")};\n'''
+          assert text.count(marker) == 1, 'add recipe marker missing'
+          text = text.replace(marker, update_fn + marker)
+
+          start = text.index('    <section className={styles.automation}>')
+          end = text.index('\n\n    <section className="inventory-grid">', start)
+          automation = '''    <section className={styles.automation}>
+      <div className={styles.automationHead}><div className={styles.automationCopy}><span className={styles.automationEyebrow}>CONTROL AUTOMÁTICO</span><h3 className={styles.automationTitle}>Control de inventario</h3><p className={styles.automationText}>Conecta cada producto con lo que usa y KIUBO descuenta el stock al cobrar.</p></div><div className={styles.automationActions}><span className={styles.stat}>{ingredients.length} en stock</span><span className={styles.stat}>{configuredRecipes} configurados</span><button className={styles.toggle} type="button" onClick={()=>setAutomationOpen(value=>!value)}>{automationOpen?"Ocultar":"Configurar"}</button></div></div>
+      {automationOpen&&<div className={styles.automationBody}>
+        <article className={styles.setupCard}><div className={styles.setupHead}><span className={styles.step}>1</span><div className={styles.setupTitle}><strong>Qué quieres controlar</strong><span>Registra cuánto tienes y cuándo quieres recibir una alerta.</span></div></div><form className={styles.ingredientForm} onSubmit={createIngredient}><input name="name" placeholder="Nombre" maxLength={160} required/><div className={styles.formRow}><input name="stock" type="number" min="0" step={quantityStep} placeholder="Cantidad" required/><input name="unit" placeholder="Unidad" defaultValue="u" maxLength={16}/></div><div className={styles.formRow}><input name="cost" type="number" min="0" step="0.01" placeholder="Costo (opcional)"/><input name="threshold" type="number" min="0" step={quantityStep} placeholder="Mínimo" defaultValue="5"/></div><button className="button secondary" type="submit">＋ Agregar</button></form><div className={styles.compactList}>{ingredients.length?ingredients.map(product=>{const low=product.stock<=lowStockThreshold(product);return <div className={`${styles.compactRow} ${low?styles.low:""}`} key={product.id}><div className={styles.compactMain}><div><strong>{product.name}</strong><small>{low?"Stock bajo":"Disponible"} · mínimo {formatStock(lowStockThreshold(product),stockUnit(product))}</small></div><div className={styles.compactValue}><b>{formatStock(product.stock,stockUnit(product))}</b><button className={styles.miniEdit} type="button" onClick={()=>setEditIngredientId(value=>value===product.id?"":product.id)}>{editIngredientId===product.id?"Cerrar":"Editar"}</button></div></div>{editIngredientId===product.id&&<form className={styles.editForm} onSubmit={e=>updateIngredient(e,product.id)}><div className={styles.formRow}><input name="name" defaultValue={product.name} placeholder="Nombre" required/><input name="unit" defaultValue={stockUnit(product)} placeholder="Unidad" required/></div><div className={styles.formRow}><input name="cost" type="number" min="0" step="0.01" defaultValue={product.cost} placeholder="Costo"/><input name="threshold" type="number" min="0" step={quantityStep} defaultValue={lowStockThreshold(product)} placeholder="Mínimo"/></div><div className={styles.editActions}><a href="#inventory-adjustment">Cambiar stock</a><button type="submit">Guardar cambios</button></div></form>}</div>}):<div className={styles.empty}>Agrega el primer producto o ingrediente que quieras controlar.</div>}</div></article>
+        <article className={styles.setupCard}><div className={styles.setupHead}><span className={styles.step}>2</span><div className={styles.setupTitle}><strong>Qué usa cada producto</strong><span>Selecciona lo que vendes y agrega lo que consume.</span></div></div>{sellableProducts.length?<><label className={styles.productSelect}><span>PRODUCTO</span><select value={recipeProduct?.id||""} onChange={e=>setRecipeProductId(e.target.value)}>{sellableProducts.map(product=><option key={product.id} value={product.id}>{product.name}</option>)}</select></label>{recipeProduct&&<div className={styles.recipeList}>{recipe.length?recipe.map(line=>{const component=products.find(product=>product.id===line.productId);return <div className={styles.recipeLine} key={line.productId}><div><strong>{component?.name||"Ingrediente"}</strong><span>{displayQty(line.qty)} {component?stockUnit(component):"u"} por venta</span></div><button type="button" onClick={()=>removeRecipeComponent(line.productId)}>Quitar</button></div>}):<div className={styles.empty}>Sin ingredientes vinculados.</div>}</div>}<form className={styles.recipeForm} onSubmit={addRecipeComponent}><select name="componentId" value={recipeComponentId} onChange={e=>setRecipeComponentId(e.target.value)} required><option value="">Selecciona ingrediente</option>{ingredients.map(product=><option key={product.id} value={product.id}>{product.name} · {formatStock(product.stock,stockUnit(product))}</option>)}</select><div className={styles.formRow}><input name="qty" type="number" min={quantityMin} step={quantityStep} placeholder="Cantidad por venta" required/><button className="button primary" type="submit" disabled={!ingredients.length}>Guardar</button></div></form></>:<div className={styles.empty}>No hay productos activos para configurar.</div>}</article>
+      </div>}
+    </section>'''
+          text = text[:start] + automation + text[end:]
+
+          old_adjust = '<article className="panel"><span className="eyebrow">AJUSTE CONTROLADO</span><h3>Sumar o retirar</h3><p>Úsalo para conteos, mermas, daños o correcciones. Cada cambio queda registrado en el historial.</p>{trackedProducts.length?<form className="inventory-form" onSubmit={adjust}><label>Producto o ingrediente<select name="productId" required defaultValue=""><option value="" disabled>Selecciona</option>{trackedProducts.map(p=><option key={p.id} value={p.id}>{p.name} · {formatStock(p.stock,stockUnit(p))}</option>)}</select></label><div className="inventory-inline"><label>Movimiento<select name="kind"><option value="in">Sumar</option><option value="out">Retirar</option></select></label><label>Cantidad<input name="qty" type="number" min="0.001" step="0.001" required/></label></div><label>Motivo<input name="reason" placeholder="Conteo, merma, daño, corrección…" maxLength={240} required/></label><button className="button primary" type="submit">Guardar ajuste</button></form>:<div className="inventory-untracked-note">Crea un ingrediente o producto con stock para empezar.</div>}<p className="cart-note">KIUBO conserva el historial de cada ajuste para poder revisarlo después.</p></article>'
+          new_adjust = '<article className="panel" id="inventory-adjustment"><span className="eyebrow">AJUSTE CONTROLADO</span><h3>Sumar o retirar stock</h3>{trackedProducts.length?<form className="inventory-form" onSubmit={adjust}><label>Producto o ingrediente<select name="productId" required defaultValue=""><option value="" disabled>Selecciona</option>{trackedProducts.map(p=><option key={p.id} value={p.id}>{p.name} · {formatStock(p.stock,stockUnit(p))}</option>)}</select></label><div className="inventory-inline"><label>Movimiento<select name="kind"><option value="in">Sumar</option><option value="out">Retirar</option></select></label><label>Cantidad<input name="qty" type="number" min={quantityMin} step={quantityStep} required/></label></div><label>Motivo<select name="reason" required defaultValue=""><option value="" disabled>Selecciona</option><option value="Conteo">Conteo</option><option value="Merma">Merma</option><option value="Daño">Daño</option><option value="Corrección">Corrección</option></select></label><button className="button primary" type="submit">Guardar</button></form>:<div className="inventory-untracked-note">Agrega algo al inventario para comenzar.</div>}</article>'
+          assert text.count(old_adjust) == 1, 'adjustment panel target missing'
+          text = text.replace(old_adjust, new_adjust)
+          inv.write_text(text)
+
+          css = Path('components/InventoryClient.module.css')
+          css_text = css.read_text()
+          css_text += '''\n.compactRow{display:grid;gap:8px}.compactRow>.compactMain{display:flex;align-items:center;justify-content:space-between;gap:10px}.compactRow>.compactMain>div:first-child{display:grid;gap:2px}.compactValue{display:flex;align-items:center;gap:8px}.miniEdit{border:0;background:#f1f5f4;color:#335b50;border-radius:8px;padding:6px 8px;font-size:10px;font-weight:900;cursor:pointer}.editForm{display:grid;gap:8px;padding-top:9px;border-top:1px solid #edf0f3}.editForm input{width:100%;border:1px solid #dde4eb;border-radius:10px;padding:9px 10px;background:#fff;font-size:11px}.editActions{display:flex;align-items:center;justify-content:space-between;gap:8px}.editActions a{font-size:10px;font-weight:900;color:#526579}.editActions button{border:0;border-radius:9px;background:var(--navy);color:#fff;padding:8px 10px;font-size:10px;font-weight:900;cursor:pointer}\n'''
+          css.write_text(css_text)
+
+          pos = Path('components/PosClientPro.tsx')
+          p = pos.read_text()
+          old = 'import { formatStock,inventoryOnly,resolveInventoryImpact,stockUnit,usesRecipeInventory } from "@/lib/recipe-inventory";'
+          new = 'import { formatStock,inventoryOnly,lowStockThreshold,resolveInventoryImpact,stockUnit,usesRecipeInventory } from "@/lib/recipe-inventory";'
+          assert p.count(old) == 1, 'POS recipe import target missing'
+          p = p.replace(old, new)
+          marker = 'import splitStyles from "./PosSplitPayment.module.css";'
+          assert p.count(marker) == 1, 'POS split style import missing'
+          p = p.replace(marker, marker + '\nimport stockStyles from "./PosStockAlert.module.css";')
+          old = 'inventoryShortage=inventoryImpactDetails.find(item=>item.remaining<-.0001);'
+          new = 'inventoryShortage=inventoryImpactDetails.find(item=>item.remaining<-.0001),inventoryAttention=inventoryImpactDetails.filter(item=>item.remaining<=lowStockThreshold(item.product));'
+          assert p.count(old) == 1, 'POS inventory calculation target missing'
+          p = p.replace(old, new)
+          old_block = '{recipeInventoryActive&&inventoryImpactDetails.length>0&&<div className={`pos-stock-impact ${inventoryShortage?"has-shortage":""}`}><div className="pos-stock-impact-head"><span>INVENTARIO DEL PEDIDO</span><small>Proyección al cobrar</small></div><div className="pos-stock-impact-list">{inventoryImpactDetails.slice(0,5).map(item=><span key={item.productId} className={item.remaining<0?"shortage":item.remaining<=5?"low":""}><b>{item.product.name}</b><em>quedan {formatStock(Math.max(0,item.remaining),stockUnit(item.product))}</em></span>)}{inventoryImpactDetails.length>5&&<span><b>+{inventoryImpactDetails.length-5}</b><em>más insumos</em></span>}</div></div>}'
+          new_block = '{recipeInventoryActive&&inventoryAttention.length>0&&<div className={`${stockStyles.alert} ${inventoryShortage?stockStyles.danger:stockStyles.warning}`}><span className={stockStyles.badge}>{inventoryShortage?"!":"i"}</span><div><strong>{inventoryShortage?"Stock insuficiente":"Stock bajo"}</strong><small>{inventoryAttention.slice(0,2).map(item=>`${item.product.name}: ${formatStock(Math.max(0,item.remaining),stockUnit(item.product))}`).join(" · ")}{inventoryAttention.length>2?` · +${inventoryAttention.length-2}`:""}</small></div></div>}'
+          assert p.count(old_block) == 1, 'POS stock projection block missing'
+          p = p.replace(old_block, new_block)
+          pos.write_text(p)
+
+          Path('components/PosStockAlert.module.css').write_text('''.alert{display:flex;align-items:center;gap:9px;margin:9px 0 2px;padding:9px 11px;border:1px solid #eadfcb;border-radius:12px;background:#fffcf6}.alert>div{display:grid;gap:2px;min-width:0}.alert strong{font-size:11px;letter-spacing:.01em}.alert small{font-size:10px;color:#756b5b;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.badge{width:22px;height:22px;display:grid;place-items:center;border-radius:999px;background:#f2e7d1;color:#705c32;font-size:10px;font-weight:900;flex:0 0 auto}.danger{border-color:#efcece;background:#fff8f8}.danger .badge{background:#f8dddd;color:#9b3434}.danger strong{color:#8d2e2e}.warning strong{color:#5f5236}\n''')
+      - run: npm install --ignore-scripts
+      - run: npm run verify
+      - run: npm run build
+      - name: Commit verified UX and remove temporary workflow
+        run: |
+          git config user.name "kiubo-automation"
+          git config user.email "actions@users.noreply.github.com"
+          git rm .github/workflows/apply-inventory-simple-ux.yml
+          git add components/InventoryClient.tsx components/InventoryClient.module.css components/PosClientPro.tsx components/PosStockAlert.module.css
+          git commit -m "feat: simplify YUKI inventory control UX"
+          git push
