@@ -31,4 +31,4 @@ jobs:
           git add components/InventoryClient.tsx components/InventoryClient.module.css components/PosClientPro.tsx components/PosStockAlert.module.css lib/sync-engine.ts
           git commit -m "feat: simplify YUKI inventory control UX"
           git push
-# retry 4: corrected compact sync marker
+# retry 5: production-only deploy policy restored
