@@ -1,0 +1,31 @@
+name: Apply simple YUKI inventory UX
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/apply-inventory-simple-ux.yml
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Apply inventory UX patch
+        run: python scripts/tmp_apply_inventory_simple_ux.py
+      - run: npm install --ignore-scripts
+      - run: npm run verify
+      - run: npm run build
+      - name: Commit verified UX
+        run: |
+          git config user.name "kiubo-automation"
+          git config user.email "actions@users.noreply.github.com"
+          git rm .github/workflows/apply-inventory-simple-ux.yml scripts/tmp_apply_inventory_simple_ux.py
+          git add components/InventoryClient.tsx components/InventoryClient.module.css components/PosClientPro.tsx components/PosStockAlert.module.css
+          git commit -m "feat: simplify YUKI inventory control UX"
+          git push
