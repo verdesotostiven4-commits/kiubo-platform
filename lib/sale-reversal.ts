@@ -41,7 +41,7 @@ export function reverseSaleLocally(db:KiuboLocalDatabase,saleId:string,rawReason
   if(reason.length<3)return{ok:false as const,message:"Escribe un motivo de anulación de al menos 3 caracteres"};
   const refundCash=sale.payment==="cash"?Number(sale.total.toFixed(2)):sale.payment==="mixed"?breakdown!.cash:0;
   const session=refundCash>0?getOpenCashSession(db,sale.tenantId,sale.branchId):undefined;
-  if(refundCash>0&&!session)return{ok:false as const,message:"Abre caja antes de devolver la parte pagada en efectivo"};
+  if(refundCash>0&&!session)return{ok:false as const,message:"Abre caja antes de devolver efectivo; KIUBO necesita registrar correctamente la salida de caja"};
 
   const originalMovements=db.stockMovements.filter(movement=>movement.tenantId===sale.tenantId&&movement.branchId===sale.branchId&&movement.reference===sale.id&&movement.type==="sale"&&movement.quantity<0);
   const restoreByProduct=new Map<string,number>();
