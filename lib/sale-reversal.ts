@@ -9,6 +9,8 @@ import {
   type StockMovementRecord,
   type TenantProduct,
 } from "./local-store";
+import { enqueueCashTransaction } from "./finance-transaction";
+import { mixedRefundMovementReason,paymentBreakdownForSale } from "./mixed-payment";
 
 export type SaleLifecycle="completed"|"voided";
 export type SaleWithLifecycle=SaleRecord&{status?:SaleLifecycle;voidedAt?:string;voidReason?:string};
@@ -34,11 +36,13 @@ export function reverseSaleLocally(db:KiuboLocalDatabase,saleId:string,rawReason
   const saleAt=Date.parse(sale.createdAt),age=Date.now()-saleAt;
   if(!Number.isFinite(saleAt)||age>24*60*60*1000||age<-(5*60*1000))return{ok:false as const,message:"La ventana de anulación expiró; una operación más antigua debe ir por devolución o nota de crédito"};
   if(sale.payment==="credit")return{ok:false as const,message:"Los fiados con saldo requieren un flujo de reverso específico; esta venta no se anuló"};
-  if(sale.payment==="mixed")return{ok:false as const,message:"Las ventas mixtas históricas no se pueden anular hasta reconstruir su reparto de pago"};
+  const breakdown=sale.payment==="mixed"?paymentBreakdownForSale(db,sale):undefined;
+  if(sale.payment==="mixed"&&(!breakdown||breakdown.cash<=0||breakdown.transfer<=0))return{ok:false as const,message:"Esta venta mixta histórica no tiene un reparto verificable y no se puede anular automáticamente"};
   const reason=rawReason.replace(/\s+/g," ").trim().slice(0,240);
   if(reason.length<3)return{ok:false as const,message:"Escribe un motivo de anulación de al menos 3 caracteres"};
-  const session=sale.payment==="cash"?getOpenCashSession(db,sale.tenantId,sale.branchId):undefined;
-  if(sale.payment==="cash"&&!session)return{ok:false as const,message:"Abre caja antes de devolver efectivo por una venta anulada"};
+  const refundCash=sale.payment==="cash"?Number(sale.total.toFixed(2)):sale.payment==="mixed"?breakdown!.cash:0;
+  const session=refundCash>0?getOpenCashSession(db,sale.tenantId,sale.branchId):undefined;
+  if(refundCash>0&&!session)return{ok:false as const,message:"Abre caja antes de devolver la parte pagada en efectivo"};
 
   // The physical truth is the stock movement written by the original sale. This supports both
   // legacy direct-product stock and the new shared recipe/ingredient inventory without guessing.
@@ -61,10 +65,13 @@ export function reverseSaleLocally(db:KiuboLocalDatabase,saleId:string,rawReason
   db.sales=db.sales.map(current=>current.id===sale.id?saleAfter:current);db.stockMovements.unshift(...stockMovements);
 
   let cashMovement:CashMovementRecord|undefined;
-  if(sale.payment==="cash"&&session){
+  if(refundCash>0&&session){
     const movementId=makeId("movement");
-    cashMovement={id:movementId,tenantId:sale.tenantId,branchId:sale.branchId,sessionId:session.id,type:"out",amount:Number(sale.total.toFixed(2)),reason:`Anulación venta · ${reason}`,clientOperationId:movementId,createdAt:reversedAt};
+    cashMovement={id:movementId,tenantId:sale.tenantId,branchId:sale.branchId,sessionId:session.id,type:"out",amount:refundCash,reason:sale.payment==="mixed"?mixedRefundMovementReason(sale.id):`Anulación venta · ${reason}`,clientOperationId:movementId,createdAt:reversedAt};
     db.cashMovements.unshift(cashMovement);
+    // Cloud v2 reverses ordinary cash atomically. For mixed sales the exact cash part travels
+    // through the protected cash command, while the sale reversal still restores stock/status atomically.
+    if(sale.payment==="mixed")enqueueCashTransaction(db,{kind:"movement",movement:cashMovement});
   }
 
   const payload:SaleReversalPayload={saleBefore,saleAfter,productBeforeSnapshots,productAfterSnapshots,stockMovements,cashMovement,reason,reversedAt};
