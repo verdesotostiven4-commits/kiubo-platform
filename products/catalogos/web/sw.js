@@ -1,5 +1,5 @@
-const CACHE = "kiubo-catalog-hakuna-v4.6.0-20260902";
-const SHELL = ["/","/index.html","/panel.html","/pedido.html","/styles.css","/catalog.css","/panel.css","/pedido.css","/hakuna.theme.css","/ux-v4.5.css","/inventory-v4.6.css","/core.js","/catalog.js","/panel.js","/pedido.js","/config.js","/inventory-v4.6.js","/assets/brand-mark.svg","/assets/brand-lockup.svg","/manifest.webmanifest"];
+const CACHE = "kiubo-catalog-hakuna-v4.7.0-20260902";
+const SHELL = ["/","/index.html","/panel.html","/pedido.html","/styles.css","/catalog.css","/panel.css","/pedido.css","/hakuna.theme.css","/ux-v4.5.css","/inventory-v4.6.css","/brands-v4.7.css","/core.js","/catalog.js","/panel.js","/pedido.js","/config.js","/inventory-v4.6.js","/brands-v4.7.js","/assets/brand-mark.svg","/assets/brand-lockup.svg","/manifest.webmanifest"];
 self.addEventListener("install", event => { event.waitUntil(caches.open(CACHE).then(cache => cache.addAll(SHELL)).then(() => self.skipWaiting())); });
 self.addEventListener("activate", event => { event.waitUntil(caches.keys().then(keys => Promise.all(keys.filter(key => key !== CACHE).map(key => caches.delete(key)))).then(() => self.clients.claim())); });
 self.addEventListener("fetch", event => {
