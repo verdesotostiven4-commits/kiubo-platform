@@ -2,6 +2,7 @@ import {
   getLocalDeviceId,
   loadLocalSession,
   makeId,
+  type CashMovementRecord,
   type CreditRecord,
   type FoodOrderRecord,
   type KiuboLocalDatabase,
@@ -17,6 +18,7 @@ export type SaleTransactionPayload = {
   credit?: CreditRecord;
   orderBefore?: FoodOrderRecord;
   orderAfter?: FoodOrderRecord;
+  cashMovement?: CashMovementRecord;
 };
 
 export function enqueueSaleTransaction(db:KiuboLocalDatabase,payload:SaleTransactionPayload){
@@ -62,7 +64,7 @@ export function enqueueSaleTransaction(db:KiuboLocalDatabase,payload:SaleTransac
     action:"sales.transaction_queued",
     entityType:"saleTransactions",
     entityId:sale.id,
-    metadata:{deviceId:getLocalDeviceId(),items:sale.items.length,total:sale.total,orderId:payload.orderAfter?.id},
+    metadata:{deviceId:getLocalDeviceId(),items:sale.items.length,total:sale.total,orderId:payload.orderAfter?.id,mixedCash:payload.cashMovement?.amount||0},
     createdAt:now,
   });
 
