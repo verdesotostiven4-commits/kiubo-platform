@@ -44,6 +44,8 @@
     return [...map.values()].sort((a, b) => a.name.localeCompare(b.name, "es", { sensitivity: "base" }));
   };
 
+  const brandsSignature = items => items.map(item => `${item.key}:${item.name}:${item.count}`).join("|");
+
   const capturePayload = (action, payload) => {
     if (!payload || typeof payload !== "object") return;
     if (["catalog_bootstrap", "provider_bootstrap", "master_bootstrap"].includes(action)) {
@@ -116,6 +118,9 @@
     const scroller = document.querySelector("#brandScroller");
     if (!scroller) return;
     const items = brands();
+    const signature = `${state.activeBrand}|${brandsSignature(items)}`;
+    if (scroller.dataset.signature === signature) return;
+    scroller.dataset.signature = signature;
     scroller.innerHTML = [
       `<button class="category-chip ${state.activeBrand === "all" ? "active" : ""}" type="button" data-brand-filter="all">Todas</button>`,
       ...items.map(item => `<button class="category-chip ${state.activeBrand === item.key ? "active" : ""}" type="button" data-brand-filter="${escapeAttr(item.key)}">${escapeText(item.name)}<small>${item.count}</small></button>`)
@@ -143,7 +148,7 @@
     controls.querySelectorAll("[data-browse-mode]").forEach(button => {
       const active = button.dataset.browseMode === mode;
       button.classList.toggle("active", active);
-      button.setAttribute("aria-selected", String(active));
+      if (button.getAttribute("aria-selected") !== String(active)) button.setAttribute("aria-selected", String(active));
     });
 
     if (mode === "brand") {
@@ -180,7 +185,7 @@
         mark.className = "product-brand-mark";
         category.insertAdjacentElement("afterend", mark);
       }
-      mark.textContent = brand;
+      if (mark.textContent !== brand) mark.textContent = brand;
     });
   }
 
@@ -192,20 +197,22 @@
       const product = productById(card.dataset.productCard);
       const matches = state.activeBrand === "all" || (product && brandKey(product.brand) === state.activeBrand);
       card.classList.toggle("brand-filter-hidden", !matches);
-      card.setAttribute("aria-hidden", matches ? "false" : "true");
+      const aria = matches ? "false" : "true";
+      if (card.getAttribute("aria-hidden") !== aria) card.setAttribute("aria-hidden", aria);
       if (matches) visible += 1;
     }
 
     const grid = document.querySelector("#productGrid");
     const empty = document.querySelector("#emptyState");
     if (grid && empty) {
-      grid.hidden = visible === 0;
-      empty.hidden = visible > 0;
+      if (grid.hidden !== (visible === 0)) grid.hidden = visible === 0;
+      if (empty.hidden !== (visible > 0)) empty.hidden = visible > 0;
     }
     const result = document.querySelector("#resultCount");
     if (result && state.activeBrand !== "all") {
       const selected = brands().find(item => item.key === state.activeBrand)?.name || "Marca";
-      result.textContent = `${visible} producto${visible === 1 ? "" : "s"} · ${selected}`;
+      const label = `${visible} producto${visible === 1 ? "" : "s"} · ${selected}`;
+      if (result.textContent !== label) result.textContent = label;
     }
   }
 
@@ -231,7 +238,12 @@
       input.setAttribute("autocomplete", "off");
       input.placeholder = "Ej. Toni, Nestlé, La Lechera";
     }
-    list.innerHTML = brands().map(item => `<option value="${escapeAttr(item.name)}"></option>`).join("");
+    const items = brands();
+    const signature = brandsSignature(items);
+    if (list.dataset.signature !== signature) {
+      list.dataset.signature = signature;
+      list.innerHTML = items.map(item => `<option value="${escapeAttr(item.name)}"></option>`).join("");
+    }
 
     const field = input.closest(".field") || input.parentElement;
     if (field && !field.querySelector(".brand-field-help")) {
@@ -245,7 +257,8 @@
     if (!search || document.querySelector("#adminBrandFilter")) return;
     const filter = document.createElement("label");
     filter.className = "admin-brand-filter";
-    filter.innerHTML = `<span>Marca</span><select id="adminBrandFilter" aria-label="Filtrar productos por marca"><option value="all">Todas las marcas</option>${brands().map(item => `<option value="${escapeAttr(item.key)}">${escapeText(item.name)} (${item.count})</option>`).join("")}</select>`;
+    filter.innerHTML = `<span>Marca</span><select id="adminBrandFilter" aria-label="Filtrar productos por marca"><option value="all">Todas las marcas</option>${items.map(item => `<option value="${escapeAttr(item.key)}">${escapeText(item.name)} (${item.count})</option>`).join("")}</select>`;
+    filter.dataset.signature = signature;
     const host = search.closest(".search-field")?.parentElement || search.parentElement;
     host?.append(filter);
     filter.querySelector("select").addEventListener("change", applyPanelBrandFilter);
@@ -267,7 +280,7 @@
         const flags = copy.querySelector(".product-flags");
         if (flags) flags.insertAdjacentElement("beforebegin", badge); else copy.append(badge);
       }
-      badge.textContent = brand;
+      if (badge.textContent !== brand) badge.textContent = brand;
     });
   }
 
@@ -284,9 +297,14 @@
   function refreshPanelBrandFilterOptions() {
     if (!isPanel) return;
     const select = document.querySelector("#adminBrandFilter");
-    if (!select) return;
+    const wrapper = select?.closest(".admin-brand-filter");
+    if (!select || !wrapper) return;
+    const items = brands();
+    const signature = brandsSignature(items);
+    if (wrapper.dataset.signature === signature) return;
+    wrapper.dataset.signature = signature;
     const current = select.value;
-    select.innerHTML = `<option value="all">Todas las marcas</option>${brands().map(item => `<option value="${escapeAttr(item.key)}">${escapeText(item.name)} (${item.count})</option>`).join("")}`;
+    select.innerHTML = `<option value="all">Todas las marcas</option>${items.map(item => `<option value="${escapeAttr(item.key)}">${escapeText(item.name)} (${item.count})</option>`).join("")}`;
     if ([...select.options].some(option => option.value === current)) select.value = current;
   }
 
@@ -329,7 +347,6 @@
     observer.observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ["hidden", "class"] });
     hydrate();
     schedule();
-    if (isPanel) setInterval(hydrate, 30000);
   };
 
   if (document.body) start();
