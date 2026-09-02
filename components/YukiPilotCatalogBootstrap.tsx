@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
-import { getTenantSettings,getWorkspaceContext,loadLocalDatabase,saveLocalDatabase,type TenantProduct } from "@/lib/local-store";
+import { getTenantSettings,getWorkspaceContext,loadLocalDatabase,saveLocalDatabase,type ServiceMode,type TenantProduct } from "@/lib/local-store";
 import type { ProductOptionConfig } from "@/lib/product-options";
 import { tableLabelsFromSettings,withTableLabels,type TableAwareSettings } from "@/lib/table-settings";
 import { runSyncCycle } from "@/lib/sync-engine";
@@ -59,7 +59,7 @@ export function YukiPilotCatalogBootstrap(){
       const current=db.settings[settingsIndex],version=Number((current as TableAwareSettings).tableSetupVersion||0);
       if(version<YUKI_TABLE_SETUP_VERSION){
         const existing=tableLabelsFromSettings(current),base=existing.length?existing:["1","2","3","4","5"],upgraded=[...new Set([...base,"6","7"])];
-        const serviceModes=current.serviceModes.length?current.serviceModes:["table","takeaway","delivery"];
+        const serviceModes:ServiceMode[]=current.serviceModes.length?current.serviceModes:["table","takeaway","delivery"];
         db.settings[settingsIndex]={...withTableLabels(current,upgraded,{tableSetupVersion:YUKI_TABLE_SETUP_VERSION}),serviceModes};
         changed=true;
       }
@@ -74,8 +74,6 @@ export function YukiPilotCatalogBootstrap(){
       db.tenantProducts.push(...products);changed=true;
     }
 
-    // Additive pilot upgrade: existing YUKI branches receive Coco once. If the business later archives it,
-    // the inactive record remains and this bootstrap will not bring it back unexpectedly.
     const coconutProduct=db.tenantProducts.find(product=>product.tenantId===ctx.tenantId&&product.branchId===ctx.branchId&&(product.barcode==="YUKI-YOGURTCOCO"||product.name.trim().toLocaleLowerCase("es")==="yogurt coco"));
     if(!coconutProduct){
       db.tenantProducts.push({id:"yuki-menu-yogurt-coco",tenantId:ctx.tenantId,branchId:ctx.branchId,masterProductId:"custom-yuki-yogurt-coco",barcode:"YUKI-YOGURTCOCO",name:"Yogurt Coco",price:4.50,cost:0,stock:VIRTUAL_STOCK,active:true,category:"Yogurts",trackStock:false});
