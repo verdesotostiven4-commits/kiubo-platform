@@ -4,8 +4,8 @@
   "ignoreCommand": "git diff --quiet HEAD^ HEAD -- . ':(exclude)products/catalogos/**' ':(exclude)supabase/**' ':(exclude)docs/**'",
   "git": {
     "deploymentEnabled": {
-      "main": true,
-      "*": false
+      "*": false,
+      "main": true
     }
   }
 }
