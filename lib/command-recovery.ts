@@ -1,7 +1,7 @@
 import {getLocalDeviceId,loadLocalSession,makeId,type CashMovementRecord,type CashSessionRecord,type CreditPaymentRecord,type CreditRecord,type FoodOrderRecord,type KiuboLocalDatabase,type PurchaseRecord,type SaleRecord,type StockMovementRecord,type SupplierPaymentRecord,type TenantProduct} from "./local-store";
 import type {SyncQueueRecord} from "./sync-types";
 
-type SalePayload={sale?:SaleRecord;stockMovements?:StockMovementRecord[];credit?:CreditRecord;orderBefore?:FoodOrderRecord;orderAfter?:FoodOrderRecord};
+type SalePayload={sale?:SaleRecord;stockMovements?:StockMovementRecord[];credit?:CreditRecord;orderBefore?:FoodOrderRecord;orderAfter?:FoodOrderRecord;cashMovement?:CashMovementRecord};
 type SaleReversalPayload={saleBefore?:SaleRecord;saleAfter?:SaleRecord;productBeforeSnapshots?:TenantProduct[];productAfterSnapshots?:TenantProduct[];stockMovements?:StockMovementRecord[];cashMovement?:CashMovementRecord};
 type CashPayload=|{kind:"open"|"close";session?:CashSessionRecord}|{kind:"movement";movement?:CashMovementRecord};
 type CreditPayload={payment?:CreditPaymentRecord;creditSnapshot?:CreditRecord;cashMovement?:CashMovementRecord};
@@ -23,6 +23,7 @@ export function recoverRejectedCommand(db:KiuboLocalDatabase,item:SyncQueueRecor
     const p=item.payload as SalePayload,r=removeById(db.sales,p.sale?.id);db.sales=r.items;changed||=r.changed;
     const ids=new Set((p.stockMovements||[]).map(x=>x.id));if(ids.size){const n=db.stockMovements.filter(x=>!ids.has(x.id));changed||=n.length!==db.stockMovements.length;db.stockMovements=n}
     const cr=removeById(db.credits,p.credit?.id);db.credits=cr.items;changed||=cr.changed;
+    const cm=removeById(db.cashMovements,p.cashMovement?.id);db.cashMovements=cm.items;changed||=cm.changed;
     for(const m of p.stockMovements||[]){const product=db.tenantProducts.find(x=>x.id===m.productId&&x.tenantId===item.tenantId);if(product&&eq(product.stock,m.newStock)){product.stock=Math.max(0,m.previousStock);changed=true}else needsCanonicalPull=true}
     if(p.orderAfter){
       const current=db.orders.find(order=>order.id===p.orderAfter?.id&&order.tenantId===item.tenantId);
