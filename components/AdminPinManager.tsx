@@ -35,7 +35,7 @@ export function AdminPinManager(){
     window.dispatchEvent(new CustomEvent(KIUBO_DATA_REFRESHED,{detail:{source:"admin-pin"}}));
   };
 
-  return <section className="panel admin-pin-panel">
+  return <section id="authorization-code" className="panel admin-pin-panel">
     <div className="panel-head"><div><span className="eyebrow">SEGURIDAD</span><h3>Código de autorización</h3><p className="admin-pin-intro">{configured?"Tu código ya está configurado. Puedes cambiarlo aquí cuando quieras.":"Aún no tienes un código configurado. Créalo aquí antes de usar acciones protegidas."}</p></div><span className={`pill ${configured?"admin-pin-ready":""}`}>{configured?"Configurado":"Pendiente"}</span></div>
     <form className="admin-pin-form" onSubmit={savePin}>
       <label>Nuevo código<input name="pin" type="password" inputMode="numeric" pattern="[0-9]*" minLength={4} maxLength={8} placeholder="4–8 números" autoComplete="new-password" required/></label>
