@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect,useMemo,useState } from "react";
-import { getWorkspaceContext,loadLocalDatabase } from "@/lib/local-store";
+import { getTenantSettings,getWorkspaceContext,loadLocalDatabase } from "@/lib/local-store";
+import { saleVisibleAfterHistoryReset } from "@/lib/sale-adjustments";
 import { saleLifecycle } from "@/lib/sale-reversal";
 import { yukiFlavorImage } from "@/lib/yuki-flavor-visuals";
 import { KIUBO_DATA_REFRESHED } from "./RealtimeSyncRuntime";
@@ -38,9 +39,9 @@ export function YukiFlavorAnalytics(){
   const data=useMemo(()=>{
     if(!db)return null;
     const ctx=getWorkspaceContext(db);if(ctx.tenant?.name.trim().toUpperCase()!=="YUKI")return null;
-    const start=periodStart(range),counts=new Map<string,{name:string;qty:number}>();let selections=0,salesWithFlavor=0;
+    const settings=getTenantSettings(db,ctx.tenantId),start=periodStart(range),counts=new Map<string,{name:string;qty:number}>();let selections=0,salesWithFlavor=0;
     for(const sale of db.sales){
-      if(sale.tenantId!==ctx.tenantId||sale.branchId!==ctx.branchId||saleLifecycle(sale)!=="completed"||Date.parse(sale.createdAt)<start)continue;
+      if(sale.tenantId!==ctx.tenantId||sale.branchId!==ctx.branchId||saleLifecycle(sale)!=="completed"||!saleVisibleAfterHistoryReset(sale,settings)||Date.parse(sale.createdAt)<start)continue;
       let hasFlavor=false;
       for(const item of sale.items){
         const flavors=flavorsFromName(item.name);

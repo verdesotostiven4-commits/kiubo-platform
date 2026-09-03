@@ -17,14 +17,14 @@ export type MasterProduct = { id:string; barcode:string; name:string; brand:stri
 export type TenantProduct = { id:string; tenantId:string; branchId:string; masterProductId:string; barcode:string; name:string; price:number; cost:number; stock:number; active:boolean; category?:string; imageUrl?:string; trackStock?:boolean };
 export type CustomerRecord = { id:string; tenantId:string; identification:string; name:string; email:string; phone:string; address:string; createdAt:string };
 export type SaleRecord = { id:string; tenantId:string; branchId:string; customerId?:string; orderId?:string; total:number; payment:"cash"|"transfer"|"mixed"|"credit"; items:{productId:string;name:string;qty:number;unitPrice:number;unitCost?:number}[]; clientOperationId?:string; createdAt:string };
-export type FoodOrderItem = { productId:string; name:string; qty:number; unitPrice:number; notes?:string };
-export type FoodOrderRecord = { id:string; tenantId:string; branchId:string; number:number; serviceMode:ServiceMode; tableLabel?:string; customerId?:string; customerName?:string; phone?:string; address?:string; notes?:string; items:FoodOrderItem[]; total:number; status:FoodOrderStatus; paymentStatus:FoodOrderPaymentStatus; saleId?:string; createdBy?:string; createdAt:string; updatedAt:string };
+export type FoodOrderItem = { productId:string; name:string; qty:number; unitPrice:number; notes?:string; courtesy?:boolean };
+export type FoodOrderRecord = { id:string; tenantId:string; branchId:string; number:number; serviceMode:ServiceMode; tableLabel?:string; customerId?:string; customerName?:string; phone?:string; address?:string; notes?:string; items:FoodOrderItem[]; total:number; status:FoodOrderStatus; paymentStatus:FoodOrderPaymentStatus; saleId?:string; createdBy?:string; discountPercent?:number; internalConsumption?:boolean; createdAt:string; updatedAt:string };
 export type UserRecord = { id:string; tenantId:string; name:string; email:string; role:UserRole; active:boolean; pin:string; platformAdmin?:boolean; createdAt:string };
 export type CashSessionRecord = { id:string; tenantId:string; branchId:string; openingAmount:number; closingAmount?:number; status:"open"|"closed"; openedAt:string; closedAt?:string; openedBy:string };
 export type CashMovementRecord = { id:string; tenantId:string; branchId:string; sessionId:string; type:"in"|"out"; amount:number; reason:string; clientOperationId?:string; createdAt:string };
 export type CreditRecord = { id:string; tenantId:string; branchId:string; customerId:string; saleId?:string; description:string; originalAmount:number; balance:number; status:"open"|"paid"; createdAt:string };
 export type CreditPaymentRecord = { id:string; tenantId:string; branchId:string; creditId:string; amount:number; method:"cash"|"transfer"; clientOperationId?:string; createdAt:string };
-export type TenantSettings = { tenantId:string; tradeName:string; legalName:string; ruc:string; establishment:string; emissionPoint:string; currency:"USD"; accent:string; receiptFooter:string; requireCashSession:boolean; allowCredit:boolean; address:string; phone:string; businessType:BusinessType; serviceModes:ServiceMode[]; tableCount:number; showProductImages:boolean; splashEnabled:boolean; receiptWidth:"58mm"|"80mm" };
+export type TenantSettings = { tenantId:string; tradeName:string; legalName:string; ruc:string; establishment:string; emissionPoint:string; currency:"USD"; accent:string; receiptFooter:string; requireCashSession:boolean; allowCredit:boolean; address:string; phone:string; businessType:BusinessType; serviceModes:ServiceMode[]; tableCount:number; categoryOrder?:string[]; showProductImages:boolean; splashEnabled:boolean; receiptWidth:"58mm"|"80mm" };
 export type TenantBrandingRecord = { tenantId:string; businessName:string; logoUrl:string; primaryColor:string; secondaryColor:string; accentColor:string; receiptTagline:string; updatedAt:string };
 export type SupplierRecord = { id:string; tenantId:string; identification:string; name:string; email:string; phone:string; address:string; createdAt:string };
 export type PurchaseRecord = { id:string; tenantId:string; branchId:string; supplierId:string; total:number; items:{productId:string;name:string;qty:number;unitCost:number}[]; documentType?:"invoice"|"note"|"receipt"|"other"; documentNumber?:string; documentDate?:string; dueDate?:string; notes?:string; status?:PurchaseStatus; paymentStatus?:PurchasePaymentStatus; paidAmount?:number; clientOperationId?:string; createdAt:string };
@@ -138,6 +138,7 @@ function normalizeSettings(item:TenantSettings):TenantSettings{
     businessType:normalizeBusinessType(item.businessType),
     serviceModes:normalizeServiceModes(item.serviceModes),
     tableCount:Math.max(0,Math.min(500,Math.floor(Number(item.tableCount)||0))),
+    categoryOrder:Array.isArray(item.categoryOrder)?[...new Set(item.categoryOrder.map(value=>safeSingleLine(value,80)).filter(Boolean))].slice(0,100):undefined,
     showProductImages:item.showProductImages!==false,
     splashEnabled:item.splashEnabled!==false,
     receiptWidth
@@ -154,7 +155,8 @@ function normalizeOrder(order:FoodOrderRecord,branchOf:(tenantId:string)=>string
     tableLabel:safeSingleLine(order.tableLabel,40)||undefined,customerId:safeSingleLine(order.customerId,200)||undefined,
     customerName:safeSingleLine(order.customerName,120)||undefined,phone:safeSingleLine(order.phone,40)||undefined,address:safeSingleLine(order.address,240)||undefined,
     notes:safeSingleLine(order.notes,500)||undefined,total:safeProductNumber(order.total),
-    items:Array.isArray(order.items)?order.items.map(item=>({productId:String(item.productId||""),name:safeSingleLine(item.name,160)||"Producto",qty:Math.max(1,Math.floor(Number(item.qty)||1)),unitPrice:safeProductNumber(item.unitPrice),notes:safeSingleLine(item.notes,240)||undefined})):[],
+    discountPercent:Math.max(0,Math.min(100,Number(order.discountPercent)||0))||undefined,internalConsumption:Boolean(order.internalConsumption)||undefined,
+    items:Array.isArray(order.items)?order.items.map(item=>({productId:String(item.productId||""),name:safeSingleLine(item.name,160)||"Producto",qty:Math.max(1,Math.floor(Number(item.qty)||1)),unitPrice:safeProductNumber(item.unitPrice),notes:safeSingleLine(item.notes,240)||undefined,courtesy:Boolean(item.courtesy)||undefined})):[],
     createdAt:String(order.createdAt||new Date().toISOString()),updatedAt:String(order.updatedAt||order.createdAt||new Date().toISOString())
   };
 }

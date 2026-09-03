@@ -1,7 +1,8 @@
 "use client";
 import Link from "next/link";
 import { useEffect,useMemo,useState } from "react";
-import { getOpenCashSession,getWorkspaceContext,loadLocalDatabase } from "@/lib/local-store";
+import { getOpenCashSession,getTenantSettings,getWorkspaceContext,loadLocalDatabase } from "@/lib/local-store";
+import { saleVisibleAfterHistoryReset } from "@/lib/sale-adjustments";
 import { PLAN_CATALOG,type CommercialPlan } from "@/lib/entitlements";
 import { lowStockThreshold } from "@/lib/recipe-inventory";
 import { KIUBO_DATA_REFRESHED } from "./RealtimeSyncRuntime";
@@ -37,7 +38,7 @@ export function DashboardClient(){
 
   const dashboard=useMemo(()=>{
     if(!db||!ctx)return null;
-    const sales=db.sales.filter(s=>s.tenantId===ctx.tenantId&&s.branchId===ctx.branchId),bounds=getPeriodBounds(range),now=new Date(),today=startOfDay(now);
+    const settings=getTenantSettings(db,ctx.tenantId),sales=db.sales.filter(s=>s.tenantId===ctx.tenantId&&s.branchId===ctx.branchId&&saleVisibleAfterHistoryReset(s,settings)),bounds=getPeriodBounds(range),now=new Date(),today=startOfDay(now);
     const inPeriod=sales.filter(s=>{const stamp=new Date(s.createdAt).getTime();return stamp>=bounds.periodStart.getTime()&&stamp<bounds.periodEnd.getTime()});
     const previous=sales.filter(s=>{const stamp=new Date(s.createdAt).getTime();return stamp>=bounds.previousStart.getTime()&&stamp<bounds.previousEnd.getTime()});
     const total=inPeriod.reduce((sum,s)=>sum+s.total,0),previousTotal=previous.reduce((sum,s)=>sum+s.total,0),trend=previousTotal>0?((total-previousTotal)/previousTotal)*100:total>0?100:0,avgTicket=inPeriod.length?total/inPeriod.length:0;
