@@ -1,0 +1,57 @@
+name: Apply YUKI UX v14
+on:
+  push:
+    branches: [feat/yuki-ux-dashboard-v14]
+permissions:
+  contents: write
+jobs:
+  apply:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feat/yuki-ux-dashboard-v14
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Apply functional UI patch
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+
+          # Dashboard: use the new interactive drill-down card instead of the static SVG.
+          p=Path('components/DashboardClient.tsx');t=p.read_text()
+          old='import { KIUBO_DATA_REFRESHED } from "./RealtimeSyncRuntime";'
+          new=old+'\nimport { DashboardSalesExplorer } from "./DashboardSalesExplorer";'
+          assert t.count(old)==1
+          t=t.replace(old,new,1)
+          t,n=re.subn(r',max=Math\.max\(1,\.\.\.dashboard\.chart\.map\(x=>x\.total\)\)', '', t, count=1)
+          assert n==1,n
+          pattern=r'<article className="ref-white-card ref-week-chart dashboard-chart-card">.*?</article>\n\n      <article className="ref-white-card dashboard-donut-card'
+          replacement='<DashboardSalesExplorer sales={dashboard.sales}/>\n\n      <article className="ref-white-card dashboard-donut-card'
+          t,n=re.subn(pattern,replacement,t,count=1,flags=re.S)
+          assert n==1,n
+          p.write_text(t)
+
+          # POS: make native desktop drag/drop reliable by carrying the category in DataTransfer.
+          p=Path('components/PosClientPro.tsx');t=p.read_text()
+          old='onDragStart={()=>{if(item!=="Todos")setDragCategory(item)}} onDragOver={event=>{if(item!=="Todos"){event.preventDefault();setDragOverCategory(item)}}} onDrop={event=>{event.preventDefault();moveCategory(dragCategory,item)}} onDragEnd={()=>{setDragCategory("");setDragOverCategory("")}}'
+          new='onDragStart={event=>{if(item!=="Todos"){event.dataTransfer.effectAllowed="move";event.dataTransfer.setData("text/plain",item);setDragCategory(item)}}} onDragEnter={()=>{if(item!=="Todos"&&dragCategory&&dragCategory!==item)setDragOverCategory(item)}} onDragOver={event=>{if(item!=="Todos"){event.preventDefault();event.dataTransfer.dropEffect="move";setDragOverCategory(item)}}} onDrop={event=>{event.preventDefault();const source=event.dataTransfer.getData("text/plain")||dragCategory;moveCategory(source,item)}} onDragEnd={()=>{setDragCategory("");setDragOverCategory("")}}'
+          assert t.count(old)==1,t.count(old)
+          t=t.replace(old,new,1)
+          p.write_text(t)
+          PY
+      - run: npm install --ignore-scripts
+      - run: npm run verify
+      - run: npm run build
+      - name: Commit verified changes
+        run: |
+          git config user.name "kiubo-automation"
+          git config user.email "actions@users.noreply.github.com"
+          git add components/DashboardClient.tsx components/PosClientPro.tsx
+          git diff --cached --quiet && exit 0
+          git commit -m "feat: polish checkout category ordering and dashboard drilldown"
+          git push origin HEAD:feat/yuki-ux-dashboard-v14
