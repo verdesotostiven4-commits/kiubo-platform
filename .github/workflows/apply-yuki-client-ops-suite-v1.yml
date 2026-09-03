@@ -23,6 +23,9 @@ jobs:
         with:
           node-version: 22
 
+      - name: Repair patch matcher
+        run: python3 scripts/fix-yuki-client-ops-patcher.py
+
       - name: Apply patch
         run: python3 scripts/apply-yuki-client-ops-suite-v1.py
 
