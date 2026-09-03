@@ -1,0 +1,58 @@
+/* KIUBO experience v14 — compact checkout, reliable category sorting and interactive owner dashboard. */
+
+/* POS checkout: keep the entire action area visible and let only content regions scroll. */
+.restaurant-checkout.pro-checkout{display:flex!important;flex-direction:column!important;max-height:calc(100dvh - 148px)!important;min-height:620px;overflow:hidden!important;padding:18px 18px 0!important;border-radius:22px!important}
+.restaurant-checkout.pro-checkout>.pro-cart-head{flex:0 0 auto;margin-bottom:6px!important}
+.restaurant-checkout.pro-checkout>.checkout-customer-block{flex:0 0 auto;max-height:210px;overflow:auto;overscroll-behavior:contain;padding-right:2px}
+.restaurant-checkout.pro-checkout>.pro-cart-lines{flex:1 1 180px!important;min-height:72px!important;max-height:none!important;overflow:auto!important;padding-right:3px;margin-top:7px}
+.restaurant-checkout.pro-checkout .order-note-wrap{margin-top:6px!important}
+.restaurant-checkout.pro-checkout .order-note-wrap input{min-height:40px!important}
+.restaurant-checkout.pro-checkout .credit-checkout{max-height:176px!important;overflow:auto!important;padding:12px!important}
+.restaurant-checkout.pro-checkout .credit-balance-card small{display:none}
+.restaurant-checkout.pro-checkout .pos-adjustments{flex:0 0 auto;gap:6px!important;padding:8px 0!important}
+.restaurant-checkout.pro-checkout .pos-adjustments-head span{font-size:9px!important}
+.restaurant-checkout.pro-checkout .pos-discount-row{gap:5px!important;flex-wrap:nowrap!important;overflow-x:auto;padding-bottom:2px;scrollbar-width:none}
+.restaurant-checkout.pro-checkout .pos-discount-row::-webkit-scrollbar{display:none}
+.restaurant-checkout.pro-checkout .pos-discount-row button{flex:0 0 auto;padding:6px 9px!important}
+.restaurant-checkout.pro-checkout .pos-discount-custom{flex:0 0 70px!important}
+.restaurant-checkout.pro-checkout .pro-checkout-summary{flex:0 0 auto;margin-top:0!important;padding:9px 0!important}
+.restaurant-checkout.pro-checkout .pro-checkout-summary>div:not(.cart-total){min-height:22px!important}
+.restaurant-checkout.pro-checkout .cart-total{padding-top:8px!important;margin-top:4px!important}
+.restaurant-checkout.pro-checkout .cart-total strong{font-size:32px!important;line-height:1!important}
+.restaurant-checkout.pro-checkout .pro-payment-grid{flex:0 0 auto;grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:7px!important;margin:7px 0!important}
+.restaurant-checkout.pro-checkout .pro-payment-grid button{min-height:42px!important;padding:8px!important}
+.restaurant-checkout.pro-checkout .pos-cash-received{flex:0 0 auto;margin-top:4px!important;padding:8px!important;gap:6px!important}
+.restaurant-checkout.pro-checkout .pos-cash-received input{padding:7px 9px!important;font-size:13px!important}
+.restaurant-checkout.pro-checkout .pos-change{padding:6px 9px!important}
+.restaurant-checkout.pro-checkout .pos-change strong{font-size:16px!important}
+.restaurant-checkout.pro-checkout .pos-checkout-footer{flex:0 0 auto;position:relative!important;bottom:auto!important;z-index:10;margin:8px -18px 0!important;padding:10px 18px 14px!important;background:#fff!important;box-shadow:0 -10px 28px rgba(22,63,49,.07);border-top:1px solid #e7eeea!important}
+.restaurant-checkout.pro-checkout .pos-checkout-footer .checkout{min-height:48px!important;margin-top:6px!important}
+.restaurant-checkout.pro-checkout .pos-checkout-footer .cart-note{display:none!important}
+.restaurant-checkout.pro-checkout .hold-order{min-height:44px!important}
+.restaurant-checkout.pro-checkout .internal-sale-banner{padding:7px 10px!important;font-size:10px!important}
+
+/* Category strip: make drag intent obvious without wasting horizontal space. */
+.category-strip{overflow-x:auto!important;overflow-y:hidden!important;scrollbar-width:none;gap:7px!important;padding-bottom:5px!important}
+.category-strip::-webkit-scrollbar{display:none}
+.category-strip button[draggable="true"]{user-select:none;-webkit-user-drag:element;touch-action:pan-x;cursor:grab!important;transition:transform .14s ease,box-shadow .14s ease,border-color .14s ease!important}
+.category-strip button[draggable="true"]:active{cursor:grabbing!important}
+.category-strip button.category-dragging{opacity:.55!important;transform:scale(.96)!important;box-shadow:0 8px 18px rgba(24,75,56,.12)!important}
+.category-strip button.category-drop-target{outline:0!important;border-color:#1d7b57!important;box-shadow:0 0 0 3px rgba(29,123,87,.12)!important;transform:translateY(-2px)!important}
+.category-order-hint{display:none!important}
+
+/* Owner dashboard explorer. */
+.dashboard-explorer{position:relative;overflow:visible!important;min-height:420px!important}
+.dashboard-explorer-head{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;margin-bottom:12px}
+.dashboard-explorer-head>div:first-child{display:grid;gap:3px}.dashboard-explorer-head>div:first-child>span{font-size:10px;font-weight:900;letter-spacing:.12em;color:#74867d}.dashboard-explorer-head>div:first-child>strong{font-size:16px;color:#0d2b21;text-transform:capitalize}
+.dashboard-explorer-modes{display:flex;gap:5px;flex-wrap:wrap;justify-content:flex-end}.dashboard-explorer-modes button{border:1px solid #dde7e2;background:#f8faf9;color:#52675d;border-radius:9px;padding:6px 9px;font-size:10px;font-weight:900;cursor:pointer}.dashboard-explorer-modes button.active{background:#173f32;color:#fff;border-color:#173f32}
+.dashboard-explorer-toolbar{display:flex;align-items:center;gap:7px;padding:9px 10px;border:1px solid #e1e9e5;background:#fbfcfc;border-radius:13px;margin-bottom:12px}.dashboard-explorer-toolbar>button{border:1px solid #dce6e1;background:#fff;border-radius:9px;width:34px;height:34px;font-size:20px;cursor:pointer;color:#274b3c}.dashboard-explorer-toolbar input{border:1px solid #dce6e1;background:#fff;border-radius:9px;height:34px;padding:0 9px;font:inherit;color:#203a30}.dashboard-explorer-toolbar label{display:flex;align-items:center;gap:5px;font-size:9px;font-weight:900;color:#708078}.dashboard-explorer-total{margin-left:auto;text-align:right;display:grid}.dashboard-explorer-total strong{font-size:20px;color:#0e3024}.dashboard-explorer-total span{font-size:9px;color:#7d8b84}
+.dashboard-bars-scroll{overflow-x:auto;overflow-y:hidden;padding:2px 0 5px;scrollbar-width:thin}.dashboard-bars{display:flex;align-items:stretch;gap:4px;height:245px;padding:10px 2px 0}.dashboard-bars>button{flex:1 0 42px;min-width:42px;border:0;background:transparent;display:grid;grid-template-rows:28px 1fr 24px;align-items:end;gap:4px;padding:0 2px;cursor:pointer;border-radius:10px}.dashboard-bars>button:hover,.dashboard-bars>button.active{background:#f4f8f6}.dashboard-bar-value{font-size:8px;font-weight:900;color:#63776d;align-self:end;white-space:nowrap}.dashboard-bars i{position:relative;display:block;height:100%;width:100%;background:linear-gradient(180deg,#f5f8f6,#fbfcfb);border-radius:9px 9px 4px 4px;overflow:hidden}.dashboard-bars i b{position:absolute;left:17%;right:17%;bottom:0;background:linear-gradient(180deg,#248761,#145f44);border-radius:7px 7px 3px 3px;min-height:2px;transition:height .22s ease}.dashboard-bars>button:hover i b,.dashboard-bars>button.active i b{background:linear-gradient(180deg,#31a778,#176c4d)}.dashboard-bars small{font-size:8px;color:#7a8982;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-align:center;align-self:start}
+.dashboard-explorer-foot{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:4px;font-size:9px;color:#7b8c83}.dashboard-explorer-foot a{font-weight:900;color:#176a4a;text-decoration:none}
+.dashboard-drilldown-backdrop{position:fixed;inset:0;z-index:9999;background:rgba(8,29,21,.28);backdrop-filter:blur(3px);display:grid;place-items:center;padding:22px}.dashboard-drilldown{position:relative;width:min(620px,94vw);max-height:min(700px,88vh);overflow:auto;background:#fff;border:1px solid #dde7e2;border-radius:22px;box-shadow:0 28px 80px rgba(10,39,28,.22);padding:22px}.dashboard-drilldown-close{position:absolute;right:14px;top:14px;width:34px;height:34px;border:1px solid #dde7e2;background:#f8faf9;border-radius:10px;font-size:20px;cursor:pointer}.dashboard-drilldown-title{display:grid;gap:5px;padding-right:48px;margin-bottom:14px}.dashboard-drilldown-title>span{font-size:9px;font-weight:950;letter-spacing:.13em;color:#74877d}.dashboard-drilldown-title h3{margin:0;font-size:22px;text-transform:capitalize}.dashboard-drilldown-title>div{display:flex;align-items:baseline;gap:9px}.dashboard-drilldown-title>div strong{font-size:26px;color:#173f32}.dashboard-drilldown-title>div small{color:#75857d}.dashboard-drilldown-list{display:grid;gap:7px}.dashboard-drilldown-list article{display:grid;grid-template-columns:1fr auto;gap:3px 12px;border:1px solid #e3ebe7;border-radius:12px;padding:10px 12px;background:#fbfcfc}.dashboard-drilldown-list article>div{display:flex;gap:8px;align-items:center}.dashboard-drilldown-list article>div span{font-size:9px;color:#75857d}.dashboard-drilldown-list article>b{font-size:14px;color:#193f31}.dashboard-drilldown-list article>small{grid-column:1/-1;color:#6f8077;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.dashboard-drilldown-empty{padding:28px;text-align:center;color:#78877f;background:#f7f9f8;border-radius:12px}
+
+/* Authorization code settings. */
+.admin-pin-panel{margin-top:18px}.admin-pin-form{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr) auto;gap:10px;align-items:end}.admin-pin-form label{display:grid;gap:5px;font-size:10px;font-weight:900;color:#65766e}.admin-pin-form input{height:42px;border:1px solid #dce6e1;border-radius:10px;padding:0 11px;font:inherit;background:#fff}.admin-pin-form button{height:42px}.admin-pin-status{margin-top:9px;padding:8px 10px;border-radius:9px;background:#eef7f2;color:#2f664f;font-size:11px;font-weight:800}
+
+@media(max-height:800px) and (min-width:1001px){.restaurant-checkout.pro-checkout{max-height:calc(100dvh - 112px)!important;min-height:0!important;overflow:auto!important}.restaurant-checkout.pro-checkout>.pro-cart-lines{flex:0 0 110px!important}.restaurant-checkout.pro-checkout .pos-checkout-footer{position:sticky!important;bottom:0!important}}
+@media(max-width:1100px){.restaurant-checkout.pro-checkout{max-height:none!important;min-height:0!important;overflow:visible!important;padding:16px!important}.restaurant-checkout.pro-checkout>.pro-cart-lines{max-height:300px!important}.restaurant-checkout.pro-checkout .pos-checkout-footer{position:sticky!important;bottom:0!important;margin-left:-16px!important;margin-right:-16px!important;padding-left:16px!important;padding-right:16px!important}.dashboard-explorer-head{flex-direction:column}.dashboard-explorer-modes{justify-content:flex-start}.admin-pin-form{grid-template-columns:1fr 1fr}.admin-pin-form button{grid-column:1/-1}}
+@media(max-width:650px){.dashboard-explorer-toolbar{flex-wrap:wrap}.dashboard-explorer-total{width:100%;margin-left:0;text-align:left;display:flex;gap:8px;align-items:baseline}.dashboard-drilldown{padding:18px}.admin-pin-form{grid-template-columns:1fr}}
