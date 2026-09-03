@@ -40,3 +40,16 @@ export function operationalDiscountAmount(unitPrice:number,qty:number,percent:nu
   const net=Math.max(0,unitPrice)*Math.max(0,qty),base=net/(1-discount/100);
   return roundMoney(Math.max(0,base-net));
 }
+
+type SalesHistoryResetSettings={salesHistoryResetAtByBranch?:Record<string,string>};
+
+export function historyResetAtForBranch(settings:unknown,branchId:string){
+  const reset=(settings as SalesHistoryResetSettings|undefined)?.salesHistoryResetAtByBranch?.[branchId]||"";
+  const parsed=Date.parse(reset);
+  return Number.isFinite(parsed)?parsed:0;
+}
+
+export function saleVisibleAfterHistoryReset(sale:{branchId:string;createdAt:string},settings:unknown){
+  const cutoff=historyResetAtForBranch(settings,sale.branchId),created=Date.parse(sale.createdAt);
+  return !cutoff||!Number.isFinite(created)||created>=cutoff;
+}
