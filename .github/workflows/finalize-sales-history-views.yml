@@ -30,7 +30,7 @@ jobs:
           r('components/DashboardClient.tsx','const sales=db.sales.filter(s=>s.tenantId===ctx.tenantId&&s.branchId===ctx.branchId),bounds=','const settings=getTenantSettings(db,ctx.tenantId),sales=db.sales.filter(s=>s.tenantId===ctx.tenantId&&s.branchId===ctx.branchId&&saleVisibleAfterHistoryReset(s,settings)),bounds=')
           r('components/YukiFlavorAnalytics.tsx','import { getWorkspaceContext,loadLocalDatabase } from "@/lib/local-store";','import { getTenantSettings,getWorkspaceContext,loadLocalDatabase } from "@/lib/local-store";\nimport { saleVisibleAfterHistoryReset } from "@/lib/sale-adjustments";')
           r('components/YukiFlavorAnalytics.tsx','const start=periodStart(range),counts=','const settings=getTenantSettings(db,ctx.tenantId),start=periodStart(range),counts=')
-          r('components/YukiFlavorAnalytics.tsx','sale.branchId!==ctx.branchId||saleLifecycle(sale)!==="completed"','sale.branchId!==ctx.branchId||!saleVisibleAfterHistoryReset(sale,settings)||saleLifecycle(sale)!==="completed"')
+          r('components/YukiFlavorAnalytics.tsx','||Date.parse(sale.createdAt)<start)continue;','||!saleVisibleAfterHistoryReset(sale,settings)||Date.parse(sale.createdAt)<start)continue;')
           PY
       - run: npm install --ignore-scripts
       - run: npm run verify
