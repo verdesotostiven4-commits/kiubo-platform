@@ -2,6 +2,7 @@
 
 import { FormEvent,useEffect,useState } from "react";
 import { getTenantSettings,getWorkspaceContext,loadLocalDatabase,saveLocalDatabase,type KiuboLocalDatabase } from "@/lib/local-store";
+import { AdminPinManager } from "./AdminPinManager";
 import { TableManager } from "./TableManager";
 
 type FoodOrderWorkflow="simple"|"kitchen";
@@ -65,6 +66,7 @@ export function BusinessAdminClient(){
       <button className="button primary" type="submit">Guardar configuración</button>
       <small className="ops-note">Los cambios quedan vinculados al negocio activo y se sincronizan con KIUBO Cloud.</small>
     </form>
+    <AdminPinManager/>
     <TableManager/>
   </>;
 }
