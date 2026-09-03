@@ -1,0 +1,45 @@
+name: Finalize sales history views
+on:
+  push:
+    branches: [feat/yuki-client-ops-suite-v1]
+permissions:
+  contents: write
+jobs:
+  finalize:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feat/yuki-client-ops-suite-v1
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Apply safe history visibility
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          def r(path,a,b):
+            p=Path(path);t=p.read_text();assert t.count(a)==1,(path,a,t.count(a));p.write_text(t.replace(a,b,1))
+          r('components/ReportsClientPro.tsx','import { SaleRecord,getWorkspaceContext,loadLocalDatabase,saveLocalDatabase } from "@/lib/local-store";','import { SaleRecord,getTenantSettings,getWorkspaceContext,loadLocalDatabase,saveLocalDatabase } from "@/lib/local-store";\nimport { saleVisibleAfterHistoryReset } from "@/lib/sale-adjustments";')
+          r('components/ReportsClientPro.tsx','const ctx=getWorkspaceContext(db),canConsolidate=','const ctx=getWorkspaceContext(db),settings=getTenantSettings(db,ctx.tenantId),canConsolidate=')
+          r('components/ReportsClientPro.tsx','const saleHistory=db.sales.filter(s=>s.tenantId===ctx.tenantId&&branchAllowed(s.branchId)&&inPeriod(s.createdAt))','const saleHistory=db.sales.filter(s=>s.tenantId===ctx.tenantId&&branchAllowed(s.branchId)&&saleVisibleAfterHistoryReset(s,settings)&&inPeriod(s.createdAt))')
+          r('components/ReportsClientPro.tsx','const branchSales=db.sales.filter(s=>s.tenantId===ctx.tenantId&&s.branchId===branch.id&&inPeriod(s.createdAt)&&saleLifecycle(s)==="completed")','const branchSales=db.sales.filter(s=>s.tenantId===ctx.tenantId&&s.branchId===branch.id&&saleVisibleAfterHistoryReset(s,settings)&&inPeriod(s.createdAt)&&saleLifecycle(s)==="completed")')
+          r('components/DashboardClient.tsx','import { getOpenCashSession,getWorkspaceContext,loadLocalDatabase } from "@/lib/local-store";','import { getOpenCashSession,getTenantSettings,getWorkspaceContext,loadLocalDatabase } from "@/lib/local-store";\nimport { saleVisibleAfterHistoryReset } from "@/lib/sale-adjustments";')
+          r('components/DashboardClient.tsx','const sales=db.sales.filter(s=>s.tenantId===ctx.tenantId&&s.branchId===ctx.branchId),bounds=','const settings=getTenantSettings(db,ctx.tenantId),sales=db.sales.filter(s=>s.tenantId===ctx.tenantId&&s.branchId===ctx.branchId&&saleVisibleAfterHistoryReset(s,settings)),bounds=')
+          r('components/YukiFlavorAnalytics.tsx','import { getWorkspaceContext,loadLocalDatabase } from "@/lib/local-store";','import { getTenantSettings,getWorkspaceContext,loadLocalDatabase } from "@/lib/local-store";\nimport { saleVisibleAfterHistoryReset } from "@/lib/sale-adjustments";')
+          r('components/YukiFlavorAnalytics.tsx','const start=periodStart(range),counts=','const settings=getTenantSettings(db,ctx.tenantId),start=periodStart(range),counts=')
+          r('components/YukiFlavorAnalytics.tsx','sale.branchId!==ctx.branchId||saleLifecycle(sale)!==="completed"','sale.branchId!==ctx.branchId||!saleVisibleAfterHistoryReset(sale,settings)||saleLifecycle(sale)!==="completed"')
+          PY
+      - run: npm install --ignore-scripts
+      - run: npm run verify
+      - run: npm run build
+      - name: Commit
+        run: |
+          git config user.name "kiubo-automation"
+          git config user.email "actions@users.noreply.github.com"
+          git add components/ReportsClientPro.tsx components/DashboardClient.tsx components/YukiFlavorAnalytics.tsx
+          git diff --cached --quiet && exit 0
+          git commit -m "fix: honor sales reset across business views"
+          git push origin HEAD:feat/yuki-client-ops-suite-v1
