@@ -1,9 +1,9 @@
 "use client";
 
 import { useEffect,useMemo,useState } from "react";
-import { getWorkspaceContext,loadLocalDatabase,saveLocalDatabase,type SaleRecord } from "@/lib/local-store";
+import { getTenantSettings,getWorkspaceContext,loadLocalDatabase,saveLocalDatabase,type SaleRecord } from "@/lib/local-store";
 import { saleLifecycle } from "@/lib/sale-reversal";
-import { operationalDiscountAmount,parseOperationalItemName } from "@/lib/sale-adjustments";
+import { operationalDiscountAmount,parseOperationalItemName,saleVisibleAfterHistoryReset } from "@/lib/sale-adjustments";
 import { runSyncCycle } from "@/lib/sync-engine";
 import { KIUBO_DATA_REFRESHED } from "./RealtimeSyncRuntime";
 import styles from "./OperationalSalesInsights.module.css";
@@ -13,6 +13,7 @@ const paymentLabel:Record<SaleRecord["payment"],string>={cash:"Efectivo",transfe
 const localDate=(value:Date)=>`${value.getFullYear()}-${String(value.getMonth()+1).padStart(2,"0")}-${String(value.getDate()).padStart(2,"0")}`;
 const saleDay=(iso:string)=>localDate(new Date(iso));
 const currentMonth=()=>localDate(new Date()).slice(0,7);
+type ResettableSettings=ReturnType<typeof getTenantSettings>&{salesHistoryResetAtByBranch?:Record<string,string>};
 
 function saleFlags(sale:SaleRecord){
   const parsed=sale.items.map(item=>({...item,meta:parseOperationalItemName(item.name)}));
@@ -35,7 +36,7 @@ export function OperationalSalesInsights(){
 
   const data=useMemo(()=>{
     if(!db)return null;
-    const ctx=getWorkspaceContext(db),branchSales=db.sales.filter(s=>s.tenantId===ctx.tenantId&&s.branchId===ctx.branchId),completed=branchSales.filter(s=>saleLifecycle(s)==="completed");
+    const ctx=getWorkspaceContext(db),settings=getTenantSettings(db,ctx.tenantId),branchSales=db.sales.filter(s=>s.tenantId===ctx.tenantId&&s.branchId===ctx.branchId&&saleVisibleAfterHistoryReset(s,settings)),completed=branchSales.filter(s=>saleLifecycle(s)==="completed");
     const monthSales=completed.filter(s=>saleDay(s.createdAt).startsWith(month));
     const courtesyMap=new Map<string,number>(),internalMap=new Map<string,number>();let courtesyUnits=0,internalUnits=0,discountAmount=0,discountedSales=0;
     for(const sale of monthSales){const flags=saleFlags(sale);courtesyUnits+=flags.courtesy;internalUnits+=flags.internal;discountAmount+=flags.discount;if(flags.discount>0)discountedSales++;
@@ -54,15 +55,14 @@ export function OperationalSalesInsights(){
     if(resetBusy||!canReset)return;const code=resetCode.trim();if(!code){setResetMessage("Escribe el código de administrador.");return}
     const current=loadLocalDatabase(),ctx=getWorkspaceContext(current),authorized=current.users.some(user=>user.active&&user.tenantId===ctx.tenantId&&(user.role==="owner"||user.role==="admin"||user.platformAdmin)&&user.pin===code);
     if(!authorized){setResetMessage("Código incorrecto.");return}
-    const targets=current.sales.filter(s=>s.tenantId===ctx.tenantId&&s.branchId===ctx.branchId);if(!targets.length){setResetMessage("El historial ya está vacío.");return}
+    const currentSettings=getTenantSettings(current,ctx.tenantId),visibleCount=current.sales.filter(s=>s.tenantId===ctx.tenantId&&s.branchId===ctx.branchId&&saleVisibleAfterHistoryReset(s,currentSettings)).length;if(!visibleCount){setResetMessage("El historial ya está vacío.");return}
     setResetBusy(true);setResetMessage("Verificando sincronización…");
     try{
       const before=await runSyncCycle();if(before.mode==="supabase"&&!before.ok&&before.failed>0){setResetMessage("Hay cambios pendientes. Espera a que KIUBO termine de sincronizar y vuelve a intentar.");return}
-      const next=loadLocalDatabase(),workspace=getWorkspaceContext(next),targetIds=new Set(next.sales.filter(s=>s.tenantId===workspace.tenantId&&s.branchId===workspace.branchId).map(s=>s.id));
-      next.syncQueue=next.syncQueue.filter(item=>!(item.tenantId===workspace.tenantId&&item.branchId===workspace.branchId&&targetIds.has(item.entityId)&&(item.entityType==="saleTransactions"||item.entityType==="saleReversalTransactions")&&item.status!=="synced"));
-      next.sales=next.sales.filter(s=>!(s.tenantId===workspace.tenantId&&s.branchId===workspace.branchId));
-      saveLocalDatabase(next);const after=await runSyncCycle();refresh();window.dispatchEvent(new CustomEvent(KIUBO_DATA_REFRESHED,{detail:{source:"sales-history-reset"}}));
-      setResetCode("");setResetOpen(false);setResetMessage(after.ok?`Historial reiniciado · ${targetIds.size} ventas eliminadas.`:"Historial vaciado; KIUBO terminará de sincronizar automáticamente.");
+      const next=loadLocalDatabase(),workspace=getWorkspaceContext(next),settings=getTenantSettings(next,workspace.tenantId) as ResettableSettings,now=new Date().toISOString(),history={...(settings.salesHistoryResetAtByBranch||{}),[workspace.branchId]:now},updated={...settings,salesHistoryResetAtByBranch:history} as ResettableSettings;
+      next.settings=next.settings.filter(item=>item.tenantId!==workspace.tenantId);next.settings.push(updated);saveLocalDatabase(next);
+      const after=await runSyncCycle();refresh();window.dispatchEvent(new CustomEvent(KIUBO_DATA_REFRESHED,{detail:{source:"sales-history-reset"}}));
+      setResetCode("");setResetOpen(true);setResetMessage(after.ok?`Historial reiniciado · ${visibleCount} ventas anteriores quedaron archivadas.`:"Historial reiniciado; KIUBO terminará de sincronizar el corte automáticamente.");
     }finally{setResetBusy(false)}
   };
 
@@ -78,7 +78,7 @@ export function OperationalSalesInsights(){
       <div className={styles.stats}><div className={styles.stat}><span>Cortesías</span><strong>{data.courtesyUnits}</strong></div><div className={styles.stat}><span>Ventas con descuento</span><strong>{data.discountedSales}</strong></div><div className={styles.stat}><span>Descuento aplicado</span><strong>{money(data.discountAmount)}</strong></div><div className={styles.stat}><span>Consumo interno</span><strong>{data.internalUnits}</strong></div></div>
       <div className={styles.columns}><div className={styles.mini}><div className={styles.miniHead}><strong>Productos de cortesía</strong><b>{data.courtesyUnits} u.</b></div>{data.courtesy.length?<div className={styles.list}>{data.courtesy.slice(0,12).map(([name,qty])=><div className={styles.row} key={name}><span>{name}</span><b>{qty} u.</b></div>)}</div>:<div className={styles.empty}>Sin cortesías este mes.</div>}</div><div className={styles.mini}><div className={styles.miniHead}><strong>Consumo del local</strong><b>{data.internalUnits} u.</b></div>{data.internal.length?<div className={styles.list}>{data.internal.slice(0,12).map(([name,qty])=><div className={styles.row} key={name}><span>{name}</span><b>{qty} u.</b></div>)}</div>:<div className={styles.empty}>Sin consumo interno este mes.</div>}</div></div>
 
-      {canReset&&<details className={styles.tools} open={resetOpen} onToggle={e=>setResetOpen((e.currentTarget as HTMLDetailsElement).open)}><summary>Herramientas de historial</summary><div className={styles.dangerBox}><strong>Reiniciar historial de ventas</strong><p>Vacía únicamente las ventas de esta sucursal. No cambia inventario, productos, clientes ni caja. Requiere código de propietario/administrador.</p><div className={styles.dangerForm}><input type="password" inputMode="numeric" value={resetCode} onChange={e=>setResetCode(e.target.value)} placeholder="Código" autoComplete="off"/><button type="button" disabled={resetBusy||!data.branchSales.length} onClick={()=>void resetSales()}>{resetBusy?"Verificando…":"Reiniciar"}</button></div>{resetMessage&&<div className={styles.status}>{resetMessage}</div>}</div></details>}
+      {canReset&&<details className={styles.tools} open={resetOpen} onToggle={e=>setResetOpen((e.currentTarget as HTMLDetailsElement).open)}><summary>Herramientas de historial</summary><div className={styles.dangerBox}><strong>Reiniciar historial de ventas</strong><p>Inicia un historial nuevo para esta sucursal. Las ventas anteriores quedan archivadas de forma segura y no cambian inventario, productos, clientes ni caja. Requiere código de propietario/administrador.</p><div className={styles.dangerForm}><input type="password" inputMode="numeric" value={resetCode} onChange={e=>setResetCode(e.target.value)} placeholder="Código" autoComplete="off"/><button type="button" disabled={resetBusy||!data.branchSales.length} onClick={()=>void resetSales()}>{resetBusy?"Verificando…":"Reiniciar"}</button></div>{resetMessage&&<div className={styles.status}>{resetMessage}</div>}</div></details>}
     </article>
   </section>;
 }
