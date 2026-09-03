@@ -3,7 +3,7 @@ window.KIUBO_CATALOG_CONFIG = Object.freeze({
   publishableKey: "sb_publishable_hnsAgTsI1c_wErMMwAYwMQ_crWdOBpT",
   apiUrl: "https://hysrlckmnzlmscwwbibn.supabase.co/functions/v1/catalog-router",
   defaultSlug: "hakuna-matata",
-  version: "4.7.0"
+  version: "5.0.0"
 });
 
 (() => {
@@ -29,6 +29,7 @@ window.KIUBO_CATALOG_CONFIG = Object.freeze({
   addStyle("/ux-v4.5.css?v=4.7.0", "catalog-ux");
   addStyle("/inventory-v4.6.css?v=4.7.0", "catalog-inventory");
   addStyle("/brands-v4.7.css?v=4.7.0", "catalog-brands");
+  addStyle("/orders-v5.css?v=5.0.0", "catalog-order-status");
   addScript("/inventory-v4.6.js?v=4.7.0", "catalog-inventory-runtime");
   addScript("/brands-v4.7.js?v=4.7.0", "catalog-brands-runtime");
   addScript("/organization-v4.8.js?v=4.8.0", "catalog-section-runtime");
@@ -249,6 +250,92 @@ window.KIUBO_CATALOG_CONFIG = Object.freeze({
     });
   };
 
+  const orderStatusMeta = status => ({
+    new: ["Pedido recibido", "ya recibimos tu pedido y quedó registrado. Lo revisaremos enseguida."],
+    confirmed: ["Pedido confirmado", "tu pedido ya fue confirmado y quedó listo para continuar con la preparación."],
+    preparing: ["Preparando pedido", "ya estamos preparando tu pedido."],
+    dispatched: ["Pedido despachado", "tu pedido ya fue despachado y está en camino o listo para la coordinación acordada."],
+    delivered: ["Pedido entregado", "tu pedido figura como entregado. ¡Gracias por tu compra!"],
+    cancelled: ["Pedido cancelado", "tu pedido fue cancelado. Si necesitas ayuda, escríbenos y lo revisamos contigo."]
+  }[status] || ["Actualización del pedido", "tenemos una actualización de tu pedido."]);
+
+  const orderTrackingUrl = order => order?.public_token
+    ? `${location.origin}/pedido?ref=${encodeURIComponent(order.public_token)}`
+    : "";
+
+  const customerStatusMessage = order => {
+    const [, copy] = orderStatusMeta(order?.status);
+    const contact = String(order?.customer_name || order?.customer_business || "").trim().split(/\s+/)[0];
+    const greeting = contact ? `Hola ${contact},` : "Hola,";
+    const tracking = orderTrackingUrl(order);
+    return `${greeting} ${copy}\n\nPedido: ${order?.order_number || ""}${tracking ? `\nSeguimiento: ${tracking}` : ""}`.trim();
+  };
+
+  const customerWhatsappUrl = order => {
+    const phone = String(order?.customer_phone || "").replace(/\D/g, "");
+    if (!phone) return "";
+    const normalized = phone.startsWith("0") ? `593${phone.slice(1)}` : phone.length === 9 ? `593${phone}` : phone;
+    return `https://wa.me/${normalized}?text=${encodeURIComponent(customerStatusMessage(order))}`;
+  };
+
+  const enhanceProviderOrderNotification = () => {
+    const title = document.querySelector("#orderModalTitle")?.textContent?.trim();
+    const content = document.querySelector("#orderModalContent");
+    if (!title || !content) return;
+    const order = runtime.orders.find(item => String(item.order_number || "") === title);
+    if (!order) return;
+
+    const actions = content.querySelector(".order-detail-actions");
+    if (!actions) return;
+    const whatsappButton = actions.querySelector('a[href^="https://wa.me/"]');
+    const whatsappUrl = customerWhatsappUrl(order);
+    if (whatsappButton && whatsappUrl) {
+      whatsappButton.href = whatsappUrl;
+      whatsappButton.innerHTML = `<svg class="icon"><use href="#i-message"/></svg>Avisar al cliente`;
+    }
+
+    let card = content.querySelector(".order-customer-notice");
+    if (!card) {
+      card = document.createElement("section");
+      card.className = "order-customer-notice";
+      actions.before(card);
+    }
+    const [label] = orderStatusMeta(order.status);
+    const message = customerStatusMessage(order);
+    const tracking = orderTrackingUrl(order);
+    card.replaceChildren();
+
+    const head = document.createElement("div");
+    head.className = "order-customer-notice__head";
+    const headTitle = document.createElement("span");
+    headTitle.textContent = "AVISO AL CLIENTE";
+    const status = document.createElement("span");
+    status.className = "order-customer-notice__status";
+    status.textContent = label;
+    head.append(headTitle, status);
+
+    const copy = document.createElement("p");
+    copy.className = "order-customer-notice__message";
+    copy.textContent = message.replace(/\n+/g, " ");
+
+    const foot = document.createElement("div");
+    foot.className = "order-customer-notice__foot";
+    const trackingNode = document.createElement("span");
+    trackingNode.className = "order-customer-notice__tracking";
+    trackingNode.textContent = tracking ? "Incluye enlace de seguimiento" : "Mensaje preparado según el estado";
+    foot.append(trackingNode);
+    if (whatsappUrl) {
+      const send = document.createElement("a");
+      send.className = "button button--primary";
+      send.href = whatsappUrl;
+      send.target = "_blank";
+      send.rel = "noopener";
+      send.textContent = `Enviar: ${label}`;
+      foot.append(send);
+    }
+    card.append(head, copy, foot);
+  };
+
   const enhanceUploadGuidance = () => {
     const input = document.querySelector("#productImage");
     const label = input?.closest("label");
@@ -315,6 +402,7 @@ window.KIUBO_CATALOG_CONFIG = Object.freeze({
     enhanceReview();
     enhanceCheckout();
     injectProviderNotes();
+    enhanceProviderOrderNotification();
     enhanceUploadGuidance();
     enhanceSheets();
   };
