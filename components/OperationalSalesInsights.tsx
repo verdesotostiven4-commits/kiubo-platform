@@ -6,7 +6,6 @@ import { saleLifecycle } from "@/lib/sale-reversal";
 import { operationalDiscountAmount,parseOperationalItemName,saleVisibleAfterHistoryReset } from "@/lib/sale-adjustments";
 import { runSyncCycle } from "@/lib/sync-engine";
 import { KIUBO_DATA_REFRESHED } from "./RealtimeSyncRuntime";
-import { adminAuthorizationConfigured } from "@/lib/admin-authorization";
 import styles from "./OperationalSalesInsights.module.css";
 
 const money=(value:number)=>new Intl.NumberFormat("es-EC",{style:"currency",currency:"USD"}).format(value||0);
@@ -51,7 +50,7 @@ export function OperationalSalesInsights(){
 
   if(!db||!data)return null;
   const canReset=Boolean(data.ctx.user?.platformAdmin||data.ctx.user?.role==="owner"||data.ctx.user?.role==="admin");
-  const resetConfigured=canReset&&adminAuthorizationConfigured(data.ctx.tenantId,data.ctx.user?.id);
+  const resetConfigured=canReset&&Boolean(data.ctx.user?.pin&&data.ctx.user.pin!=="1234");
 
   const resetSales=async()=>{
     if(resetBusy||!canReset)return;if(!resetConfigured){setResetMessage("Primero configura tu propio código de autorización.");return}const code=resetCode.trim();if(!code){setResetMessage("Escribe tu código de autorización.");return}
@@ -80,7 +79,7 @@ export function OperationalSalesInsights(){
       <div className={styles.stats}><div className={styles.stat}><span>Cortesías</span><strong>{data.courtesyUnits}</strong></div><div className={styles.stat}><span>Ventas con descuento</span><strong>{data.discountedSales}</strong></div><div className={styles.stat}><span>Descuento aplicado</span><strong>{money(data.discountAmount)}</strong></div><div className={styles.stat}><span>Consumo interno</span><strong>{data.internalUnits}</strong></div></div>
       <div className={styles.columns}><div className={styles.mini}><div className={styles.miniHead}><strong>Productos de cortesía</strong><b>{data.courtesyUnits} u.</b></div>{data.courtesy.length?<div className={styles.list}>{data.courtesy.slice(0,12).map(([name,qty])=><div className={styles.row} key={name}><span>{name}</span><b>{qty} u.</b></div>)}</div>:<div className={styles.empty}>Sin cortesías este mes.</div>}</div><div className={styles.mini}><div className={styles.miniHead}><strong>Consumo del local</strong><b>{data.internalUnits} u.</b></div>{data.internal.length?<div className={styles.list}>{data.internal.slice(0,12).map(([name,qty])=><div className={styles.row} key={name}><span>{name}</span><b>{qty} u.</b></div>)}</div>:<div className={styles.empty}>Sin consumo interno este mes.</div>}</div></div>
 
-      {canReset&&<details className={styles.tools} open={resetOpen} onToggle={e=>setResetOpen((e.currentTarget as HTMLDetailsElement).open)}><summary>Herramientas de historial</summary><div className={styles.dangerBox}><strong>Reiniciar historial de ventas</strong><p>Inicia un historial nuevo para esta sucursal. Las ventas anteriores quedan archivadas de forma segura y no cambian inventario, productos, clientes ni caja.</p>{!resetConfigured?<div className="history-code-unconfigured"><span>No existe un código creado por ti en este equipo.</span><a href="/operations#authorization-code">Configurar código</a></div>:<div className={styles.dangerForm}><input type="password" inputMode="numeric" value={resetCode} onChange={e=>setResetCode(e.target.value)} placeholder="Tu código" autoComplete="off"/><button type="button" disabled={resetBusy||!data.branchSales.length} onClick={()=>void resetSales()}>{resetBusy?"Verificando…":"Reiniciar"}</button></div>}{resetMessage&&<div className={styles.status}>{resetMessage}</div>}</div></details>}
+      {canReset&&<details className={styles.tools} open={resetOpen} onToggle={e=>setResetOpen((e.currentTarget as HTMLDetailsElement).open)}><summary>Herramientas de historial</summary><div className={styles.dangerBox}><strong>Reiniciar historial de ventas</strong><p>Inicia un historial nuevo para esta sucursal. Las ventas anteriores quedan archivadas de forma segura y no cambian inventario, productos, clientes ni caja.</p>{!resetConfigured?<div className="history-code-unconfigured"><span>Aún no has configurado tu propio código de autorización.</span><a href="/operations#authorization-code">Configurar código</a></div>:<div className={styles.dangerForm}><input type="password" inputMode="numeric" value={resetCode} onChange={e=>setResetCode(e.target.value)} placeholder="Tu código" autoComplete="off"/><button type="button" disabled={resetBusy||!data.branchSales.length} onClick={()=>void resetSales()}>{resetBusy?"Verificando…":"Reiniciar"}</button></div>}{resetMessage&&<div className={styles.status}>{resetMessage}</div>}</div></details>}
     </article>
   </section>;
 }

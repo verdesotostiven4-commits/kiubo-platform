@@ -2,7 +2,8 @@
 import Link from "next/link";
 import { useEffect,useMemo,useState } from "react";
 import { getOpenCashSession,getTenantSettings,getWorkspaceContext,loadLocalDatabase } from "@/lib/local-store";
-import { saleVisibleAfterHistoryReset } from "@/lib/sale-adjustments";
+import { parseOperationalItemName,saleVisibleAfterHistoryReset } from "@/lib/sale-adjustments";
+import { saleLifecycle } from "@/lib/sale-reversal";
 import { PLAN_CATALOG,type CommercialPlan } from "@/lib/entitlements";
 import { lowStockThreshold } from "@/lib/recipe-inventory";
 import { KIUBO_DATA_REFRESHED } from "./RealtimeSyncRuntime";
@@ -48,12 +49,12 @@ export function DashboardClient(){
 
   const dashboard=useMemo(()=>{
     if(!db||!ctx)return null;
-    const settings=getTenantSettings(db,ctx.tenantId),sales=db.sales.filter(s=>s.tenantId===ctx.tenantId&&s.branchId===ctx.branchId&&saleVisibleAfterHistoryReset(s,settings)),bounds=getPeriodBounds(range,customFrom,customTo),now=new Date(),today=startOfDay(now);
+    const settings=getTenantSettings(db,ctx.tenantId),sales=db.sales.filter(s=>s.tenantId===ctx.tenantId&&s.branchId===ctx.branchId&&saleLifecycle(s)==="completed"&&saleVisibleAfterHistoryReset(s,settings)),bounds=getPeriodBounds(range,customFrom,customTo),now=new Date(),today=startOfDay(now);
     const inPeriod=sales.filter(s=>{const stamp=new Date(s.createdAt).getTime();return stamp>=bounds.periodStart.getTime()&&stamp<bounds.periodEnd.getTime()});
     const previous=sales.filter(s=>{const stamp=new Date(s.createdAt).getTime();return stamp>=bounds.previousStart.getTime()&&stamp<bounds.previousEnd.getTime()});
     const total=inPeriod.reduce((sum,s)=>sum+s.total,0),previousTotal=previous.reduce((sum,s)=>sum+s.total,0),trend=previousTotal>0?((total-previousTotal)/previousTotal)*100:total>0?100:0,avgTicket=inPeriod.length?total/inPeriod.length:0;
     const paymentTotals={cash:0,transfer:0,credit:0,mixed:0};for(const sale of inPeriod)paymentTotals[sale.payment]+=sale.total;
-    const sold=new Map<string,{name:string,qty:number}>();for(const sale of inPeriod)for(const item of sale.items){if(item.name==="Envase")continue;const current=sold.get(item.productId)||{name:item.name,qty:0};current.qty+=item.qty;sold.set(item.productId,current)}
+    const sold=new Map<string,{name:string,qty:number}>();for(const sale of inPeriod)for(const item of sale.items){const meta=parseOperationalItemName(item.name);if(meta.mode!=="sale"||meta.displayName==="Envase")continue;const current=sold.get(item.productId)||{name:meta.displayName,qty:0};current.qty+=item.qty;sold.set(item.productId,current)}
     const top=[...sold.values()].sort((a,b)=>b.qty-a.qty).slice(0,5);
 
     let chart:{key:string;label:string;total:number}[]=[];
@@ -80,9 +81,10 @@ export function DashboardClient(){
   const paymentGrand=Math.max(.01,Object.values(dashboard.paymentTotals).reduce((sum,value)=>sum+value,0)),cashPct=dashboard.paymentTotals.cash/paymentGrand*100,transferPct=dashboard.paymentTotals.transfer/paymentGrand*100,creditPct=dashboard.paymentTotals.credit/paymentGrand*100,mixedPct=dashboard.paymentTotals.mixed/paymentGrand*100;
   const donut=`conic-gradient(#123f31 0 ${cashPct}%, #3c82f6 ${cashPct}% ${cashPct+transferPct}%, #f4a000 ${cashPct+transferPct}% ${cashPct+transferPct+creditPct}%, #ff5b55 ${cashPct+transferPct+creditPct}% ${cashPct+transferPct+creditPct+mixedPct}%, #eef3f0 0)`;
   const payments=[{key:"cash",label:"Efectivo",amount:dashboard.paymentTotals.cash,pct:cashPct},{key:"transfer",label:"Transferencia",amount:dashboard.paymentTotals.transfer,pct:transferPct},{key:"credit",label:"Fiado",amount:dashboard.paymentTotals.credit,pct:creditPct},{key:"mixed",label:"Mixto",amount:dashboard.paymentTotals.mixed,pct:mixedPct}].filter(item=>item.amount>0||item.key!=="mixed");
-  const dominant=[...payments].sort((a,b)=>b.amount-a.amount)[0];
+  const dominant=dashboard.total>0?[...payments].sort((a,b)=>b.amount-a.amount)[0]:undefined;
   const periodLabel=range==="custom"?`${new Intl.DateTimeFormat("es-EC",{day:"2-digit",month:"short"}).format(dateFromInput(customFrom,new Date()))} – ${new Intl.DateTimeFormat("es-EC",{day:"2-digit",month:"short"}).format(dateFromInput(customTo,new Date()))}`:rangeCopy[range].title;
   const periodShort=range==="custom"?"rango elegido":rangeCopy[range].short;
+  const canManagePlan=Boolean(ctx.user?.platformAdmin||ctx.user?.role==="owner"||ctx.user?.role==="admin");
 
   return <div className="ref-business-dashboard dashboard-v3">
     <header className="ref-app-topbar"><div className="ref-app-search">⌕ <span>Buscar en KIUBO</span><kbd>Ctrl K</kbd></div><div className="ref-topbar-actions"><div className="ref-user-chip"><span>{(ctx.user?.name||"K").slice(0,1).toUpperCase()}</span><div><strong>{ctx.user?.name||"Usuario"}</strong><small>{ctx.user?.role||""}</small></div></div></div></header>
@@ -91,7 +93,7 @@ export function DashboardClient(){
 
     <section className="dashboard-period-toolbar" aria-label="Cambiar período del tablero">
       <div className="dashboard-period-copy"><span>VER RESULTADOS DE</span><strong>{periodLabel}</strong></div>
-      <div className="dashboard-range-switch dashboard-range-switch-v3">{(Object.keys(rangeCopy) as DashboardRange[]).map(key=><button key={key} aria-pressed={range===key} className={range===key?"active":""} onClick={()=>setRange(key)}><b>{rangeCopy[key].button}</b><small>{rangeCopy[key].hint}</small></button>)}</div>{range==="custom"&&<div className="dashboard-custom-range"><label>Desde<input type="date" value={customFrom} max={customTo} onChange={e=>setCustomFrom(e.target.value||customFrom)}/></label><label>Hasta<input type="date" value={customTo} min={customFrom} max={localDate(new Date())} onChange={e=>setCustomTo(e.target.value||customTo)}/></label><small>Todo el tablero usa estas mismas fechas.</small></div>}
+      <div className="dashboard-range-switch dashboard-range-switch-v3">{(Object.keys(rangeCopy) as DashboardRange[]).map(key=><button key={key} aria-pressed={range===key} className={range===key?"active":""} onClick={()=>setRange(key)}><b>{rangeCopy[key].button}</b><small>{rangeCopy[key].hint}</small></button>)}</div>{range==="custom"&&<div className="dashboard-custom-range"><label>Desde<input type="date" value={customFrom} max={customTo} onChange={e=>setCustomFrom(e.target.value||customFrom)}/></label><label>Hasta<input type="date" value={customTo} min={customFrom} max={localDate(new Date())} onChange={e=>setCustomTo(e.target.value||customTo)}/></label><small>Ventas, pagos, más vendidos y el gráfico usan estas fechas.</small></div>}
     </section>
 
     <section className="dashboard-period-insights dashboard-range-enter" key={`insights-${range}`}>
@@ -111,6 +113,6 @@ export function DashboardClient(){
 
     <section className="ref-dashboard-secondary dashboard-secondary-v2"><article className="ref-white-card"><div className="ref-card-title"><div><span className="danger-text">Stock bajo</span><small>Atención de inventario</small></div><Link href="/inventory">Ver inventario</Link></div><div className="ref-stock-list">{low.slice(0,4).map(p=><div key={p.id}><span>{p.name}</span><b>{p.stock} unidades</b></div>)}{!low.length&&<div><span>Inventario saludable</span><b className="ok-text">Sin alertas</b></div>}</div></article><article className="ref-white-card"><div className="ref-card-title"><div><span>Caja actual</span><small>{cash?"Turno abierto":"Sin turno"}</small></div><span className={`ref-status-dot ${cash?"open":""}`}>{cash?"Abierta":"Cerrada"}</span></div><div className="ref-cash-summary"><div><span>Fondo inicial</span><strong>{money(cash?.openingAmount||0)}</strong></div><div><span>Ventas en efectivo</span><strong>{money(cashSales)}</strong></div><div><span>Transferencias</span><strong>{money(transferSales)}</strong></div><div className="total"><span>Total vendido hoy</span><strong>{money(todayTotal)}</strong></div></div><Link href="/cash" className="button ref-outline-button">Ir a caja</Link></article><article className="ref-white-card ref-quick-card"><div className="ref-card-title"><div><span>Acciones rápidas</span><small>Un toque y listo</small></div></div><div className="ref-quick-actions"><Link href="/pos"><i className="blue">▣</i><span>Nueva venta</span></Link><Link href="/orders"><i className="green">≡</i><span>Pedidos</span></Link><Link href="/customers"><i className="purple">◎</i><span>Clientes</span></Link><Link href="/reports"><i className="orange">↗</i><span>Reportes</span></Link></div></article></section>
 
-    <section className="ref-dashboard-bottom"><article className="ref-white-card"><div className="ref-card-title"><div><span>Ventas recientes</span><small>Últimos movimientos</small></div><Link href="/reports">Ver todas</Link></div><div className="ref-sales-table"><div className="head"><span>Folio</span><span>Hora</span><span>Método</span><span>Total</span></div>{recent.length?recent.map(s=><div key={s.id}><span>{s.id.slice(-8).toUpperCase()}</span><span>{new Date(s.createdAt).toLocaleTimeString("es-EC",{hour:"2-digit",minute:"2-digit"})}</span><span>{paymentLabel[s.payment]}</span><strong>{money(s.total)}</strong></div>):<div className="ref-empty-row">Todavía no hay ventas registradas.</div>}</div></article><article className="ref-white-card ref-plan-summary dashboard-plan-mini"><span className="public-kicker">TU PLAN</span><h3>KIUBO {tenant.plan}</h3><p>{plan.tagline}</p><div className="dashboard-plan-feature-count"><strong>{plan.features.length}</strong><span>capacidades incluidas</span></div><Link href="/upgrade">Ver plan y módulos →</Link></article></section>
+    <section className={`ref-dashboard-bottom ${canManagePlan?"":"dashboard-bottom-single"}`}><article className="ref-white-card"><div className="ref-card-title"><div><span>Ventas recientes</span><small>Últimos movimientos</small></div><Link href="/reports">Ver todas</Link></div><div className="ref-sales-table"><div className="head"><span>Folio</span><span>Hora</span><span>Método</span><span>Total</span></div>{recent.length?recent.map(s=><div key={s.id}><span>{s.id.slice(-8).toUpperCase()}</span><span>{new Date(s.createdAt).toLocaleTimeString("es-EC",{hour:"2-digit",minute:"2-digit"})}</span><span>{paymentLabel[s.payment]}</span><strong>{money(s.total)}</strong></div>):<div className="ref-empty-row">Todavía no hay ventas registradas.</div>}</div></article>{canManagePlan&&<article className="ref-white-card ref-plan-summary dashboard-plan-mini"><span className="public-kicker">TU PLAN</span><h3>KIUBO {tenant.plan}</h3><p>{plan.tagline}</p><div className="dashboard-plan-feature-count"><strong>{plan.features.length}</strong><span>capacidades incluidas</span></div><Link href="/upgrade">Ver plan y módulos →</Link></article>}</section>
   </div>;
 }
