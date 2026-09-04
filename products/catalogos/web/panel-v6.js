@@ -1,0 +1,78 @@
+(()=>{
+  'use strict';
+  const config=window.KIUBO_CATALOG_CONFIG;if(!config?.apiUrl)return;
+  const $=(s,r=document)=>r.querySelector(s), $$=(s,r=document)=>[...r.querySelectorAll(s)];
+  const slug=(()=>{const q=new URLSearchParams(location.search).get('slug');return(q||config.defaultSlug||'hakuna-matata').toLowerCase().replace(/[^a-z0-9-]/g,'')})();
+  const baseFetch=window.fetch.bind(window);
+  const state={account:null,presentations:[],orders:[],products:[],scheduled:0};
+  const parse=init=>{try{return typeof init?.body==='string'?JSON.parse(init.body):null}catch{return null}};
+  const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  const money=n=>new Intl.NumberFormat('es-EC',{style:'currency',currency:state.account?.currency||'USD'}).format(Number(n||0));
+  const providerToken=()=>sessionStorage.getItem(`kiubo-provider-session:${slug}`)||'';
+  const headers=()=>({'Content-Type':'application/json','X-Client-Version':config.version,'X-Provider-Session':providerToken()});
+  const presentationById=id=>state.presentations.find(p=>String(p.id)===String(id));
+  const statusLabel=s=>({new:'recibido',confirmed:'confirmado',preparing:'en preparación',dispatched:'despachado',delivered:'entregado',cancelled:'cancelado'})[s]||'actualizado';
+  const paymentLabel=id=>({cash:'Efectivo',transfer:'Transferencia',card:'Tarjeta',credit:'Crédito',other:'Otro'})[id]||'Por coordinar';
+  const phone593=v=>{const d=String(v||'').replace(/\D/g,'');if(d.startsWith('593'))return d;if(d.startsWith('0'))return`593${d.slice(1)}`;return d.length===9?`593${d}`:d};
+  function toast(msg,type=''){const el=document.createElement('div');el.className=`v6-panel-toast ${type}`;el.textContent=msg;document.body.append(el);requestAnimationFrame(()=>el.classList.add('show'));setTimeout(()=>{el.classList.remove('show');setTimeout(()=>el.remove(),180)},2600)}
+
+  window.fetch=async(input,init={})=>{
+    const url=typeof input==='string'?input:input?.url||'';let body=url===config.apiUrl?parse(init):null;let nextInit=init;
+    if(body?.action==='save_product'&&Array.isArray(body.presentations)){
+      const rows=$$('.v5-presentation-row');
+      body={...body,presentations:body.presentations.map((p,i)=>({...p,cost_total:(()=>{const v=$('[data-p-cost]',rows[i])?.value;return v===''||v==null?null:Math.max(0,Number(v||0))})()}))};
+      nextInit={...init,body:JSON.stringify(body)};
+    }
+    if(body?.action==='save_presentations'&&Array.isArray(body.presentations)){
+      const rows=$$('.v5-presentation-row');
+      body={...body,presentations:body.presentations.map((p,i)=>({...p,cost_total:(()=>{const v=$('[data-p-cost]',rows[i])?.value;return v===''||v==null?null:Math.max(0,Number(v||0))})()}))};
+      nextInit={...init,body:JSON.stringify(body)};
+    }
+    const res=await baseFetch(input,nextInit);
+    if(url===config.apiUrl&&body){
+      try{const payload=await res.clone().json();if(res.ok&&['provider_bootstrap','master_bootstrap'].includes(body.action)){state.account=payload.account||state.account;state.presentations=payload.presentations||state.presentations;state.orders=payload.orders||state.orders;state.products=payload.products||state.products;schedule()}if(res.ok&&body.action==='save_product'&&Array.isArray(payload.presentations)){mergePresentations(payload.presentations);schedule()}}catch{}
+    }
+    return res;
+  };
+  function mergePresentations(rows){const m=new Map(state.presentations.map(x=>[String(x.id),x]));rows.forEach(x=>m.set(String(x.id),{...(m.get(String(x.id))||{}),...x}));state.presentations=[...m.values()]}
+
+  function ensureCostFields(){
+    $$('.v5-presentation-row').forEach(row=>{
+      if($('.v6-cost-block',row))return;
+      const p=presentationById(row.dataset.id);
+      const box=document.createElement('div');box.className='v6-cost-block';box.innerHTML=`<label>Costo presentación<input data-p-cost type="number" min="0" step="0.01" inputmode="decimal" value="${p?.cost_total??''}" placeholder="0.00"></label><div class="v6-unit-metric"><span>Costo x unidad</span><b data-unit-cost>—</b></div><div class="v6-unit-metric"><span>Venta x unidad</span><b data-unit-sale>—</b></div>`;row.append(box);
+      const calc=()=>{const units=Math.max(1,Number($('[data-p-units]',row)?.value||1));const price=Math.max(0,Number($('[data-p-price]',row)?.value||0));const costRaw=$('[data-p-cost]',row)?.value;const cost=costRaw===''?null:Math.max(0,Number(costRaw||0));$('[data-unit-cost]',row).textContent=cost==null?'—':money(cost/units);$('[data-unit-sale]',row).textContent=money(price/units)};
+      ['[data-p-units]','[data-p-price]','[data-p-cost]'].forEach(sel=>$(sel,row)?.addEventListener('input',calc));calc();
+    });
+  }
+
+  function ensurePaymentSettings(){
+    const tabs=$('.settings-tabs'),content=$('.settings-content');if(!tabs||!content)return;
+    if(!$('#v6PaymentsTab')){const tab=document.createElement('button');tab.id='v6PaymentsTab';tab.dataset.settings='payments-v6';tab.textContent='Pagos';tabs.append(tab);tab.addEventListener('click',e=>{e.preventDefault();showPayments()});}
+    if(!$('#v6PaymentsPanel')){const panel=document.createElement('section');panel.id='v6PaymentsPanel';panel.className='settings-panel v6-payment-panel';panel.dataset.settingsPanel='payments-v6';panel.innerHTML=`<div class="panel-card"><header><div><span class="section-kicker">COBRO</span><h3>Formas de pago</h3><p>Activa solo las opciones que quieres ofrecer a tus clientes.</p></div></header><form id="v6PaymentForm" class="v6-payment-form"><div class="v6-payment-switches">${[['cash','Efectivo'],['transfer','Transferencia'],['card','Tarjeta'],['credit','Crédito / fiado'],['other','Otro']].map(([id,label])=>`<label><span><b>${label}</b><small>${id==='transfer'?'Puede mostrar datos bancarios al cliente.':'Disponible al confirmar el pedido.'}</small></span><input type="checkbox" data-payment-method="${id}"><i></i></label>`).join('')}</div><div class="v6-bank-settings" id="v6BankSettings"><div class="field"><label>Banco</label><input id="v6BankName" maxlength="80" placeholder="Ej. Banco Pichincha"></div><div class="field"><label>Tipo de cuenta</label><input id="v6AccountType" maxlength="40" placeholder="Ahorros / Corriente"></div><div class="field"><label>Número de cuenta</label><input id="v6AccountNumber" maxlength="60" inputmode="numeric"></div><div class="field"><label>Titular</label><input id="v6AccountHolder" maxlength="100"></div><div class="field"><label>Cédula / RUC</label><input id="v6IdNumber" maxlength="30" inputmode="numeric"></div></div><button class="button button--primary" type="submit">Guardar formas de pago</button></form></div>`;content.append(panel);$('#v6PaymentForm').addEventListener('submit',savePayments);}
+    hydratePayments();
+  }
+  function showPayments(){ $$('.settings-tabs button').forEach(b=>b.classList.toggle('active',b.id==='v6PaymentsTab'));$$('.settings-panel').forEach(p=>p.classList.toggle('active',p.id==='v6PaymentsPanel'));hydratePayments(); }
+  function hydratePayments(){if(!state.account||!$('#v6PaymentForm'))return;const methods=state.account.payment_methods||['cash','transfer'];$$('[data-payment-method]').forEach(i=>i.checked=methods.includes(i.dataset.paymentMethod));const d=state.account.payment_details||{};$('#v6BankName').value=d.bank_name||'';$('#v6AccountType').value=d.account_type||'';$('#v6AccountNumber').value=d.account_number||'';$('#v6AccountHolder').value=d.account_holder||'';$('#v6IdNumber').value=d.id_number||'';$('#v6BankSettings').classList.toggle('muted',!methods.includes('transfer'));}
+  async function savePayments(e){e.preventDefault();const methods=$$('[data-payment-method]:checked').map(i=>i.dataset.paymentMethod);if(!methods.length)return toast('Activa al menos una forma de pago','error');const btn=e.submitter;btn.disabled=true;btn.textContent='Guardando…';try{const r=await baseFetch(config.apiUrl,{method:'POST',headers:headers(),body:JSON.stringify({action:'save_payment_settings',slug,payment_methods:methods,payment_details:{bank_name:$('#v6BankName').value,account_type:$('#v6AccountType').value,account_number:$('#v6AccountNumber').value,account_holder:$('#v6AccountHolder').value,id_number:$('#v6IdNumber').value}})});const p=await r.json();if(!r.ok)throw new Error(p.error||'save_failed');state.account={...state.account,...p.account};toast('Formas de pago guardadas');hydratePayments()}catch{toast('No pudimos guardar las formas de pago','error')}finally{btn.disabled=false;btn.textContent='Guardar formas de pago'}}
+
+  function enhanceOrderModal(){
+    const modal=$('#orderModal'),content=$('#orderModalContent'),title=$('#orderModalTitle')?.textContent?.trim();if(!modal||!content||!title)return;const order=state.orders.find(o=>String(o.order_number)===title);if(!order)return;
+    if(!$('#v6OrderPayment',content)){const card=document.createElement('div');card.id='v6OrderPayment';card.className='v6-order-payment';card.innerHTML=`<span><small>FORMA DE PAGO</small><b>${esc(paymentLabel(order.payment_method))}</b></span><span><small>ESTADO</small><b>${esc(order.payment_status==='paid'?'Pagado':'Pendiente')}</b></span>`;const actions=$('.order-detail-actions',content);content.insertBefore(card,actions||null)}
+    let btn=$('#v6OrderWhatsapp',content);if(!btn){btn=document.createElement('button');btn.id='v6OrderWhatsapp';btn.type='button';btn.className='button button--primary v6-whatsapp';const actions=$('.order-detail-actions',content);actions?.append(btn);btn.onclick=()=>sendOrderWhatsapp(order,content)}
+    const sync=()=>{const status=$('#modalOrderStatus',content)?.value||order.status;btn.textContent=`Confirmar y avisar · ${statusLabel(status)}`};sync();$('#modalOrderStatus',content)?.addEventListener('change',sync);
+  }
+  function sendOrderWhatsapp(order,content){const status=$('#modalOrderStatus',content)?.value||order.status;const phone=phone593(order.customer_phone);if(!phone)return toast('Este pedido no tiene WhatsApp','error');const link=`${location.origin}/pedido?ref=${order.public_token||''}`;const msg=`Hola ${order.customer_business||order.customer_name||''} 👋\nTu pedido ${order.order_number} está ${statusLabel(status)}.\nPuedes revisar su avance aquí: ${link}`;window.open(`https://wa.me/${phone}?text=${encodeURIComponent(msg)}`,'_blank','noopener')}
+
+  function improveEditor(){
+    const modal=$('#productModal');if(!modal||modal.hidden)return;modal.classList.add('v6-product-modal');ensureCostFields();
+    const editor=$('#v5ProductEditor');if(editor&&!editor.dataset.v6Title){editor.dataset.v6Title='1';const ribbon=document.createElement('div');ribbon.className='v6-editor-ribbon';ribbon.innerHTML='<span>VENTA</span><b>Presentaciones, stock y rentabilidad</b><small>Una jaba puede contener 24 unidades y tener un precio distinto al de venta por unidad.</small>';editor.prepend(ribbon)}
+  }
+
+  function installMeta(){if(!document.querySelector('meta[name="apple-mobile-web-app-capable"]')){const m=document.createElement('meta');m.name='apple-mobile-web-app-capable';m.content='yes';document.head.append(m)}if(!document.querySelector('meta[name="apple-mobile-web-app-status-bar-style"]')){const m=document.createElement('meta');m.name='apple-mobile-web-app-status-bar-style';m.content='black-translucent';document.head.append(m)}if(!document.querySelector('meta[name="apple-mobile-web-app-title"]')){const m=document.createElement('meta');m.name='apple-mobile-web-app-title';m.content='Hakuna Admin';document.head.append(m)}}
+
+  function schedule(){if(state.scheduled)return;state.scheduled=requestAnimationFrame(()=>{state.scheduled=0;ensureCostFields();ensurePaymentSettings();improveEditor();enhanceOrderModal();installMeta()})}
+  document.addEventListener('click',e=>{if(e.target.closest?.('[data-edit-product],#newProductBtn,#mobileCreateBtn'))setTimeout(schedule,25);if(e.target.closest?.('[data-open-order]'))setTimeout(schedule,35);const settings=e.target.closest?.('[data-settings]');if(settings&&settings.id!=='v6PaymentsTab')$('#v6PaymentsPanel')?.classList.remove('active')},true);
+  const start=()=>{installMeta();schedule();new MutationObserver(schedule).observe(document.body,{childList:true,subtree:true,attributes:true,attributeFilter:['hidden','class']})};
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start,{once:true});else start();
+})();
