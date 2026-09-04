@@ -1,0 +1,11 @@
+/* KIUBO Catálogos v5 — customer status communication */
+.order-customer-notice{display:grid;gap:10px;margin:14px 0;padding:14px;border:1px solid rgba(19,65,48,.10);border-radius:18px;background:linear-gradient(145deg,rgba(246,250,247,.98),rgba(255,252,247,.98));box-shadow:0 12px 28px rgba(22,63,49,.06)}
+.order-customer-notice__head{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.order-customer-notice__head>span:first-child{font-size:10px;font-weight:900;letter-spacing:.12em;color:#6b7c73;text-transform:uppercase}
+.order-customer-notice__status{display:inline-flex;align-items:center;gap:6px;padding:6px 9px;border-radius:999px;background:rgba(21,71,52,.08);color:#164632;font-size:10px;font-weight:900}
+.order-customer-notice__status::before{content:"";width:7px;height:7px;border-radius:50%;background:var(--brand,#f06a3a);box-shadow:0 0 0 4px color-mix(in srgb,var(--brand,#f06a3a) 16%,transparent)}
+.order-customer-notice__message{margin:0;color:#243b32;font-size:12px;line-height:1.55}
+.order-customer-notice__foot{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}
+.order-customer-notice__tracking{font-size:10px;color:#718078;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:100%}
+.order-customer-notice .button{min-height:42px;border-radius:13px;padding:10px 14px}
+@media(max-width:759px){.order-customer-notice{margin:12px 0;padding:12px;border-radius:16px}.order-customer-notice__foot{display:grid}.order-customer-notice .button{width:100%;justify-content:center}.order-customer-notice__tracking{font-size:9px}}
