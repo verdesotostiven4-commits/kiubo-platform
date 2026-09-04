@@ -13,11 +13,13 @@ export function AdminPinManager(){
   const ctx=getWorkspaceContext(db),user=ctx.user;
   const allowed=Boolean(user&&(user.platformAdmin||user.role==="owner"||user.role==="admin"));
   if(!allowed)return null;
+  const configured=Boolean(user?.pin&&user.pin!=="1234");
 
   const savePin=(event:FormEvent<HTMLFormElement>)=>{
     event.preventDefault();
     const form=new FormData(event.currentTarget),pin=String(form.get("pin")||"").trim(),confirm=String(form.get("confirm")||"").trim();
     if(!/^\d{4,8}$/.test(pin)){setMessage("Usa de 4 a 8 números.");return}
+    if(pin==="1234"){setMessage("Elige un código distinto de 1234.");return}
     if(pin!==confirm){setMessage("Los códigos no coinciden.");return}
     const next=loadLocalDatabase(),workspace=getWorkspaceContext(next),index=next.users.findIndex(item=>item.id===workspace.user?.id&&item.tenantId===workspace.tenantId);
     if(index<0){setMessage("No encontramos tu usuario administrador.");return}
@@ -26,19 +28,19 @@ export function AdminPinManager(){
     next.users[index]={...current,pin};
     saveLocalDatabase(next);
     event.currentTarget.reset();
-    setMessage("Código actualizado.");
+    setMessage("Código configurado correctamente.");
     refresh();
     window.dispatchEvent(new CustomEvent(KIUBO_DATA_REFRESHED,{detail:{source:"admin-pin"}}));
   };
 
-  return <section className="panel admin-pin-panel">
-    <div className="panel-head"><div><span className="eyebrow">SEGURIDAD</span><h3>Código de autorización</h3></div><span className="pill">Propietario</span></div>
+  return <section id="authorization-code" className="panel admin-pin-panel">
+    <div className="panel-head"><div><span className="eyebrow">SEGURIDAD</span><h3>Código de autorización</h3><p className="admin-pin-intro">{configured?"Tu código ya está configurado. Puedes cambiarlo aquí cuando quieras.":"Aún no tienes un código configurado. Créalo aquí antes de usar acciones protegidas."}</p></div><span className={`pill ${configured?"admin-pin-ready":""}`}>{configured?"Configurado":"Pendiente"}</span></div>
     <form className="admin-pin-form" onSubmit={savePin}>
       <label>Nuevo código<input name="pin" type="password" inputMode="numeric" pattern="[0-9]*" minLength={4} maxLength={8} placeholder="4–8 números" autoComplete="new-password" required/></label>
       <label>Repetir<input name="confirm" type="password" inputMode="numeric" pattern="[0-9]*" minLength={4} maxLength={8} placeholder="Repite el código" autoComplete="new-password" required/></label>
-      <button className="button primary" type="submit">Guardar código</button>
+      <button className="button primary" type="submit">{configured?"Cambiar código":"Configurar código"}</button>
     </form>
-    <small className="ops-note">Se usa para acciones protegidas, como reiniciar el historial visible de ventas.</small>
+    <small className="ops-note">Este código protege acciones sensibles, como reiniciar el historial visible de ventas.</small>
     {message&&<div className="admin-pin-status">{message}</div>}
   </section>;
 }
