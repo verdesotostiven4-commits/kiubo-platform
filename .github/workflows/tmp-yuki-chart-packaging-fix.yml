@@ -1,0 +1,55 @@
+name: Temporary YUKI chart and packaging fix
+
+on:
+  push:
+    branches:
+      - fix/yuki-chart-stability-no-packaging
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: fix/yuki-chart-stability-no-packaging
+          fetch-depth: 0
+      - name: Apply focused fixes
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          dashboard = Path('components/DashboardSalesExplorer.tsx')
+          text = dashboard.read_text()
+          old = '    {selected&&<div className="dashboard-drilldown-backdrop" role="presentation" onMouseDown={event=>{if(event.currentTarget===event.target)setSelectedKey("")}}><section className="dashboard-drilldown" role="dialog" aria-modal="true" aria-label={`Detalle de ${selected.label}`}'
+          new = '    {selected&&<div className="dashboard-drilldown-backdrop" role="presentation"><section className="dashboard-drilldown" role="dialog" aria-modal="true" aria-label={`Detalle de ${selected.label}`}'
+          if old not in text:
+              raise SystemExit('Dashboard backdrop target not found')
+          text = text.replace(old, new, 1)
+          dashboard.write_text(text)
+
+          pos = Path('components/PosClientPro.tsx')
+          text = pos.read_text()
+          old_fee = 'packagingFee=foodService&&packagingProduct&&(activeServiceMode==="takeaway"||activeServiceMode==="delivery")?packagingProduct.price:0'
+          if old_fee not in text:
+              raise SystemExit('Automatic packaging fee target not found')
+          text = text.replace(old_fee, 'packagingFee=0', 1)
+
+          old_fn = 'const packagingFeeFor=(mode:ServiceMode)=>foodService&&packagingProduct&&(mode==="takeaway"||mode==="delivery")?packagingProduct.price:0;'
+          if old_fn not in text:
+              raise SystemExit('Order packaging function target not found')
+          text = text.replace(old_fn, 'const packagingFeeFor=(_mode:ServiceMode)=>0;', 1)
+          pos.write_text(text)
+          PY
+      - name: Commit product changes
+        shell: bash
+        run: |
+          git config user.name "kiubo-automation"
+          git config user.email "actions@users.noreply.github.com"
+          git add components/DashboardSalesExplorer.tsx components/PosClientPro.tsx
+          git commit -m "fix: stabilize dashboard detail and remove automatic packaging fee"
+          git push origin HEAD:fix/yuki-chart-stability-no-packaging
