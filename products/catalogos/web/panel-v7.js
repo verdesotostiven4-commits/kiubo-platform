@@ -26,19 +26,32 @@
     if(decorating)return;decorating=true;
     requestAnimationFrame(()=>{decorating=false;$$('#adminProductList .admin-product').forEach(row=>{if(row.dataset.v7Done)return;const edit=$('[data-edit-product]',row);if(!edit)return;row.dataset.v7Done='1';const id=edit.dataset.editProduct||'';const name=$('.admin-product__copy h3',row)?.textContent?.trim()||'Producto';const actions=edit.parentElement;if(!actions)return;const del=document.createElement('button');del.type='button';del.className='v7-inline-delete';del.dataset.deleteProduct=id;del.setAttribute('aria-label',`Eliminar ${name}`);del.innerHTML='<svg viewBox="0 0 24 24"><path d="M4 7h16M9 7V4h6v3M8 10v8M12 10v8M16 10v8M6 7l1 14h10l1-14"/></svg>';actions.append(del)})})
   }
+  function polishFeaturedSwitch(){
+    const input=$('#productFeatured');const row=input?.closest('.switch-row');if(!row)return;
+    row.classList.add('v71-featured-switch');const title=$('b',row),copy=$('small',row);
+    if(title)title.textContent='Mostrar en Productos destacados';
+    if(copy)copy.textContent='Aparece en el carrusel infinito de la pantalla Inicio. Puedes activar o quitar cualquier producto cuando quieras.';
+  }
+  function nativeSurface(){
+    const meta=document.querySelector('meta[name="viewport"]');if(meta)meta.setAttribute('content','width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover');
+    document.documentElement.classList.add('v71-native-surface');
+    document.addEventListener('contextmenu',e=>{if(!e.target.closest?.('input,textarea,select'))e.preventDefault()});
+    document.addEventListener('dragstart',e=>{if(e.target.closest?.('img,.admin-product,.side-nav,.panel-card'))e.preventDefault()});
+  }
   function polishStatic(){
     document.documentElement.classList.add('kiubo-panel-v7');
     const search=$('#productSearch');if(search&&search.placeholder!=='Buscar producto, marca o código')search.placeholder='Buscar producto, marca o código';
     const title=$('#viewTitle');if(title&&$('[data-nav="products"]')?.classList.contains('active')&&title.textContent!=='Productos')title.textContent='Productos';
+    polishFeaturedSwitch();
   }
   function queueDecorate(){if(decorateQueued)return;decorateQueued=true;requestAnimationFrame(()=>{decorateQueued=false;polishStatic();decorateProductRows()})}
   function observeProducts(){const list=$('#adminProductList');if(!list||list.dataset.v7Observed)return;list.dataset.v7Observed='1';new MutationObserver(queueDecorate).observe(list,{childList:true})}
   document.addEventListener('click',e=>{
     const nav=e.target.closest?.('[data-nav="products"]');if(nav)setTimeout(()=>{polishStatic();observeProducts();decorateProductRows()},0);
-    const edit=e.target.closest?.('[data-edit-product]');if(edit){activeProductId=edit.dataset.editProduct||'';activeProductName=edit.closest('.admin-product')?.querySelector('.admin-product__copy h3')?.textContent?.trim()||'';setTimeout(injectDangerZone,30)}
-    const fresh=e.target.closest?.('#newProductBtn,#mobileCreateBtn,[data-quick="new-product"]');if(fresh){activeProductId='';activeProductName='';setTimeout(injectDangerZone,30)}
+    const edit=e.target.closest?.('[data-edit-product]');if(edit){activeProductId=edit.dataset.editProduct||'';activeProductName=edit.closest('.admin-product')?.querySelector('.admin-product__copy h3')?.textContent?.trim()||'';setTimeout(()=>{injectDangerZone();polishFeaturedSwitch()},30)}
+    const fresh=e.target.closest?.('#newProductBtn,#mobileCreateBtn,[data-quick="new-product"]');if(fresh){activeProductId='';activeProductName='';setTimeout(()=>{injectDangerZone();polishFeaturedSwitch()},30)}
     const del=e.target.closest?.('[data-delete-product]');if(del){e.preventDefault();e.stopPropagation();const row=del.closest('.admin-product');confirmDelete(del.dataset.deleteProduct,row?.querySelector('.admin-product__copy h3')?.textContent?.trim()||'Producto')}
   },true);
-  const start=()=>{polishStatic();observeProducts();decorateProductRows()};
+  const start=()=>{nativeSurface();polishStatic();observeProducts();decorateProductRows()};
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start,{once:true});else start();
 })();
