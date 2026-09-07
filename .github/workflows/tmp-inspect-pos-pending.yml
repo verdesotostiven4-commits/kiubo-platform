@@ -1,0 +1,51 @@
+name: Temporary inspect POS pending UI
+
+on:
+  push:
+    branches:
+      - feat/yuki-pending-order-visuals
+
+permissions:
+  contents: write
+
+jobs:
+  inspect:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feat/yuki-pending-order-visuals
+          fetch-depth: 0
+      - name: Extract focused POS snippets
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p=Path('components/PosClientPro.tsx')
+          t=p.read_text()
+          needles=['openTableOrders','deliveryLabels','enabledModes.map','tableNumbers.map','deliveryLabels.map','setServiceMode','serviceLabel[mode]']
+          out=[]
+          for n in needles:
+              out.append(f'\n===== {n} =====\n')
+              start=0
+              found=False
+              while True:
+                  i=t.find(n,start)
+                  if i<0: break
+                  found=True
+                  a=max(0,i-1600); b=min(len(t),i+3200)
+                  out.append(t[a:b])
+                  out.append('\n---\n')
+                  start=i+len(n)
+              if not found: out.append('NOT FOUND\n')
+          Path('tmp-pos-pending-snippets.txt').write_text(''.join(out))
+          PY
+      - name: Commit inspection artifact
+        shell: bash
+        run: |
+          git config user.name "verdesotiven4-commits"
+          git config user.email "verdesotostiven4@gmail.com"
+          git add tmp-pos-pending-snippets.txt
+          git commit -m "chore: inspect POS pending order markup"
+          git push origin HEAD:feat/yuki-pending-order-visuals
