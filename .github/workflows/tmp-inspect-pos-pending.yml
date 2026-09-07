@@ -24,21 +24,27 @@ jobs:
           from pathlib import Path
           p=Path('components/PosClientPro.tsx')
           t=p.read_text()
-          needles=['openTableOrders','deliveryLabels','enabledModes.map','tableNumbers.map','deliveryLabels.map','setServiceMode','serviceLabel[mode]']
           out=[]
-          for n in needles:
+          for n in ['const changeServiceMode','const selectTable','const selectDelivery','service-mode-bar','table-selector-grid','delivery-selector-grid']:
+              i=t.find(n)
               out.append(f'\n===== {n} =====\n')
-              start=0
-              found=False
-              while True:
-                  i=t.find(n,start)
-                  if i<0: break
-                  found=True
-                  a=max(0,i-1600); b=min(len(t),i+3200)
-                  out.append(t[a:b])
-                  out.append('\n---\n')
-                  start=i+len(n)
-              if not found: out.append('NOT FOUND\n')
+              if i<0:
+                  out.append('NOT FOUND\n')
+              else:
+                  out.append(t[max(0,i-1200):min(len(t),i+4200)])
+                  out.append('\n')
+          css_hits=[]
+          for path in Path('.').rglob('*.css'):
+              try: s=path.read_text()
+              except: continue
+              if 'service-mode-bar' in s or 'table-selector-grid' in s or 'delivery-selector-grid' in s:
+                  css_hits.append(str(path))
+                  for n in ['service-mode-bar','table-selector-grid','delivery-selector-grid']:
+                      i=s.find(n)
+                      if i>=0:
+                          out.append(f'\n===== CSS {path} :: {n} =====\n')
+                          out.append(s[max(0,i-1200):min(len(s),i+3500)])
+          out.append('\n===== CSS FILES =====\n'+'\n'.join(css_hits))
           Path('tmp-pos-pending-snippets.txt').write_text(''.join(out))
           PY
       - name: Commit inspection artifact
@@ -47,5 +53,5 @@ jobs:
           git config user.name "verdesotiven4-commits"
           git config user.email "verdesotostiven4@gmail.com"
           git add tmp-pos-pending-snippets.txt
-          git commit -m "chore: inspect POS pending order markup"
+          git commit -m "chore: inspect POS pending interactions and styles" || exit 0
           git push origin HEAD:feat/yuki-pending-order-visuals
