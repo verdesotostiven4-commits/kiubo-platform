@@ -1,0 +1,56 @@
+/* Hakuna v7.6 — mobile stability, no horizontal drift, clearer product/category workflow */
+html,body,.panel-page,.admin-app,.admin-main,.admin-content,.admin-view{max-width:100%!important;overflow-x:clip!important}
+
+/* Home metrics: always visible, never hidden in a horizontal carousel. */
+@media(max-width:760px){
+  .kiubo-panel-v7 .stats-grid{display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:9px!important;overflow:visible!important;margin:12px 0 16px!important;padding:0!important;scroll-snap-type:none!important;transform:none!important}
+  .kiubo-panel-v7 .stats-grid .stat-card{flex:none!important;width:auto!important;min-width:0!important;min-height:118px!important;margin:0!important;scroll-snap-align:none!important}
+  .kiubo-panel-v7 .stat-card small{max-width:90px!important}
+}
+
+/* Product filters: wrap instead of leaking/sliding outside the viewport. */
+@media(max-width:760px){
+  .kiubo-panel-v7 .filter-row{display:flex!important;flex-wrap:wrap!important;gap:7px!important;overflow:visible!important;margin:0!important;padding:0 0 9px!important;scroll-snap-type:none!important;max-width:100%!important}
+  .kiubo-panel-v7 .filter-chip{flex:0 0 auto!important;min-height:35px!important;padding:0 11px!important}
+  .kiubo-panel-v7 #v75CategoryFilters{display:flex!important;flex-wrap:wrap!important;gap:7px!important;overflow:visible!important;padding:0 0 10px!important;max-width:100%!important;overscroll-behavior:none!important}
+  .kiubo-panel-v7 #v75CategoryFilters button{flex:0 0 auto!important}
+}
+
+/* Old enhancement badges were being injected after each refresh and visually flashing. */
+.v5-stock-badge,.v5-presentation-badge{display:none!important}
+#adminProductList .admin-product{animation:none!important;transition:none!important}
+
+/* Orders: toolbar belongs to the flow, cards must never slide underneath it. */
+@media(max-width:760px){
+  .kiubo-panel-v7 .order-toolbar{position:static!important;top:auto!important;z-index:auto!important;margin:0 0 12px!important;padding:0!important;background:transparent!important;display:grid!important;gap:9px!important}
+  .kiubo-panel-v7 .order-toolbar .segmented{display:grid!important;grid-template-columns:repeat(4,minmax(0,1fr))!important;overflow:visible!important;width:100%!important}
+  .kiubo-panel-v7 .order-toolbar .segmented button{min-width:0!important;padding:0 7px!important;white-space:nowrap!important}
+  .kiubo-panel-v7 .orders-board{margin:0!important;padding:0!important;overflow:visible!important}
+  .kiubo-panel-v7 .order-card:first-child{margin-top:0!important}
+}
+
+/* Lock the page behind the order sheet; only the sheet itself can move. */
+body.v76-order-locked{position:fixed!important;left:0!important;right:0!important;width:100%!important;overflow:hidden!important}
+body.v76-order-locked #orderModal{overscroll-behavior:contain!important;-webkit-overflow-scrolling:touch!important}
+body.v76-order-locked #modalBackdrop{touch-action:none!important}
+
+/* Categories live with Products, not inside business settings. */
+.v76-category-tools{display:flex;justify-content:flex-end;margin:0 0 10px}
+.v76-category-tools button{min-height:38px;border:1px solid #dce3dd;border-radius:12px;background:#fff;color:#294035;padding:0 12px;font-size:9px;font-weight:850;box-shadow:0 4px 12px rgba(20,35,26,.035)}
+.v76-category-tools button.active{background:#153426;border-color:#153426;color:#fff}
+#v76CategoryManager{margin:0 0 12px}
+#v76CategoryManager[hidden]{display:none!important}
+#v76CategoryManager>.settings-panel{display:block!important;opacity:1!important;transform:none!important}
+#v76CategoryManager .panel-card{margin:0!important}
+#v76CategoryManager .panel-card>header{min-height:auto!important}
+@media(max-width:760px){
+  .v76-category-tools{justify-content:stretch}
+  .v76-category-tools button{width:100%;min-height:42px}
+  #v76CategoryManager .category-admin-list{padding:8px!important}
+}
+
+/* General mobile guard against accidental sideways page movement. */
+@media(max-width:760px){
+  .admin-content,.admin-view,.view-toolbar,.products-admin-list,.orders-board,.dashboard-grid,.stats-grid{min-width:0!important;width:100%!important;max-width:100%!important}
+  .admin-content{overscroll-behavior-x:none!important}
+}
