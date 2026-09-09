@@ -10,7 +10,7 @@
   const V6=`${config.supabaseUrl}/functions/v1/catalog-v6`;
   const ROUTER=`${config.supabaseUrl}/functions/v1/catalog-router`;
   const productCache=new Map();
-  let categories=[],activeProductId='',activeCategory='all',queue=[],running=0,refreshTimer=0,applyingFilters=false;
+  let categories=[],activeProductId='',activeCategory='all',queue=[],running=0,refreshTimer=0,applyingFilters=false,polishQueued=false;
   const providerToken=()=>sessionStorage.getItem(`kiubo-provider-session:${slug}`)||'';
   const headers=()=>({'Content-Type':'application/json','X-Client-Version':config.version,'X-Provider-Session':providerToken()});
   const parse=init=>{try{return typeof init?.body==='string'?JSON.parse(init.body):null}catch{return null}};
@@ -25,9 +25,7 @@
   window.fetch=async(input,init={})=>{
     const res=await baseFetch(input,init);
     const body=(typeof input==='string'&&input===config.apiUrl)?parse(init):null;
-    if(res.ok&&body&&['provider_bootstrap','master_bootstrap'].includes(body.action)){
-      res.clone().json().then(cacheBootstrap).catch(()=>{});
-    }
+    if(res.ok&&body&&['provider_bootstrap','master_bootstrap'].includes(body.action))res.clone().json().then(cacheBootstrap).catch(()=>{});
     return res;
   };
 
@@ -47,7 +45,7 @@
     const note=$('#v5AllowNote')?.closest('label');if(note){const b=$('b',note),small=$('small',note);if(b)b.textContent='Permitir surtido o variedades';if(small)small.textContent='Actívalo si el cliente puede pedir sabores, colores, modelos o una mezcla. Ej.: 3 Coca-Cola + 3 Sprite + 3 Fiora.'}
     const ph=$('.v5-presentations-head h4',editor);if(ph)ph.textContent='Formas de venta';const add=$('#v5AddPresentation');if(add)add.textContent='+ Añadir forma de venta';
     const pres=$('.v5-presentations',editor);if(pres&&!$('.v75-presentation-intro',pres)){const intro=document.createElement('div');intro.className='v75-presentation-intro';intro.innerHTML='<b>Ejemplo rápido</b>Si la unidad base es “botella”, crea <strong>Unidad = 1 botella</strong> y <strong>Jaba x 9 = 9 botellas</strong>. El cliente puede pedir 2 jabas y además 5 unidades; todo descuenta del mismo stock base.';pres.insertBefore(intro,$('#v5PresentationRows',pres)||pres.firstChild)}
-    $$('.v5-presentation-row',editor).forEach(row=>{const labels=$(':scope>label',row);setLabel(labels[0],'Cómo se vende');setLabel(labels[1],'Unidades que contiene');setLabel(labels[2],'Precio de venta');setLabel(labels[3],'Nombre de la unidad');const def=$('.v5-default span',row);if(def)def.textContent='Predeterminada';const cost=$('.v6-cost-block label',row);setLabel(cost,'Costo de esta presentación')});
+    $$('.v5-presentation-row',editor).forEach(row=>{const labels=$$(':scope>label',row);setLabel(labels[0],'Cómo se vende');setLabel(labels[1],'Unidades que contiene');setLabel(labels[2],'Precio de venta');setLabel(labels[3],'Nombre de la unidad');const def=$('.v5-default span',row);if(def)def.textContent='Predeterminada';const cost=$('.v6-cost-block label',row);setLabel(cost,'Costo de esta presentación')});
     const help=$('.v5-presentation-note',editor);if(help)help.textContent='El stock siempre se controla en la unidad base. Puedes crear todas las presentaciones que necesites sin duplicar el producto.';
   }
 
@@ -67,7 +65,7 @@
   function captureJob(){
     const name=$('#productName')?.value.trim()||'',price=Number($('#productPrice')?.value);if(name.length<2||!Number.isFinite(price)||price<0)return null;
     const old=productCache.get(String(activeProductId))||{};const file=$('#productImage')?.files?.[0]||null;
-    return {activeId:activeProductId,file,old,product:{id:activeProductId||null,name,category_id:$('#productCategory')?.value||null,brand:$('#productBrand')?.value.trim()||null,price,compare_at_price:$('#productComparePrice')?.value?Number($('#productComparePrice').value):null,unit:$('#productUnit')?.value.trim()||null,sku:$('#productSku')?.value.trim()||null,description:$('#productDescription')?.value.trim()||null,status:$('#productStatus')?.value||'available',sort_order:Number($('#productSort')?.value||0),visible:$('#productVisible')?.checked!==false,featured:Boolean($('#productFeatured')?.checked),image_path:old.image_path||null,image_url:old.image_url||null},presentations:capturePresentations(),stock:{stock_tracking:Boolean($('#v5StockTracking')?.checked),stock_quantity:Math.max(0,Math.trunc(Number($('#v5StockQuantity')?.value||0))),low_stock_threshold:Math.max(0,Math.trunc(Number($('#v5LowThreshold')?.value||5))),base_unit:$('#v5BaseUnit')?.value.trim()||'unidad',allow_item_note:$('#v5AllowNote')?.checked!==false}};
+    return {file,old,product:{id:activeProductId||null,name,category_id:$('#productCategory')?.value||null,brand:$('#productBrand')?.value.trim()||null,price,compare_at_price:$('#productComparePrice')?.value?Number($('#productComparePrice').value):null,unit:$('#productUnit')?.value.trim()||null,sku:$('#productSku')?.value.trim()||null,description:$('#productDescription')?.value.trim()||null,status:$('#productStatus')?.value||'available',sort_order:Number($('#productSort')?.value||0),visible:$('#productVisible')?.checked!==false,featured:Boolean($('#productFeatured')?.checked),image_path:old.image_path||null,image_url:old.image_url||null},presentations:capturePresentations(),stock:{stock_tracking:Boolean($('#v5StockTracking')?.checked),stock_quantity:Math.max(0,Math.trunc(Number($('#v5StockQuantity')?.value||0))),low_stock_threshold:Math.max(0,Math.trunc(Number($('#v5LowThreshold')?.value||5))),base_unit:$('#v5BaseUnit')?.value.trim()||'unidad',allow_item_note:$('#v5AllowNote')?.checked!==false}};
   }
   async function optimize(file){if(!(file instanceof File)||file.size<300*1024||!/^image\/(jpeg|png|webp)$/i.test(file.type))return file;try{const bm=await createImageBitmap(file,{imageOrientation:'from-image'});const max=1152,s=Math.min(1,max/Math.max(bm.width,bm.height));const c=document.createElement('canvas');c.width=Math.max(1,Math.round(bm.width*s));c.height=Math.max(1,Math.round(bm.height*s));c.getContext('2d',{alpha:true}).drawImage(bm,0,0,c.width,c.height);bm.close?.();const blob=await new Promise(r=>c.toBlob(r,'image/webp',.8));return blob&&blob.size<file.size?new File([blob],file.name.replace(/\.[^.]+$/,'')+'.webp',{type:'image/webp'}):file}catch{return file}}
   async function upload(job){if(!job.file)return;const file=await optimize(job.file);const form=new FormData();form.set('action','upload_asset');form.set('kind','product');form.set('slug',slug);form.set('old_path',job.old?.image_path||'');form.set('file',file,file.name);const r=await baseFetch(CORE,{method:'POST',headers:{'X-Client-Version':config.version,'X-Provider-Session':providerToken()},body:form});const p=await r.json().catch(()=>({}));if(!r.ok)throw new Error(p.error||'image_upload_failed');job.product.image_path=p.path||null;job.product.image_url=p.public_url||null}
@@ -90,7 +88,8 @@
   function renderCategoryFilters(){
     const row=$('.filter-row');if(!row||!categories.length)return;let rail=$('#v75CategoryFilters');if(!rail){rail=document.createElement('div');rail.id='v75CategoryFilters';rail.className='v75-category-filters';row.insertAdjacentElement('afterend',rail)}
     const products=[...productCache.values()].filter(p=>!p.archived_at);const count=id=>products.filter(p=>String(p.category_id)===String(id)).length;
-    rail.innerHTML=`<button data-v75-category="all" class="${activeCategory==='all'?'active':''}">Todas las categorías <b>${products.length}</b></button>${categories.filter(c=>c.visible!==false).map(c=>`<button data-v75-category="${esc(c.id)}" class="${String(activeCategory)===String(c.id)?'active':''}">${esc(c.name)} <b>${count(c.id)}</b></button>`).join('')}`;
+    const html=`<button data-v75-category="all" class="${activeCategory==='all'?'active':''}">Todas las categorías <b>${products.length}</b></button>${categories.filter(c=>c.visible!==false).map(c=>`<button data-v75-category="${esc(c.id)}" class="${String(activeCategory)===String(c.id)?'active':''}">${esc(c.name)} <b>${count(c.id)}</b></button>`).join('')}`;
+    if(rail.dataset.html!==html){rail.dataset.html=html;rail.innerHTML=html}
   }
   function applyCombinedFilters(){
     if(applyingFilters)return;const list=$('#adminProductList');if(!list)return;applyingFilters=true;
@@ -103,19 +102,24 @@
     const modal=$('#orderModal');if(!modal||modal.hidden)return;if(!$('.v75-order-x',modal)){const b=document.createElement('button');b.type='button';b.className='v75-order-x';b.setAttribute('aria-label','Cerrar pedido');b.textContent='×';b.onclick=()=>{const native=$('[data-close-modal]',modal);if(native)native.click();else{modal.classList.remove('visible');modal.hidden=true}};modal.append(b)}
   }
   function polish(){applyStaticLogo();removeInstall();polishEditor();ensureOrderClose();$('#saveNextProductBtn')?.remove();if($('#archiveProductBtn'))$('#archiveProductBtn').hidden=true;renderCategoryFilters();updateFilterCounts();applyCombinedFilters()}
+  function queuePolish(){if(polishQueued)return;polishQueued=true;requestAnimationFrame(()=>{polishQueued=false;polish()})}
 
   document.addEventListener('click',e=>{
     const edit=e.target.closest?.('[data-edit-product]');if(edit)activeProductId=edit.dataset.editProduct||'';
     if(e.target.closest?.('#newProductBtn,#mobileCreateBtn,[data-quick="new-product"]'))activeProductId='';
     const cat=e.target.closest?.('[data-v75-category]');if(cat){e.preventDefault();activeCategory=cat.dataset.v75Category||'all';renderCategoryFilters();applyCombinedFilters();return}
-    if(e.target.closest?.('#saveProductBtn')&&location.pathname!=='/master'){
-      const job=captureJob();if(!job){savingPill('Completa nombre y precio correctamente.');return}
+    if(e.target.closest?.('#saveProductBtn')&&!location.pathname.startsWith('/master')){
+      const job=captureJob();if(!job){e.preventDefault();e.stopImmediatePropagation();savingPill('Completa nombre y precio correctamente.');return}
       e.preventDefault();e.stopImmediatePropagation();enqueue(job);closeModalNow();return;
     }
     if(e.target.closest?.('[data-open-order]'))setTimeout(ensureOrderClose,30);
   },true);
 
-  const mo=new MutationObserver(()=>requestAnimationFrame(polish));
-  const start=()=>{applyStaticLogo();removeInstall();mo.observe(document.body,{childList:true,subtree:true,attributes:true,attributeFilter:['hidden','class']});setTimeout(polish,40);const list=$('#adminProductList');if(list)new MutationObserver(()=>{if(!applyingFilters)requestAnimationFrame(()=>{updateFilterCounts();renderCategoryFilters();applyCombinedFilters()})}).observe(list,{childList:true,subtree:true,attributes:true,attributeFilter:['hidden','class']})};
+  const bodyObserver=new MutationObserver(records=>{if(records.every(r=>r.target?.closest?.('#v75CategoryFilters,.v75-saving-pill')))return;queuePolish()});
+  const start=()=>{
+    applyStaticLogo();removeInstall();bodyObserver.observe(document.body,{childList:true,subtree:true});setTimeout(queuePolish,40);
+    const list=$('#adminProductList');if(list)new MutationObserver(()=>{if(!applyingFilters)requestAnimationFrame(()=>{updateFilterCounts();renderCategoryFilters();applyCombinedFilters()})}).observe(list,{childList:true,subtree:true,attributes:true,attributeFilter:['hidden','class']});
+    const filters=$('.filter-row');if(filters)new MutationObserver(()=>requestAnimationFrame(applyCombinedFilters)).observe(filters,{subtree:true,attributes:true,attributeFilter:['class']});
+  };
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start,{once:true});else start();
 })();
