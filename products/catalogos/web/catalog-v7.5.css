@@ -1,0 +1,24 @@
+/* Hakuna v7.5 — catalog polish, full product media and native-feel fixes */
+.v7-hero-art{display:none!important}
+.v7-hero-copy{max-width:760px!important}
+.v7-search input:focus,.v7-search input:focus-visible{outline:none!important;box-shadow:none!important}
+.v7-catalog-body{overscroll-behavior-x:contain!important}
+.v7-detail-media{aspect-ratio:4/3!important;background:#fff!important;border:1px solid var(--line)!important}
+.v7-detail-media>img{width:100%!important;height:100%!important;object-fit:contain!important;object-position:center!important;padding:18px!important;background:#fff!important}
+.v7-detail-media .v7-photo-empty{aspect-ratio:4/3!important}
+.v75-search-empty{grid-column:1/-1;display:grid;place-items:center;min-height:180px;text-align:center;color:var(--muted);padding:24px}
+.v75-search-empty b{display:block;color:var(--ink);font-size:15px;margin-bottom:5px}
+.v75-search-empty span{font-size:10px}
+.v75-presentation-help{margin:7px 0 0;padding:8px 10px;border-radius:11px;background:#f2f5f2;color:#647168;font-size:8px;line-height:1.45}
+.v7-note-toggle{display:flex!important;align-items:center!important;gap:6px!important;color:var(--ink)!important}
+.v7-note-box textarea{min-height:76px!important;background:#fff!important}
+.v7-category-rail{overscroll-behavior-x:contain;scroll-padding-inline:12px}
+.v7-category-rail button{transition:background .12s ease,color .12s ease,border-color .12s ease,transform .08s ease}
+.v7-category-rail button:active{transform:scale(.97)}
+.v75-cat-icon{width:38px!important;height:38px!important;border-radius:13px!important;display:grid!important;place-items:center!important;background:color-mix(in srgb,var(--brand) 12%,#f6f3ee)!important;color:var(--brand-deep)!important}
+.v75-cat-icon svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+@media(max-width:680px){
+  .v7-detail-media{aspect-ratio:4/3!important;min-height:0!important}
+  .v7-detail-media>img{padding:14px!important}
+  .v7-hero{padding-top:26px!important}
+}
