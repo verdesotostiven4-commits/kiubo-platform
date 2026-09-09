@@ -1,0 +1,53 @@
+/* v7.2.1 — mobile product editor must scroll as one native sheet */
+@media(max-width:760px){
+  #productModal.admin-modal{
+    display:block!important;
+    height:calc(100dvh - max(8px,env(safe-area-inset-top)))!important;
+    max-height:calc(100dvh - max(8px,env(safe-area-inset-top)))!important;
+    overflow-y:auto!important;
+    overflow-x:hidden!important;
+    overscroll-behavior-y:contain!important;
+    -webkit-overflow-scrolling:touch!important;
+    touch-action:pan-y!important;
+    scrollbar-width:none!important;
+  }
+  #productModal.admin-modal::-webkit-scrollbar{display:none!important}
+  #productModal .modal-form{
+    overflow:visible!important;
+    max-height:none!important;
+    min-height:0!important;
+    touch-action:pan-y!important;
+    overscroll-behavior:unset!important;
+    -webkit-overflow-scrolling:auto!important;
+    padding-bottom:18px!important;
+  }
+  #productModal>header{
+    position:sticky!important;
+    top:0!important;
+    z-index:40!important;
+    background:rgba(252,251,247,.985)!important;
+  }
+  #productModal>footer{
+    position:sticky!important;
+    bottom:0!important;
+    z-index:40!important;
+    background:rgba(252,251,247,.985)!important;
+    box-shadow:0 -8px 24px rgba(20,32,25,.07)!important;
+    padding-bottom:max(13px,env(safe-area-inset-bottom))!important;
+  }
+  #productModal .v72-modal-x{
+    position:fixed!important;
+    top:calc(10px + env(safe-area-inset-top))!important;
+    right:10px!important;
+    z-index:60!important;
+  }
+  #productModal input,#productModal textarea,#productModal select,#productModal button,#productModal label{
+    touch-action:manipulation;
+  }
+  #productModal .modal-form,
+  #productModal .v5-product-editor,
+  #productModal .v5-presentations,
+  #productModal .v5-presentation-row{
+    pointer-events:auto!important;
+  }
+}
