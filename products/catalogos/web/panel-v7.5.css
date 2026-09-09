@@ -1,0 +1,40 @@
+/* Hakuna v7.5 — provider panel workflow polish */
+html,body,.panel-page,.admin-app,.admin-main,.admin-content{max-width:100%!important;overflow-x:hidden!important}
+#v5InstallBtn{display:none!important}
+#saveNextProductBtn,#archiveProductBtn{display:none!important}
+#productModal .v72-modal-x{position:fixed!important;top:calc(10px + env(safe-area-inset-top))!important;right:10px!important;z-index:100!important}
+#orderModal{overflow-y:auto!important;overflow-x:hidden!important;-webkit-overflow-scrolling:touch!important}
+#orderModal>header{position:sticky!important;top:0!important;z-index:50!important;background:rgba(252,251,247,.985)!important;backdrop-filter:none!important}
+.v75-order-x{position:fixed;top:calc(10px + env(safe-area-inset-top));right:10px;z-index:120;width:48px;height:48px;border:1px solid #dfe5df;border-radius:15px;background:#fff;display:grid;place-items:center;box-shadow:0 8px 22px rgba(20,35,26,.08);font-size:28px;line-height:1;color:#213028}
+.v75-order-x:active{transform:scale(.97)}
+.v75-category-filters{display:flex;gap:7px;overflow-x:auto;scrollbar-width:none;padding:1px 0 9px;overscroll-behavior-x:contain}
+.v75-category-filters::-webkit-scrollbar{display:none}
+.v75-category-filters button{flex:0 0 auto;border:1px solid #e0e6e1;background:#fff;border-radius:999px;padding:8px 11px;font-size:9px;font-weight:850;color:#536159;white-space:nowrap}
+.v75-category-filters button.active{background:#153426;border-color:#153426;color:#fff}
+.v75-category-filters b,.filter-chip b{font-size:8px;margin-left:4px;opacity:.72}
+.v75-saving-pill{position:fixed;z-index:10020;left:50%;bottom:88px;transform:translateX(-50%);display:flex;align-items:center;gap:8px;background:#153426;color:#fff;border-radius:999px;padding:9px 13px;font-size:9px;font-weight:850;box-shadow:0 12px 30px rgba(15,40,25,.18);pointer-events:none}
+.v75-saving-pill i{width:8px;height:8px;border-radius:50%;background:#7ae1a8;box-shadow:0 0 0 4px rgba(122,225,168,.12)}
+.v75-saving-pill.error{background:#8f4343}
+#v5ProductEditor .v5-editor-head{align-items:flex-start!important}
+#v5ProductEditor .v5-editor-head small{line-height:1.45!important}
+.v75-presentation-intro{grid-column:1/-1;margin:0 0 8px;padding:10px 11px;border:1px solid #e1e7e2;border-radius:12px;background:#f5f7f5;color:#647168;font-size:9px;line-height:1.5}
+.v75-presentation-intro b{display:block;color:#24332a;font-size:10px;margin-bottom:3px}
+.v5-presentation-row>label{font-size:8px!important;line-height:1.25!important;color:#68756d!important}
+.v5-presentation-row>label input{margin-top:4px!important}
+.v5-presentation-note{font-size:8px!important;line-height:1.5!important;background:#f6f7f4!important;border-radius:11px!important;padding:9px!important}
+.v5-presentations-head h4{font-size:12px!important}
+#v5AllowNote+span small{line-height:1.4!important}
+.panel-loading{background:#fff!important}
+.panel-loading .loading-logo,.gate-logo{background:#fff!important;overflow:hidden!important}
+.panel-loading .loading-logo img,.gate-logo img{width:100%!important;height:100%!important;object-fit:contain!important;background:#fff!important}
+@media(max-width:760px){
+  .stats-grid{display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:8px!important;overflow:visible!important}
+  .stats-grid .stat-card{min-width:0!important;width:auto!important}
+  .filter-row{max-width:100%!important}
+  #productModal>footer{grid-template-columns:1fr!important;display:grid!important}
+  #productModal>footer>span,#productModal>footer>[data-close-modal]{display:none!important}
+  #saveProductBtn{width:100%!important;min-height:52px!important;font-size:12px!important}
+  .v5-presentation-row{grid-template-columns:1fr 1fr!important;overflow:hidden!important}
+  .v5-presentation-row .v6-cost-block{grid-column:1/-1!important}
+  .v75-order-x{width:44px;height:44px;border-radius:14px}
+}
