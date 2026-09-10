@@ -1,0 +1,1 @@
+window.KIUBO_BRAND_ASSETS=Object.freeze({});
