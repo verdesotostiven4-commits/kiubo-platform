@@ -1,0 +1,5 @@
+/* Hakuna v7.8.1 cleanup */
+.v77-options-pill{display:none!important}
+.v77-toast{display:block!important}
+.v7-product-title p{max-width:100%!important}
+.v7-catalog-head,.v7-topbar{-webkit-backdrop-filter:none!important;backdrop-filter:none!important}
