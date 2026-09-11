@@ -1,0 +1,7 @@
+/* Hakuna Matata 10.7.4 — final brand rail polish. */
+.hm-v104-catalog-brands .hm1074-wordmark,.v10-brand-options .hm1074-wordmark{position:relative!important;background:linear-gradient(145deg,hsl(var(--hm1074-h) 42% 97%),#fff 68%)!important;color:hsl(var(--hm1074-h) 34% 29%)!important;border:1px solid hsl(var(--hm1074-h) 28% 88%)!important;box-shadow:inset 0 -1px 0 rgba(255,255,255,.7)!important}
+.hm1074-wordmark:before{content:"";position:absolute;left:10px;right:10px;bottom:6px;height:2px;border-radius:999px;background:hsl(var(--hm1074-h) 55% 54% / .35)}
+.hm1074-wordmark b{font-weight:950!important;letter-spacing:-.035em!important;max-width:100%!important;white-space:normal!important;overflow:visible!important;text-overflow:clip!important;text-align:center!important;line-height:1.02!important}
+.hm-v104-catalog-brands .hm1074-wordmark b{font-size:10px!important}.v10-brand-options .hm1074-wordmark b{font-size:9px!important}
+/* Selection changes should feel instantaneous, not like a full-page refresh. */
+.hm-v104-catalog-brands{scroll-behavior:auto!important}.hm-v104-catalog-brands [data-brand-chip]{transition:border-color .1s ease,background-color .1s ease,color .1s ease!important}.hm-v104-catalog-brands [data-brand-chip]:active{transform:scale(.985)!important}
