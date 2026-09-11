@@ -1,0 +1,25 @@
+/* Hakuna Matata · Panel 10.3.3 stability polish */
+.admin-search.v1033-search-ready{position:relative}
+.admin-search.v1033-search-ready input{min-width:0;padding-right:34px}
+.admin-search.v1033-search-ready input::-webkit-search-cancel-button{-webkit-appearance:none;appearance:none;display:none}
+.v1033-search-clear{position:absolute;z-index:2;right:7px;top:50%;width:31px;height:31px;display:grid;place-items:center;transform:translateY(-50%);border:0;border-radius:10px;background:#eef1ed;color:#536158;font-size:21px;font-weight:500;line-height:1;cursor:pointer;transition:background .15s,color .15s,transform .12s}
+.v1033-search-clear:hover{background:#e4e9e4;color:#18251d}
+.v1033-search-clear:active{transform:translateY(-50%) scale(.93)}
+.v1033-search-clear:focus-visible{outline:2px solid color-mix(in srgb,var(--brand) 60%,white);outline-offset:2px}
+.v1033-search-clear[hidden]{display:none!important}
+
+@media(max-width:760px){
+  .bottom-nav.v1033-six-nav{grid-template-columns:repeat(6,minmax(0,1fr));padding-inline:6px}
+  .bottom-nav.v1033-six-nav button{min-width:0}
+  .bottom-nav.v1033-six-nav button span{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .bottom-nav.v1033-six-nav .bottom-nav__create{width:48px;height:48px!important;border-radius:16px}
+  .bottom-nav.v1033-six-nav .nav-badge{right:2px}
+  .admin-search.v1033-search-ready input{font-size:12px}
+  .v1033-search-clear{right:6px;width:33px;height:33px;border-radius:11px}
+}
+@media(max-width:380px){
+  .bottom-nav.v1033-six-nav{padding-inline:3px}
+  .bottom-nav.v1033-six-nav button{font-size:6.5px}
+  .bottom-nav.v1033-six-nav .icon{width:19px;height:19px}
+  .bottom-nav.v1033-six-nav .bottom-nav__create{width:44px;height:44px!important}
+}
