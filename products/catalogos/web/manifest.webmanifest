@@ -12,9 +12,12 @@
   "orientation": "portrait-primary",
   "prefer_related_applications": false,
   "icons": [
-    { "src": "https://cdn.phototourl.com/free/2026-09-09-81972c89-9fb3-4bb7-ad34-74c1fe90aca9.jpg", "sizes": "512x512", "type": "image/jpeg", "purpose": "any" },
-    { "src": "/assets/brand-mark.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" },
-    { "src": "/assets/brand-mark.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "maskable" }
+    {
+      "src": "https://cdn.phototourl.com/free/2026-09-09-81972c89-9fb3-4bb7-ad34-74c1fe90aca9.jpg",
+      "sizes": "512x512",
+      "type": "image/jpeg",
+      "purpose": "any maskable"
+    }
   ],
   "shortcuts": [
     { "name": "Catálogo", "short_name": "Catálogo", "url": "/#catalog" },
