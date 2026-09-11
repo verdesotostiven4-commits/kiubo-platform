@@ -6,9 +6,13 @@
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
+  "display_override": ["standalone", "minimal-ui"],
   "background_color": "#F7F4EE",
-  "theme_color": "#122018",
+  "theme_color": "#14231B",
+  "orientation": "portrait-primary",
+  "prefer_related_applications": false,
   "icons": [
-    { "src": "https://cdn.phototourl.com/free/2026-09-09-81972c89-9fb3-4bb7-ad34-74c1fe90aca9.jpg", "sizes": "any", "type": "image/jpeg", "purpose": "any" }
+    { "src": "/assets/brand-mark.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" },
+    { "src": "/assets/brand-mark.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "maskable" }
   ]
 }
