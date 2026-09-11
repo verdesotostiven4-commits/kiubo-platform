@@ -1,0 +1,56 @@
+/* Hakuna Matata 10.4.1 — mobile polish, stable rails and product-first catalog. */
+#homeView .v10-home{gap:0}
+#homeView .v10-home-search{box-shadow:0 8px 24px rgba(18,39,25,.035)}
+#homeView .v10-heading>button span{font-size:16px;line-height:1}
+#homeView .hm-brand-block .v10-brand-rail{scroll-padding-inline:1px}
+#homeView .v10-categories button{min-height:86px}
+.hm1041-cat-copy{min-width:0;display:grid;gap:3px}
+.hm1041-cat-copy b{font-size:11px!important;line-height:1.05}
+.hm1041-cat-copy small{font-size:7px;color:#879188;line-height:1.25}
+#homeView .v10-product-strip{scroll-snap-type:x mandatory;overscroll-behavior-inline:contain;scroll-behavior:smooth}
+#homeView .v10-product-strip>.v10-product{scroll-snap-align:start;scroll-snap-stop:normal}
+#homeView .v10-product-strip [data-carousel-clone]{display:none!important}
+.hm-v104-catalog-brands{padding:10px 2px 3px!important;scroll-padding-inline:2px;overscroll-behavior-inline:contain}
+.hm-v104-catalog-brands button{outline:0!important;box-shadow:0 3px 12px rgba(20,39,27,.025)!important;transition:border-color .14s ease,background .14s ease,box-shadow .14s ease,transform .12s ease}
+.hm-v104-catalog-brands button:active{transform:scale(.98)}
+.hm-v104-catalog-brands button.active{outline:0!important;border-color:#7eab91!important;background:#f0f7f2!important;box-shadow:0 0 0 2px rgba(30,91,58,.10)!important}
+.hm-v104-catalog-brands button.active .hm-brand-visual{background:#fff!important}
+.hm-v104-catalog-brands .hm-v1041-all{flex:0 0 72px;display:grid;place-items:center;color:#244b37;font-size:10px;font-weight:900;background:#f5f7f4}
+.hm-v104-catalog-brands .hm-v1041-all.active{color:#fff!important;background:#114a32!important;border-color:#114a32!important;box-shadow:none!important}
+.hm-v104-catalog-brands .hm-v104-more{background:#f4f6f3!important}
+.v10-active-filter{min-height:38px;background:#eff7f1!important;border:1px solid #e4eee7}
+.v10-active-filter button{min-height:28px;padding:0 8px!important;border-radius:9px!important;color:#ce5a3c!important;background:#fff!important}
+#catalogView .v10-catalog-head{transition:transform .24s cubic-bezier(.2,.75,.2,1),box-shadow .2s ease;will-change:transform}
+#catalogView .v10-catalog-head.hm-v1041-hidden{transform:translateY(calc(-100% - 6px));pointer-events:none;box-shadow:none}
+#catalogView .v10-catalog-body{min-height:70dvh}
+#ordersView .hm1041-order-empty{padding-top:20px!important}
+#ordersView .hm1041-order-empty .hm-empty-art{width:min(290px,72vw)!important;height:220px!important;border-radius:42% 58% 48% 52% / 52% 45% 55% 48%!important;background:linear-gradient(145deg,#edf7e9,#f8faf5)!important;box-shadow:inset 0 0 0 1px rgba(32,80,52,.025)}
+#ordersView .hm1041-order-empty .hm-empty-art:before,#ordersView .hm1041-order-empty .hm-empty-art:after{display:none!important}
+#ordersView .hm1041-order-empty .hm-empty-art svg{width:138px!important;height:138px!important;fill:none!important;stroke:#16563a!important;stroke-width:5!important;stroke-linecap:round!important;stroke-linejoin:round!important;filter:none!important}
+#ordersView .hm1041-order-empty>b{font-size:22px!important;letter-spacing:-.025em}
+#ordersView .hm1041-order-empty>span{max-width:300px;line-height:1.45}
+#ordersView .hm1041-order-empty>button{min-width:210px!important}
+.hm-brand-visual.image-failed img{display:none!important}
+.hm-brand-visual.image-failed:after{content:'Marca';font-size:8px;font-weight:900;color:#567064}
+.v10-backdrop{z-index:120!important}.v10-sheet{z-index:121!important}
+@media(max-width:620px){
+#homeView .v10-home{width:calc(100% - 24px)}
+#homeView .v10-home-search{height:56px;margin-bottom:10px}
+#homeView .hm-brand-block .hm-brand-chip{min-width:94px!important;height:56px!important}
+#homeView .hm-brand-block .hm-brand-more{min-width:58px!important;height:56px!important}
+#homeView .v10-hero.hm-hero-carousel{margin-top:10px!important}
+#homeView .hm-hero-slide{min-height:235px!important;padding:20px 17px 24px!important;grid-template-columns:minmax(0,1fr) 118px!important}
+#homeView .hm-hero-copy h1{font-size:30px!important;max-width:215px!important}
+#homeView .hm-hero-copy h2{font-size:27px!important;max-width:220px!important}
+#homeView .hm-hero-copy p{font-size:9px!important;max-width:205px!important}
+#homeView .hm-product-pile{height:185px!important;min-width:118px!important}
+#homeView .v10-categories{gap:8px}
+#homeView .v10-categories button{flex:0 0 148px!important;min-height:80px!important;grid-template-columns:42px minmax(0,1fr) 11px!important;padding:10px!important;gap:8px!important}
+#homeView .v10-categories button span{width:42px!important;height:42px!important}
+#homeView .v10-product-strip>.v10-product{flex-basis:47vw!important}
+#catalogView .v10-catalog-head{top:66px!important}
+.hm-v104-catalog-brands button{flex-basis:104px!important;height:58px!important}
+.hm-v104-catalog-brands .hm-v1041-all{flex-basis:66px!important}
+.hm-v104-catalog-brands .hm-v104-more{flex-basis:70px!important}
+}
+@media(max-width:390px){#homeView .v10-categories button{flex-basis:142px!important}#homeView .v10-product-strip>.v10-product{flex-basis:48vw!important}.hm-v104-catalog-brands button{flex-basis:98px!important}}
