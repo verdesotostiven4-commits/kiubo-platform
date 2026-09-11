@@ -1,5 +1,5 @@
 /* Catalog 10.2 — UX polish without legacy runtime layers */
-.v10-backdrop{background:rgba(16,34,23,.17)!important;backdrop-filter:blur(3px);-webkit-backdrop-filter:blur(3px)}
+.v10-backdrop{background:rgba(16,34,23,.17)!important;backdrop-filter:blur(3px);-webkit-backdrop-filter:blur(3px);border-radius:0!important;box-shadow:none!important}
 .v10-sheet{box-shadow:0 -18px 54px rgba(8,25,14,.12)!important}
 .v10-nav{background:#fff!important;backdrop-filter:none!important;-webkit-backdrop-filter:none!important;box-shadow:none!important}
 .v10-nav:before,.v10-nav:after{display:none!important}
@@ -13,6 +13,10 @@
 .v102-hero-products .p1{width:148px;height:185px;right:58px;top:30px;z-index:3;transform:rotate(-2deg)}
 .v102-hero-products .p2{width:118px;height:148px;right:0;top:4px;z-index:2;transform:rotate(5deg)}
 .v102-hero-products .p3{width:112px;height:138px;right:4px;bottom:0;z-index:1;transform:rotate(-4deg)}
+
+/* Square product photography without cropping tall bottles or packs. */
+.v10-product-media{aspect-ratio:1/1!important}
+.v10-product-media>img{width:100%!important;height:100%!important;padding:8px;object-fit:contain!important}
 
 .v102-search-wrap{position:relative;min-width:0;z-index:45}
 .v102-search-suggestions{position:absolute;left:0;right:0;top:calc(100% + 7px);background:#fff;border:1px solid var(--line);border-radius:16px;box-shadow:0 18px 45px rgba(17,38,24,.16);padding:5px;max-height:min(55dvh,430px);overflow:auto;z-index:100}

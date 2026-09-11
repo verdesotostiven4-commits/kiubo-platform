@@ -206,8 +206,52 @@ async function saveStock(req: Request, body: Json, route: CatalogRoute) {
   return response(req, { product: data }, 200);
 }
 
+async function savePresentationImage(req: Request, body: Json, route: CatalogRoute) {
+  if (!(await authorizeRouteActor(req, route))) return response(req, { error: "session_expired" }, 401);
+
+  const presentationId = validUuid(body.presentation_id);
+  const imageUrl = String(body.image_url || "").trim();
+  const imagePath = String(body.image_path || "").trim();
+  const accountPrefix = `${route.id}/products/`;
+  let parsedUrl: URL;
+  try { parsedUrl = new URL(imageUrl); } catch { return response(req, { error: "invalid_image" }, 400); }
+  const publicPrefix = "/storage/v1/object/public/catalog-assets-v4/";
+  if (!presentationId || !imagePath.startsWith(accountPrefix) || parsedUrl.host !== new URL(SUPABASE_URL).host || !parsedUrl.pathname.startsWith(publicPrefix) || decodeURIComponent(parsedUrl.pathname.slice(publicPrefix.length)) !== imagePath) {
+    return response(req, { error: "invalid_image" }, 400);
+  }
+
+  const fileName = imagePath.slice(accountPrefix.length);
+  const { data: objects, error: objectError } = await db.storage.from("catalog-assets-v4").list(`${route.id}/products`, { search: fileName, limit: 2 });
+  if (objectError) throw objectError;
+  if (!objects?.some(item => item.name === fileName)) return response(req, { error: "image_not_found" }, 404);
+
+  const { data: previous, error: previousError } = await db.from("catalog_product_presentations")
+    .select("id,image_path")
+    .eq("id", presentationId)
+    .eq("account_id", route.id)
+    .maybeSingle();
+  if (previousError) throw previousError;
+  if (!previous) return response(req, { error: "presentation_not_found" }, 404);
+
+  const { data, error } = await db.from("catalog_product_presentations")
+    .update({ image_url: imageUrl, image_path: imagePath, updated_at: new Date().toISOString() })
+    .eq("id", presentationId)
+    .eq("account_id", route.id)
+    .select("id,image_url,image_path")
+    .maybeSingle();
+  if (error) throw error;
+  if (!data) return response(req, { error: "presentation_not_found" }, 404);
+  const previousPath = String(previous.image_path || "");
+  if (previousPath.startsWith(accountPrefix) && previousPath !== imagePath) {
+    const { error: removeError } = await db.storage.from("catalog-assets-v4").remove([previousPath]);
+    if (removeError) console.error("presentation image cleanup", { presentationId, previousPath, message: removeError.message });
+  }
+  return response(req, { ok: true, presentation: data }, 200);
+}
+
 async function forwardJson(req: Request, body: Json, route: CatalogRoute) {
   if (body.action === "save_stock") return saveStock(req, body, route);
+  if (body.action === "save_presentation_image") return savePresentationImage(req, body, route);
 
   const upstream = await fetch(CORE_URL, {
     method: "POST",
