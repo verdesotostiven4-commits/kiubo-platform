@@ -20,7 +20,6 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-          cache: npm
       - name: Separate physical inventory from prepared products
         shell: bash
         run: |
@@ -30,21 +29,16 @@ jobs:
 
           p=Path('components/InventoryClient.tsx')
           t=p.read_text()
-
           old='<article className={styles.setupCard}><div className={styles.setupHead}><span className={styles.step}>1</span><div className={styles.setupTitle}><strong>Qué quieres controlar</strong><span>Registra cuánto tienes y cuándo quieres recibir una alerta.</span></div></div>'
           new='<article className={styles.setupCard}><div className={styles.setupHead}><span className={styles.step}>1</span><div className={styles.setupTitle}><strong>Qué quieres controlar</strong><span>Solo stock real: ingredientes, insumos o artículos que puedes contar físicamente.</span></div></div>'
           assert old in t, 'step 1 copy anchor missing'
           t=t.replace(old,new,1)
-
           anchor='  const removeRecipeComponent=(componentId:string)=>{if(!recipeProduct)return;const next=loadLocalDatabase(),target=next.tenantProducts.find(p=>p.id===recipeProduct.id);if(!target)return;asInventoryProduct(target).recipe=productRecipe(target).filter(line=>line.productId!==componentId);persist(next,`Ingrediente retirado de ${target.name}`)};\n  return <>'
           replacement='  const removeRecipeComponent=(componentId:string)=>{if(!recipeProduct)return;const next=loadLocalDatabase(),target=next.tenantProducts.find(p=>p.id===recipeProduct.id);if(!target)return;asInventoryProduct(target).recipe=productRecipe(target).filter(line=>line.productId!==componentId);persist(next,`Ingrediente retirado de ${target.name}`)};\n  const openRecipeEditor=(productId:string)=>{setRecipeProductId(productId);setAutomationOpen(true);requestAnimationFrame(()=>document.getElementById("inventory-automation")?.scrollIntoView({behavior:"smooth",block:"start"}))};\n  return <>'
           assert anchor in t, 'recipe helper anchor missing'
           t=t.replace(anchor,replacement,1)
-
-          old='<section className={styles.automation}>'
-          assert old in t, 'automation section missing'
-          t=t.replace(old,'<section className={styles.automation} id="inventory-automation">',1)
-
+          assert '<section className={styles.automation}>' in t, 'automation section missing'
+          t=t.replace('<section className={styles.automation}>','<section className={styles.automation} id="inventory-automation">',1)
           pattern=re.compile(r'      <article className="panel"><div className="panel-head"><div><span className="eyebrow">STOCK ACTUAL</span><h3>Productos e ingredientes</h3></div><span className="pill">\{products\.length\}</span></div><div className="inventory-list">.*?</div></article>\n      <article className="panel" id="inventory-adjustment">',re.S)
           physical=('      <article className="panel"><div className="panel-head"><div><span className="eyebrow">STOCK REAL</span><h3>Existencias</h3></div><span className="pill">{trackedProducts.length}</span></div>'
             '<p className="cart-note">Aquí solo aparece lo que existe físicamente y puede sumarse, retirarse o contarse.</p>'
@@ -53,12 +47,10 @@ jobs:
           t2,n=pattern.subn(physical,t,count=1)
           assert n==1, f'physical inventory panel replacement count={n}'
           t=t2
-
           old='<article className="panel" id="inventory-adjustment"><span className="eyebrow">AJUSTE CONTROLADO</span><h3>Sumar o retirar stock</h3>{trackedProducts.length?<form className="inventory-form" onSubmit={adjust}><label>Producto o ingrediente<select name="productId" required defaultValue=""><option value="" disabled>Selecciona</option>{trackedProducts.map(p=><option key={p.id} value={p.id}>{p.name} · {formatStock(p.stock,stockUnit(p))}</option>)}</select></label>'
           new='<article className="panel" id="inventory-adjustment"><span className="eyebrow">AJUSTE CONTROLADO</span><h3>Sumar o retirar stock</h3><p className="cart-note">Solo existencias físicas. Los productos preparados se descuentan automáticamente mediante su receta.</p>{trackedProducts.length?<form className="inventory-form" onSubmit={adjust}><label>Existencia / insumo<select name="productId" required defaultValue=""><option value="" disabled>Selecciona</option>{trackedProducts.map(p=><option key={p.id} value={p.id}>{p.name} · {formatStock(p.stock,stockUnit(p))}</option>)}</select></label>'
           assert old in t, 'adjustment form anchor missing'
           t=t.replace(old,new,1)
-
           anchor='    </section>\n    <section className="inventory-grid">\n      <article className="panel"><div className="panel-head"><div><span className="eyebrow">PROVEEDORES</span><h3>Directorio del negocio</h3></div><span className="pill">{suppliers.length}</span></div>'
           prepared=('    </section>\n'
             '    <section className="panel"><div className="panel-head"><div><span className="eyebrow">PREPARACIÓN</span><h3>Productos preparados y recetas</h3></div><span className="pill">{preparedProducts.length}</span></div>'
@@ -72,39 +64,31 @@ jobs:
           p.write_text(t)
 
           p=Path('components/InventoryQuickRestock.tsx')
-          t=p.read_text()
-          old='<label><span>Producto o ingrediente</span><select value={selected?.id||""}'
+          t=p.read_text(); old='<label><span>Producto o ingrediente</span><select value={selected?.id||""}'
           assert old in t, 'quick restock label anchor missing'
-          t=t.replace(old,'<label><span>Existencia / insumo</span><select value={selected?.id||""}',1)
-          p.write_text(t)
+          p.write_text(t.replace(old,'<label><span>Existencia / insumo</span><select value={selected?.id||""}',1))
 
           p=Path('components/PurchasesClient.tsx')
           t=p.read_text()
           old='const ctx=getWorkspaceContext(db),products=db.tenantProducts.filter(p=>p.tenantId===ctx.tenantId&&p.branchId===ctx.branchId&&p.active),suppliers='
           new='const ctx=getWorkspaceContext(db),products=db.tenantProducts.filter(p=>p.tenantId===ctx.tenantId&&p.branchId===ctx.branchId&&p.active),stockProducts=products.filter(p=>p.trackStock!==false),suppliers='
-          assert old in t, 'purchase products declaration anchor missing'
-          t=t.replace(old,new,1)
-          old='product=products.find(p=>p.id===productId);if(!product||qty<=0'
-          assert old in t, 'purchase addLine product anchor missing'
-          t=t.replace(old,'product=stockProducts.find(p=>p.id===productId);if(!product||qty<=0',1)
+          assert old in t, 'purchase products declaration anchor missing'; t=t.replace(old,new,1)
+          old='product=products.find(p=>p.id===productId);if(!product||qty<=0'; assert old in t, 'purchase addLine product anchor missing'; t=t.replace(old,'product=stockProducts.find(p=>p.id===productId);if(!product||qty<=0',1)
           old='const product=dbNow.tenantProducts.find(p=>p.id===line.productId&&p.tenantId===ctxNow.tenantId&&p.branchId===ctxNow.branchId);if(!product)continue;'
           new='const product=dbNow.tenantProducts.find(p=>p.id===line.productId&&p.tenantId===ctxNow.tenantId&&p.branchId===ctxNow.branchId&&p.active&&p.trackStock!==false);if(!product)continue;'
-          assert old in t, 'purchase save guard anchor missing'
-          t=t.replace(old,new,1)
+          assert old in t, 'purchase save guard anchor missing'; t=t.replace(old,new,1)
           old='<option value="" disabled>Producto</option>{products.map(p=><option key={p.id} value={p.id}>{p.name}</option>)}</select>'
           new='<option value="" disabled>Existencia / insumo</option>{stockProducts.map(p=><option key={p.id} value={p.id}>{p.name}</option>)}</select>'
-          assert old in t, 'purchase selector anchor missing'
-          t=t.replace(old,new,1)
+          assert old in t, 'purchase selector anchor missing'; t=t.replace(old,new,1)
           p.write_text(t)
 
-          p=Path('components/InventoryClient.module.css')
-          t=p.read_text()
+          p=Path('components/InventoryClient.module.css'); t=p.read_text()
           add='\n.preparedList{display:grid;gap:8px;margin-top:14px}.preparedRow{display:grid;grid-template-columns:minmax(0,1fr) auto auto;align-items:center;gap:12px;padding:11px 12px;border:1px solid #e7edf2;border-radius:12px;background:#fbfcfd}.preparedRow>div{display:grid;gap:3px;min-width:0}.preparedRow strong{font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.preparedRow>div span{font-size:10px;color:var(--muted)}.recipeState{padding:6px 9px;border-radius:999px;font-size:10px;font-weight:900;white-space:nowrap}.recipeReady{background:#eaf7ef;color:#28744b}.recipeMissing{background:#fff1df;color:#a66113}.recipeEdit{border:1px solid #dce5ec;background:#fff;color:#38556f;border-radius:9px;padding:7px 9px;font-size:10px;font-weight:900;cursor:pointer}.recipeEdit:hover{background:#f4f8fb}@media(max-width:640px){.preparedRow{grid-template-columns:1fr auto}.preparedRow .recipeEdit{grid-column:1/-1;width:100%}}\n'
           if '.preparedList{' not in t:t+=add
           p.write_text(t)
           PY
       - name: Install dependencies
-        run: npm ci
+        run: npm install --no-audit --no-fund
       - name: Run KIUBO regression checks
         run: npm run verify
       - name: Production build
