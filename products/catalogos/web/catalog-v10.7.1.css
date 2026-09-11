@@ -1,0 +1,17 @@
+/* Hakuna Matata 10.7.1 — complete brand rail + keyboard-safe brand sheet. */
+.hm-v104-catalog-brands{max-width:100%!important;width:100%!important;display:flex!important;flex-wrap:nowrap!important;overflow-x:auto!important;overflow-y:hidden!important;-webkit-overflow-scrolling:touch!important;scrollbar-width:none!important;overscroll-behavior-inline:contain!important;touch-action:pan-x!important}
+.hm-v104-catalog-brands::-webkit-scrollbar{display:none!important}
+.hm-v104-catalog-brands>[data-brand-chip]{flex:0 0 94px!important;min-width:94px!important}
+.hm-v104-catalog-brands>.hm1043-all{flex:0 0 66px!important;min-width:66px!important}
+.hm1071-brand-sheet{max-height:min(86dvh,760px)!important}
+.hm1071-brand-sheet .v10-sheet-scroll{overscroll-behavior:contain!important}
+.hm1071-brand-sheet.hm1071-keyboard{position:fixed!important;top:var(--hm1071-top,8px)!important;bottom:auto!important;height:var(--hm1071-height,70dvh)!important;max-height:var(--hm1071-height,70dvh)!important;border-radius:24px 24px 18px 18px!important;transform:none!important;transition:top .12s ease,height .12s ease!important}
+.hm1071-brand-sheet.hm1071-keyboard.show{transform:none!important}
+.hm1071-brand-sheet.hm1071-keyboard .v10-sheet-scroll{height:100%!important;max-height:100%!important;overflow-y:auto!important;padding-bottom:18px!important}
+.hm1071-brand-sheet.hm1071-keyboard .v10-filter-sheet{padding-top:2px!important}
+.hm1071-brand-sheet.hm1071-keyboard .v10-filter-sheet>div:first-child p{display:none!important}
+.hm1071-brand-sheet.hm1071-keyboard .v10-filter-sheet>div:first-child h2{font-size:26px!important;line-height:1.02!important;margin-bottom:8px!important}
+.hm1071-brand-sheet.hm1071-keyboard .v10-brand-search{position:sticky!important;top:0!important;z-index:4!important;background:#fff!important;margin-top:8px!important;box-shadow:0 10px 16px -14px rgba(10,45,28,.35)!important}
+.hm1071-brand-sheet.hm1071-keyboard .v10-brand-options{padding-top:10px!important}
+.hm1071-brand-sheet.hm1071-keyboard .v10-brand-options [data-brand-option]{min-height:68px!important}
+@media(max-width:620px){.hm-v104-catalog-brands>[data-brand-chip]{flex-basis:92px!important;min-width:92px!important}.hm-v104-catalog-brands>.hm1043-all{flex-basis:66px!important;min-width:66px!important}}
