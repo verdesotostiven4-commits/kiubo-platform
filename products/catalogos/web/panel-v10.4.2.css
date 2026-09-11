@@ -1,0 +1,12 @@
+/* Hakuna Panel 10.4.2 — clearer photos and resilient mobile editing. */
+.hm1042-photo-guide{margin:0 0 14px;padding:13px 14px;border:1px solid #dce9df;border-radius:16px;background:linear-gradient(135deg,#eef7f0,#f8faf6);display:grid;gap:4px;color:#214b35}
+.hm1042-photo-guide b{font-size:12px;line-height:1.2}.hm1042-photo-guide span{font-size:9px;line-height:1.45;color:#68796e}
+.product-image-upload.hm1042-general-photo{border-style:dashed!important;background:#fbfcfa!important;box-shadow:none!important}
+.product-image-upload.hm1042-general-photo label b{color:#506259}.product-image-upload.hm1042-general-photo label small{max-width:330px;line-height:1.35}
+.v77-presentation-image{position:relative}
+.hm1042-default-badge{position:absolute;top:9px;right:9px;padding:5px 8px;border-radius:999px;background:#e6f4e9;color:#1e6841;font-size:7px;font-weight:900;letter-spacing:.02em;box-shadow:0 2px 7px rgba(25,82,53,.08)}
+.v5-presentation-row[data-hm-photo-state="saving"] .v77-presentation-image{border-color:#9ab8a5!important;background:#f3f8f4!important}
+.v5-presentation-row[data-hm-photo-state="saved"] .v77-presentation-image{border-color:#91c2a2!important;background:#f0f8f2!important}
+.v5-presentation-row[data-hm-photo-state="pending"] .v77-presentation-image{border-color:#e8c58d!important;background:#fff9ee!important}
+.hm1042-panel-toast{position:fixed;z-index:9999;left:50%;bottom:104px;max-width:min(390px,calc(100vw - 28px));transform:translate(-50%,12px);opacity:0;padding:11px 15px;border-radius:13px;background:#153f2d;color:#fff;font-size:10px;font-weight:800;box-shadow:0 14px 34px rgba(15,44,29,.2);transition:.18s ease;pointer-events:none;text-align:center}.hm1042-panel-toast.show{transform:translate(-50%,0);opacity:1}.hm1042-panel-toast.error{background:#8a3f3f}.hm1042-panel-toast.success{background:#1f6843}
+@media(max-width:760px){.hm1042-photo-guide{margin-inline:0;padding:12px;border-radius:15px}.hm1042-photo-guide b{font-size:11px}.hm1042-photo-guide span{font-size:8.5px}.hm1042-default-badge{top:7px;right:7px;font-size:6.5px;padding:4px 7px}.product-image-upload.hm1042-general-photo{padding:12px!important}.hm1042-panel-toast{bottom:96px}}
