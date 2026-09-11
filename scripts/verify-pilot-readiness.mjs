@@ -41,8 +41,7 @@ requireText("lib/cash-reconciliation.ts",["reconcileCashSession","session.openin
 requireText("lib/sync-engine.ts",["isActiveQueueItem(item,activeTenantId)","recoverRejectedCommand","navigator.locks"]);
 requireText("lib/offline-durability.ts",["recoverInterruptedSyncQueue","snapshotOfflineDatabase","navigator.storage?.persist"]);
 const vercel=JSON.parse(text("vercel.json"));
-assert.equal(vercel?.git?.deploymentEnabled?.main,true,"vercel.json must allow production deployments from main");
-assert.equal(vercel?.git?.deploymentEnabled?.["*"],false,"vercel.json must keep feature branch deployments disabled");
-console.log("✓ vercel.json production-only deployment policy");
+assert.equal(vercel?.git?.deploymentEnabled,false,"vercel.json must keep duplicate root Git deployments disabled");
+console.log("✓ vercel.json duplicate root Git deployments remain disabled");
 
-console.log("✓ Pilot Readiness V12 passed: coupled money/stock commands stay atomic-only, Food Service private routes remain protected, revoked order data is purged, employee roles stay out of plan settings, and only main can deploy to Vercel.");
+console.log("✓ Pilot Readiness V12 passed: coupled money/stock commands stay atomic-only, Food Service private routes remain protected, revoked order data is purged, employee roles stay out of plan settings, and duplicate root Git deployments remain disabled.");

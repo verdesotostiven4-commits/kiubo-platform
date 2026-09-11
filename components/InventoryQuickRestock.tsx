@@ -47,7 +47,7 @@ export function InventoryQuickRestock({floating=false}:{floating?:boolean}){
       <section className={styles.modal} role="dialog" aria-modal="true" aria-label="Reponer stock">
         <div className={styles.head}><div><span>INVENTARIO</span><h3>Reponer stock</h3></div><button type="button" onClick={()=>setOpen(false)} aria-label="Cerrar">×</button></div>
         <form onSubmit={submit} className={styles.form}>
-          <label><span>Producto o ingrediente</span><select value={selected?.id||""} onChange={e=>{setSelectedId(e.target.value);setMessage("")}}>{data.tracked.map(product=><option key={product.id} value={product.id}>{product.name} · {formatStock(product.stock,stockUnit(product))}</option>)}</select></label>
+          <label><span>Existencia / insumo</span><select value={selected?.id||""} onChange={e=>{setSelectedId(e.target.value);setMessage("")}}>{data.tracked.map(product=><option key={product.id} value={product.id}>{product.name} · {formatStock(product.stock,stockUnit(product))}</option>)}</select></label>
           <label><span>Cantidad que llegó</span><input autoFocus name="qty" type="number" min={data.isYuki?"1":"0.001"} step={data.isYuki?"1":"0.001"} value={qty} onChange={e=>{setQty(e.target.value);setMessage("")}} placeholder="Ej. 10" required/></label>
           {selected&&<div className={styles.preview}><span>Ahora</span><b>{formatStock(selected.stock,stockUnit(selected))}</b><i>→</i><span>Quedará</span><strong>{formatStock(nextStock,stockUnit(selected))}</strong></div>}
           <button className={styles.save} type="submit" disabled={!validQty}>＋ Sumar al stock</button>
