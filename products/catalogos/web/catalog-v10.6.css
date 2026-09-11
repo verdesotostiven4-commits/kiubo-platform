@@ -1,17 +1,11 @@
-/* Hakuna Matata Catalog 10.6 — touch-first finishing layer. */
-html,body,.v10-app{overscroll-behavior-x:none}
+/* Hakuna Matata Catalog 10.6.1 — touch-first finishing layer. */
+html,body,.v10-app{overscroll-behavior-x:none;max-width:100%;overflow-x:clip}
 .v10-app,.v10-nav,.v10-product,.v10-hero,.v10-brand-rail,.hm-v104-catalog-brands{-webkit-tap-highlight-color:transparent}
-.v10-app button,.v10-app a,.v10-app img{-webkit-user-drag:none}
-.v10-app{user-select:none;-webkit-user-select:none}
-.v10-app input,.v10-app textarea,.v10-app select{user-select:text;-webkit-user-select:text}
-.v10-nav i.hm106-badge-pop{animation:hm106BadgePop .34s cubic-bezier(.2,.8,.2,1)}
-@keyframes hm106BadgePop{0%{transform:scale(.72)}55%{transform:scale(1.22)}100%{transform:scale(1)}}
-#checkoutForm input,#checkoutForm textarea{transition:border-color .16s ease,box-shadow .16s ease,background .16s ease}
-#checkoutForm input:focus,#checkoutForm textarea:focus{box-shadow:0 0 0 4px rgba(22,92,58,.08)!important}
+.v10-app button,.v10-app a,.v10-app img{-webkit-user-drag:none}.v10-app{user-select:none;-webkit-user-select:none}.v10-app input,.v10-app textarea,.v10-app select{user-select:text;-webkit-user-select:text}
+.hm-install-btn,.hm105-install-card,[data-hm-install]{display:none!important}
+.v10-detail-media{overflow:hidden!important;background:#fff!important}.v10-detail-media>img{width:86%!important;height:86%!important;max-width:100%!important;max-height:100%!important;object-fit:contain!important;object-position:center!important}
+.v10-nav i.hm106-badge-pop{animation:hm106BadgePop .34s cubic-bezier(.2,.8,.2,1)}@keyframes hm106BadgePop{0%{transform:scale(.72)}55%{transform:scale(1.22)}100%{transform:scale(1)}}
+#checkoutForm input,#checkoutForm textarea{transition:border-color .16s ease,box-shadow .16s ease,background .16s ease}#checkoutForm input:focus,#checkoutForm textarea:focus{box-shadow:0 0 0 4px rgba(22,92,58,.08)!important}
 .hm106-keyboard .v10-nav{opacity:.985}
-@media(max-width:620px){
-  .v10-view{overflow-x:clip}
-  #cartView .v10-form{padding-bottom:calc(100px + env(safe-area-inset-bottom))}
-  #checkoutForm .v10-choice button,#checkoutForm .v10-payment-options button{min-height:44px}
-}
+@media(max-width:620px){.v10-view{overflow-x:clip}.v10-detail-media{aspect-ratio:1/1!important;min-height:0!important}.v10-detail-media>img{width:82%!important;height:82%!important}#cartView .v10-form{padding-bottom:calc(100px + env(safe-area-inset-bottom))}#checkoutForm .v10-choice button,#checkoutForm .v10-payment-options button{min-height:44px}}
 @media(prefers-reduced-motion:reduce){.v10-nav i.hm106-badge-pop{animation:none}}
