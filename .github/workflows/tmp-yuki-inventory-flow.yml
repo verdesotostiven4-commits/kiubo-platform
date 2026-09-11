@@ -1,0 +1,126 @@
+name: Temporary YUKI inventory workflow patch
+
+on:
+  push:
+    branches:
+      - fix/yuki-inventory-workflow-separation
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: fix/yuki-inventory-workflow-separation
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - name: Separate physical inventory from prepared products
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import re
+
+          p=Path('components/InventoryClient.tsx')
+          t=p.read_text()
+
+          # Make the automatic-control copy explicitly distinguish physical stock from recipes.
+          old='<article className={styles.setupCard}><div className={styles.setupHead}><span className={styles.step}>1</span><div className={styles.setupTitle}><strong>Qué quieres controlar</strong><span>Registra cuánto tienes y cuándo quieres recibir una alerta.</span></div></div>'
+          new='<article className={styles.setupCard}><div className={styles.setupHead}><span className={styles.step}>1</span><div className={styles.setupTitle}><strong>Qué quieres controlar</strong><span>Solo stock real: ingredientes, insumos o artículos que puedes contar físicamente.</span></div></div>'
+          assert old in t, 'step 1 copy anchor missing'
+          t=t.replace(old,new,1)
+
+          # Give recipe buttons a direct, predictable workflow back to step 2.
+          anchor='  const removeRecipeComponent=(componentId:string)=>{if(!recipeProduct)return;const next=loadLocalDatabase(),target=next.tenantProducts.find(p=>p.id===recipeProduct.id);if(!target)return;asInventoryProduct(target).recipe=productRecipe(target).filter(line=>line.productId!==componentId);persist(next,`Ingrediente retirado de ${target.name}`)};\n  return <>'
+          replacement='  const removeRecipeComponent=(componentId:string)=>{if(!recipeProduct)return;const next=loadLocalDatabase(),target=next.tenantProducts.find(p=>p.id===recipeProduct.id);if(!target)return;asInventoryProduct(target).recipe=productRecipe(target).filter(line=>line.productId!==componentId);persist(next,`Ingrediente retirado de ${target.name}`)};\n  const openRecipeEditor=(productId:string)=>{setRecipeProductId(productId);setAutomationOpen(true);requestAnimationFrame(()=>document.getElementById("inventory-automation")?.scrollIntoView({behavior:"smooth",block:"start"}))};\n  return <>'
+          assert anchor in t, 'recipe helper anchor missing'
+          t=t.replace(anchor,replacement,1)
+
+          old='<section className={styles.automation}>'
+          assert old in t, 'automation section missing'
+          t=t.replace(old,'<section className={styles.automation} id="inventory-automation">',1)
+
+          # Replace the mixed stock/prepared list with physical stock only.
+          pattern=re.compile(r'      <article className="panel"><div className="panel-head"><div><span className="eyebrow">STOCK ACTUAL</span><h3>Productos e ingredientes</h3></div><span className="pill">\{products\.length\}</span></div><div className="inventory-list">.*?</div></article>\n      <article className="panel" id="inventory-adjustment">',re.S)
+          physical='''      <article className="panel"><div className="panel-head"><div><span className="eyebrow">STOCK REAL</span><h3>Existencias</h3></div><span className="pill">{trackedProducts.length}</span></div><p className="cart-note">Aquí solo aparece lo que existe físicamente y puede sumarse, retirarse o contarse.</p><div className="inventory-list">{trackedProducts.length?trackedProducts.map(p=>{const ingredient=inventoryOnly(p),low=p.stock<=lowStockThreshold(p);return <div className="inventory-row" key={p.id}><div><strong>{p.name}</strong><span>{p.barcode} · {ingredient?"insumo / ingrediente":"producto con stock"}</span></div><b className={low?"stock-low":""}>{formatStock(p.stock,stockUnit(p))}</b><small>{low?"Stock bajo · ":""}Mínimo {formatStock(lowStockThreshold(p),stockUnit(p))}</small></div>}):<p className="empty-cart">Aún no hay existencias físicas configuradas.</p>}</div></article>
+      <article className="panel" id="inventory-adjustment">'''
+          t2,n=pattern.subn(physical,t,count=1)
+          assert n==1, f'physical inventory panel replacement count={n}'
+          t=t2
+
+          old='<article className="panel" id="inventory-adjustment"><span className="eyebrow">AJUSTE CONTROLADO</span><h3>Sumar o retirar stock</h3>{trackedProducts.length?<form className="inventory-form" onSubmit={adjust}><label>Producto o ingrediente<select name="productId" required defaultValue=""><option value="" disabled>Selecciona</option>{trackedProducts.map(p=><option key={p.id} value={p.id}>{p.name} · {formatStock(p.stock,stockUnit(p))}</option>)}</select></label>'
+          new='<article className="panel" id="inventory-adjustment"><span className="eyebrow">AJUSTE CONTROLADO</span><h3>Sumar o retirar stock</h3><p className="cart-note">Solo existencias físicas. Los productos preparados se descuentan automáticamente mediante su receta.</p>{trackedProducts.length?<form className="inventory-form" onSubmit={adjust}><label>Existencia / insumo<select name="productId" required defaultValue=""><option value="" disabled>Selecciona</option>{trackedProducts.map(p=><option key={p.id} value={p.id}>{p.name} · {formatStock(p.stock,stockUnit(p))}</option>)}</select></label>'
+          assert old in t, 'adjustment form anchor missing'
+          t=t.replace(old,new,1)
+
+          # Add a separate recipe/preparation panel before suppliers.
+          anchor='''    </section>
+    <section className="inventory-grid">
+      <article className="panel"><div className="panel-head"><div><span className="eyebrow">PROVEEDORES</span><h3>Directorio del negocio</h3></div><span className="pill">{suppliers.length}</span></div>'''
+          prepared='''    </section>
+    <section className="panel"><div className="panel-head"><div><span className="eyebrow">PREPARACIÓN</span><h3>Productos preparados y recetas</h3></div><span className="pill">{preparedProducts.length}</span></div><p className="cart-note">Estos productos no tienen un stock artificial propio. Al venderlos, KIUBO descuenta sus ingredientes reales.</p><div className={styles.preparedList}>{preparedProducts.length?preparedProducts.map(product=>{const recipeCount=productRecipe(product).length;return <div className={styles.preparedRow} key={product.id}><div><strong>{product.name}</strong><span>{recipeCount?`Receta configurada · ${recipeCount} ${recipeCount===1?"ingrediente":"ingredientes"}`:"Falta configurar receta"}</span></div><span className={`${styles.recipeState} ${recipeCount?styles.recipeReady:styles.recipeMissing}`}>{recipeCount?"Automático":"Revisar"}</span><button type="button" className={styles.recipeEdit} onClick={()=>openRecipeEditor(product.id)}>{recipeCount?"Editar receta":"Configurar receta"}</button></div>}):<div className={styles.empty}>No hay productos preparados en esta sucursal.</div>}</div></section>
+    <section className="inventory-grid">
+      <article className="panel"><div className="panel-head"><div><span className="eyebrow">PROVEEDORES</span><h3>Directorio del negocio</h3></div><span className="pill">{suppliers.length}</span></div>'''
+          assert anchor in t, 'supplier section insertion anchor missing'
+          t=t.replace(anchor,prepared,1)
+
+          # Guard against old misleading copy surviving in inventory.
+          t=t.replace('"Descuento automático configurado"','"Receta configurada"').replace('"Sin descuento automático"','"Sin receta"')
+          p.write_text(t)
+
+          # Quick restock: clarify that this selector is physical inventory.
+          p=Path('components/InventoryQuickRestock.tsx')
+          t=p.read_text()
+          old='<label><span>Producto o ingrediente</span><select value={selected?.id||""}'
+          assert old in t, 'quick restock label anchor missing'
+          t=t.replace(old,'<label><span>Existencia / insumo</span><select value={selected?.id||""}',1)
+          p.write_text(t)
+
+          # Purchases: only physical tracked inventory may be received and have stock/cost increased.
+          p=Path('components/PurchasesClient.tsx')
+          t=p.read_text()
+          old='const ctx=getWorkspaceContext(db),products=db.tenantProducts.filter(p=>p.tenantId===ctx.tenantId&&p.branchId===ctx.branchId&&p.active),suppliers='
+          new='const ctx=getWorkspaceContext(db),products=db.tenantProducts.filter(p=>p.tenantId===ctx.tenantId&&p.branchId===ctx.branchId&&p.active),stockProducts=products.filter(p=>p.trackStock!==false),suppliers='
+          assert old in t, 'purchase products declaration anchor missing'
+          t=t.replace(old,new,1)
+          old='product=products.find(p=>p.id===productId);if(!product||qty<=0'
+          assert old in t, 'purchase addLine product anchor missing'
+          t=t.replace(old,'product=stockProducts.find(p=>p.id===productId);if(!product||qty<=0',1)
+          old='const product=dbNow.tenantProducts.find(p=>p.id===line.productId&&p.tenantId===ctxNow.tenantId&&p.branchId===ctxNow.branchId);if(!product)continue;'
+          new='const product=dbNow.tenantProducts.find(p=>p.id===line.productId&&p.tenantId===ctxNow.tenantId&&p.branchId===ctxNow.branchId&&p.active&&p.trackStock!==false);if(!product)continue;'
+          assert old in t, 'purchase save guard anchor missing'
+          t=t.replace(old,new,1)
+          old='<option value="" disabled>Producto</option>{products.map(p=><option key={p.id} value={p.id}>{p.name}</option>)}</select>'
+          new='<option value="" disabled>Existencia / insumo</option>{stockProducts.map(p=><option key={p.id} value={p.id}>{p.name}</option>)}</select>'
+          assert old in t, 'purchase selector anchor missing'
+          t=t.replace(old,new,1)
+          p.write_text(t)
+
+          # Styling for the separated prepared/recipe list.
+          p=Path('components/InventoryClient.module.css')
+          t=p.read_text()
+          add='''\n.preparedList{display:grid;gap:8px;margin-top:14px}.preparedRow{display:grid;grid-template-columns:minmax(0,1fr) auto auto;align-items:center;gap:12px;padding:11px 12px;border:1px solid #e7edf2;border-radius:12px;background:#fbfcfd}.preparedRow>div{display:grid;gap:3px;min-width:0}.preparedRow strong{font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.preparedRow>div span{font-size:10px;color:var(--muted)}.recipeState{padding:6px 9px;border-radius:999px;font-size:10px;font-weight:900;white-space:nowrap}.recipeReady{background:#eaf7ef;color:#28744b}.recipeMissing{background:#fff1df;color:#a66113}.recipeEdit{border:1px solid #dce5ec;background:#fff;color:#38556f;border-radius:9px;padding:7px 9px;font-size:10px;font-weight:900;cursor:pointer}.recipeEdit:hover{background:#f4f8fb}@media(max-width:640px){.preparedRow{grid-template-columns:1fr auto}.preparedRow .recipeEdit{grid-column:1/-1;width:100%}}\n'''
+          if '.preparedList{' not in t:t+=add
+          p.write_text(t)
+          PY
+      - name: Install dependencies
+        run: npm ci
+      - name: Run KIUBO regression checks
+        run: npm run verify
+      - name: Production build
+        run: npm run build
+      - name: Commit validated product changes
+        shell: bash
+        run: |
+          git config user.name "kiubo-automation"
+          git config user.email "actions@users.noreply.github.com"
+          git add components/InventoryClient.tsx components/InventoryClient.module.css components/InventoryQuickRestock.tsx components/PurchasesClient.tsx
+          git commit -m "fix: separate YUKI physical stock from prepared recipes"
+          git push origin HEAD:fix/yuki-inventory-workflow-separation
