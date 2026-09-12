@@ -1,4 +1,4 @@
-/* Hakuna Matata 10.7.2 — verified brand assets + optical brand tuning. */
+/* Hakuna Matata 10.7.2 — verified brand assets + rounded full-bleed brand plates. */
 (()=>{
 'use strict';
 const current=window.KIUBO_BRAND_ASSETS||{};
@@ -7,114 +7,72 @@ window.KIUBO_BRAND_ASSETS=Object.freeze({...current,
   'kinder':'https://blogger.googleusercontent.com/img/a/AVvXsEjhCWtIsLsNpwkLtqVHznwvqoRhanhsB0GanfRzb5QODLbcY_PaeIpYM_atG1Y1FGbRlSP9AO0qL13D67JUbWddLcXnGDsx71-WwmrabZa5phtFj-bgV1B8vLdXgJDX3_a7u1TmUhd2OV6hF-cYb-PX8vVI2HtWnvhh_tOmMYFspUkZ8mjdSklPks8qhGc',
   'halls':HALLS
 });
-if(document.getElementById('hmBrandOpticalTuning'))return;
-const style=document.createElement('style');
-style.id='hmBrandOpticalTuning';
-style.textContent=`
-/* Brand logos: use more of the chip instead of looking tiny inside it. */
-#homeView [data-brand-chip] .hm-brand-visual.has-image,
-.hm-v104-catalog-brands [data-brand-chip] .hm-brand-visual.has-image{
-  width:100%!important;height:100%!important;padding:2px!important;box-sizing:border-box!important;
-  display:grid!important;place-items:center!important;overflow:hidden!important;border-radius:12px!important;
-}
-#homeView [data-brand-chip] .hm-brand-visual.has-image img,
-.hm-v104-catalog-brands [data-brand-chip] .hm-brand-visual.has-image img{
-  width:94%!important;height:84%!important;max-width:none!important;object-fit:contain!important;
-  display:block!important;margin:auto!important;
-}
-/* Horizontal/compact logos get a little more presence. */
-#homeView [data-brand-chip="Chips Ahoy!"] img,.hm-v104-catalog-brands [data-brand-chip="Chips Ahoy!"] img,
-#homeView [data-brand-chip="Ritz"] img,.hm-v104-catalog-brands [data-brand-chip="Ritz"] img,
-#homeView [data-brand-chip="Club Social"] img,.hm-v104-catalog-brands [data-brand-chip="Club Social"] img,
-#homeView [data-brand-chip="Chiki"] img,.hm-v104-catalog-brands [data-brand-chip="Chiki"] img,
-#homeView [data-brand-chip="Galak"] img,.hm-v104-catalog-brands [data-brand-chip="Galak"] img,
-#homeView [data-brand-chip="Yogu Yogu"] img,.hm-v104-catalog-brands [data-brand-chip="Yogu Yogu"] img{
-  width:100%!important;height:90%!important;
-}
-/* Artwork that already contains its own colored plate should visually become the chip. */
-#homeView [data-brand-chip="Mías"],.hm-v104-catalog-brands [data-brand-chip="Mías"]{background:#e4312c!important;overflow:hidden!important;}
-#homeView [data-brand-chip="Mías"] .hm-brand-visual,.hm-v104-catalog-brands [data-brand-chip="Mías"] .hm-brand-visual{padding:0!important;border-radius:inherit!important;}
-#homeView [data-brand-chip="Mías"] img,.hm-v104-catalog-brands [data-brand-chip="Mías"] img{
-  width:116%!important;height:112%!important;object-fit:cover!important;transform:scale(1.08)!important;
-}
-#homeView [data-brand-chip="Power"] .hm-brand-visual,#homeView [data-brand-chip="Powerade"] .hm-brand-visual,
-.hm-v104-catalog-brands [data-brand-chip="Power"] .hm-brand-visual,.hm-v104-catalog-brands [data-brand-chip="Powerade"] .hm-brand-visual,
-#homeView [data-brand-chip="Vivant"] .hm-brand-visual,.hm-v104-catalog-brands [data-brand-chip="Vivant"] .hm-brand-visual{
-  padding:0!important;
-}
-#homeView [data-brand-chip="Power"] img,#homeView [data-brand-chip="Powerade"] img,
-.hm-v104-catalog-brands [data-brand-chip="Power"] img,.hm-v104-catalog-brands [data-brand-chip="Powerade"] img{
-  width:112%!important;height:100%!important;object-fit:cover!important;transform:scale(1.07)!important;
-}
-#homeView [data-brand-chip="Vivant"] img,.hm-v104-catalog-brands [data-brand-chip="Vivant"] img{
-  width:110%!important;height:100%!important;object-fit:cover!important;transform:scale(1.06)!important;
-}
-#homeView [data-brand-chip="Natura"] img,.hm-v104-catalog-brands [data-brand-chip="Natura"] img,
-#homeView [data-brand-chip="Inacake"] img,.hm-v104-catalog-brands [data-brand-chip="Inacake"] img,
-#homeView [data-brand-chip="Rellenitas"] img,.hm-v104-catalog-brands [data-brand-chip="Rellenitas"] img{
-  width:106%!important;height:94%!important;
-}
-/* Halls: guarantee the supplied artwork even if an older fallback was already rendered. */
-#homeView [data-brand-chip="Halls"] .hm-brand-visual,
-.hm-v104-catalog-brands [data-brand-chip="Halls"] .hm-brand-visual{
-  padding:0!important;background:#fff url('${HALLS}') center/96% 90% no-repeat!important;
-}
-#homeView [data-brand-chip="Halls"] .hm-brand-visual b,
-.hm-v104-catalog-brands [data-brand-chip="Halls"] .hm-brand-visual b{display:none!important;}
-#homeView [data-brand-chip="Halls"] .hm-brand-visual img,
-.hm-v104-catalog-brands [data-brand-chip="Halls"] .hm-brand-visual img{width:100%!important;height:94%!important;object-fit:contain!important;}
-/* Same optical sizing inside search brand suggestions. */
-.hm1072-search-brands [data-brand-chip] .hm-brand-visual{padding:2px!important;overflow:hidden!important;}
-.hm1072-search-brands [data-brand-chip] .hm-brand-visual img{width:96%!important;height:90%!important;max-width:none!important;object-fit:contain!important;}
-.hm1072-search-brands [data-brand-chip="Mías"] .hm-brand-visual{padding:0!important;background:#e4312c!important;}
-.hm1072-search-brands [data-brand-chip="Mías"] img{width:116%!important;height:112%!important;object-fit:cover!important;transform:scale(1.08)!important;}
-.hm1072-search-brands [data-brand-chip="Power"] img,.hm1072-search-brands [data-brand-chip="Powerade"] img{width:112%!important;height:100%!important;object-fit:cover!important;}
-.hm1072-search-brands [data-brand-chip="Vivant"] img{width:110%!important;height:100%!important;object-fit:cover!important;}
-.hm1072-search-brands [data-brand-chip="Halls"] .hm-brand-visual{padding:0!important;background:#fff url('${HALLS}') center/96% 90% no-repeat!important;}
-.hm1072-search-brands [data-brand-chip="Halls"] .hm-brand-visual b{display:none!important;}
+const A=window.KIUBO_BRAND_ASSETS||{};
+const norm=(v='')=>String(v).normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().trim();
+const key=v=>norm(v).replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'');
+const aliases={power:'power',powerade:'power',vivant:'vivant',kataboom:'kataboom',manicho:'manicho',tru:'tru'};
+const plateNames=new Set(['power','powerade','vivant','kataboom','manicho','tru']);
+const scales={power:'132% 124%',powerade:'132% 124%',vivant:'128% 122%',kataboom:'120% 114%',manicho:'120% 114%',tru:'120% 114%'};
 
-/* Full-bleed plate pass: crop rectangular artwork under the chip's rounded mask. */
-#homeView [data-brand-chip="Mías"],#homeView [data-brand-chip="Power"],#homeView [data-brand-chip="Powerade"],
-#homeView [data-brand-chip="Vivant"],#homeView [data-brand-chip="Kataboom"],#homeView [data-brand-chip="Manicho"],
-#homeView [data-brand-chip="Tru"],#homeView [data-brand-chip="TRU"],
-.hm-v104-catalog-brands [data-brand-chip="Mías"],.hm-v104-catalog-brands [data-brand-chip="Power"],.hm-v104-catalog-brands [data-brand-chip="Powerade"],
-.hm-v104-catalog-brands [data-brand-chip="Vivant"],.hm-v104-catalog-brands [data-brand-chip="Kataboom"],.hm-v104-catalog-brands [data-brand-chip="Manicho"],
-.hm-v104-catalog-brands [data-brand-chip="Tru"],.hm-v104-catalog-brands [data-brand-chip="TRU"]{
-  position:relative!important;overflow:hidden!important;padding:0!important;
+if(!document.getElementById('hmBrandOpticalTuning')){
+  const style=document.createElement('style');
+  style.id='hmBrandOpticalTuning';
+  style.textContent=`
+  #homeView [data-brand-chip] .hm-brand-visual.has-image,
+  .hm-v104-catalog-brands [data-brand-chip] .hm-brand-visual.has-image{
+    width:100%!important;height:100%!important;padding:2px!important;box-sizing:border-box!important;
+    display:grid!important;place-items:center!important;overflow:hidden!important;border-radius:14px!important;
+  }
+  #homeView [data-brand-chip] .hm-brand-visual.has-image img,
+  .hm-v104-catalog-brands [data-brand-chip] .hm-brand-visual.has-image img{
+    width:96%!important;height:88%!important;max-width:none!important;object-fit:contain!important;display:block!important;margin:auto!important;
+  }
+  #homeView [data-brand-chip="Mías"],.hm-v104-catalog-brands [data-brand-chip="Mías"]{background:#e4312c!important;overflow:hidden!important;}
+  #homeView [data-brand-chip="Mías"] .hm-brand-visual,.hm-v104-catalog-brands [data-brand-chip="Mías"] .hm-brand-visual{padding:0!important;border-radius:inherit!important;}
+  #homeView [data-brand-chip="Mías"] img,.hm-v104-catalog-brands [data-brand-chip="Mías"] img{width:118%!important;height:114%!important;object-fit:cover!important;transform:scale(1.10)!important;}
+  #homeView [data-brand-chip="Natura"] img,.hm-v104-catalog-brands [data-brand-chip="Natura"] img,
+  #homeView [data-brand-chip="Inacake"] img,.hm-v104-catalog-brands [data-brand-chip="Inacake"] img,
+  #homeView [data-brand-chip="Rellenitas"] img,.hm-v104-catalog-brands [data-brand-chip="Rellenitas"] img{width:106%!important;height:94%!important;}
+  #homeView [data-brand-chip="Halls"] .hm-brand-visual,.hm-v104-catalog-brands [data-brand-chip="Halls"] .hm-brand-visual{padding:0!important;background:#fff url('${HALLS}') center/98% 92% no-repeat!important;}
+  #homeView [data-brand-chip="Halls"] .hm-brand-visual b,.hm-v104-catalog-brands [data-brand-chip="Halls"] .hm-brand-visual b{display:none!important;}
+  .hm1072-search-brands [data-brand-chip] .hm-brand-visual{padding:2px!important;overflow:hidden!important;border-radius:12px!important;}
+  .hm1072-search-brands [data-brand-chip] .hm-brand-visual img{width:98%!important;height:92%!important;max-width:none!important;object-fit:contain!important;}
+  `;
+  document.head.append(style);
 }
-#homeView [data-brand-chip="Mías"] .hm-brand-visual,#homeView [data-brand-chip="Power"] .hm-brand-visual,#homeView [data-brand-chip="Powerade"] .hm-brand-visual,
-#homeView [data-brand-chip="Vivant"] .hm-brand-visual,#homeView [data-brand-chip="Kataboom"] .hm-brand-visual,#homeView [data-brand-chip="Manicho"] .hm-brand-visual,
-#homeView [data-brand-chip="Tru"] .hm-brand-visual,#homeView [data-brand-chip="TRU"] .hm-brand-visual,
-.hm-v104-catalog-brands [data-brand-chip="Mías"] .hm-brand-visual,.hm-v104-catalog-brands [data-brand-chip="Power"] .hm-brand-visual,.hm-v104-catalog-brands [data-brand-chip="Powerade"] .hm-brand-visual,
-.hm-v104-catalog-brands [data-brand-chip="Vivant"] .hm-brand-visual,.hm-v104-catalog-brands [data-brand-chip="Kataboom"] .hm-brand-visual,.hm-v104-catalog-brands [data-brand-chip="Manicho"] .hm-brand-visual,
-.hm-v104-catalog-brands [data-brand-chip="Tru"] .hm-brand-visual,.hm-v104-catalog-brands [data-brand-chip="TRU"] .hm-brand-visual{
-  width:calc(100% - 4px)!important;height:calc(100% - 4px)!important;margin:2px!important;padding:0!important;
-  border-radius:14px!important;overflow:hidden!important;background:transparent!important;
+
+function applyPlate(chip){
+  if(!chip||chip.dataset.hmFullBleed==='1')return;
+  const raw=String(chip.dataset.brandChip||'').trim();
+  const k=key(raw);
+  if(!plateNames.has(k))return;
+  const assetKey=aliases[k]||k;
+  const url=A[assetKey];
+  if(!url)return;
+  chip.dataset.hmFullBleed='1';
+  chip.style.setProperty('overflow','hidden','important');
+  chip.style.setProperty('padding','0','important');
+  chip.style.setProperty('background-image',`url("${url}")`,'important');
+  chip.style.setProperty('background-repeat','no-repeat','important');
+  chip.style.setProperty('background-position','center','important');
+  chip.style.setProperty('background-size',scales[k]||'120% 114%','important');
+  const visual=chip.querySelector('.hm-brand-visual');
+  if(visual){
+    visual.style.setProperty('width','100%','important');
+    visual.style.setProperty('height','100%','important');
+    visual.style.setProperty('padding','0','important');
+    visual.style.setProperty('margin','0','important');
+    visual.style.setProperty('background','transparent','important');
+    visual.style.setProperty('border-radius','inherit','important');
+    visual.style.setProperty('overflow','hidden','important');
+    const img=visual.querySelector('img');
+    if(img)img.style.setProperty('opacity','0','important');
+    const b=visual.querySelector('b');
+    if(b)b.style.setProperty('display','none','important');
+  }
 }
-#homeView [data-brand-chip="Mías"] img,#homeView [data-brand-chip="Power"] img,#homeView [data-brand-chip="Powerade"] img,
-#homeView [data-brand-chip="Vivant"] img,#homeView [data-brand-chip="Kataboom"] img,#homeView [data-brand-chip="Manicho"] img,
-#homeView [data-brand-chip="Tru"] img,#homeView [data-brand-chip="TRU"] img,
-.hm-v104-catalog-brands [data-brand-chip="Mías"] img,.hm-v104-catalog-brands [data-brand-chip="Power"] img,.hm-v104-catalog-brands [data-brand-chip="Powerade"] img,
-.hm-v104-catalog-brands [data-brand-chip="Vivant"] img,.hm-v104-catalog-brands [data-brand-chip="Kataboom"] img,.hm-v104-catalog-brands [data-brand-chip="Manicho"] img,
-.hm-v104-catalog-brands [data-brand-chip="Tru"] img,.hm-v104-catalog-brands [data-brand-chip="TRU"] img{
-  width:118%!important;height:112%!important;max-width:none!important;object-fit:cover!important;margin:0!important;transform:scale(1.12)!important;
-}
-/* Vivant and Power need a touch more crop because their source artwork carries more white margin. */
-#homeView [data-brand-chip="Power"] img,#homeView [data-brand-chip="Powerade"] img,#homeView [data-brand-chip="Vivant"] img,
-.hm-v104-catalog-brands [data-brand-chip="Power"] img,.hm-v104-catalog-brands [data-brand-chip="Powerade"] img,.hm-v104-catalog-brands [data-brand-chip="Vivant"] img{
-  width:124%!important;height:116%!important;transform:scale(1.16)!important;
-}
-/* Keep the same treatment in brand search cards. */
-.hm1072-search-brands [data-brand-chip="Mías"] .hm-brand-visual,.hm1072-search-brands [data-brand-chip="Power"] .hm-brand-visual,.hm1072-search-brands [data-brand-chip="Powerade"] .hm-brand-visual,
-.hm1072-search-brands [data-brand-chip="Vivant"] .hm-brand-visual,.hm1072-search-brands [data-brand-chip="Kataboom"] .hm-brand-visual,.hm1072-search-brands [data-brand-chip="Manicho"] .hm-brand-visual,
-.hm1072-search-brands [data-brand-chip="Tru"] .hm-brand-visual,.hm1072-search-brands [data-brand-chip="TRU"] .hm-brand-visual{
-  padding:0!important;border-radius:12px!important;overflow:hidden!important;
-}
-.hm1072-search-brands [data-brand-chip="Mías"] img,.hm1072-search-brands [data-brand-chip="Power"] img,.hm1072-search-brands [data-brand-chip="Powerade"] img,
-.hm1072-search-brands [data-brand-chip="Vivant"] img,.hm1072-search-brands [data-brand-chip="Kataboom"] img,.hm1072-search-brands [data-brand-chip="Manicho"] img,
-.hm1072-search-brands [data-brand-chip="Tru"] img,.hm1072-search-brands [data-brand-chip="TRU"] img{
-  width:120%!important;height:114%!important;object-fit:cover!important;transform:scale(1.12)!important;
-}
-`;
-document.head.append(style);
+function apply(){document.querySelectorAll('[data-brand-chip]').forEach(applyPlate)}
+if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',apply,{once:true});else apply();
+new MutationObserver(apply).observe(document.documentElement,{childList:true,subtree:true});
+window.addEventListener('kiubo:brands-ready',apply);
 })();
