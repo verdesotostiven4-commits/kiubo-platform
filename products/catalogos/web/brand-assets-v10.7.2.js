@@ -10,9 +10,10 @@ window.KIUBO_BRAND_ASSETS=Object.freeze({...current,
 const A=window.KIUBO_BRAND_ASSETS||{};
 const norm=(v='')=>String(v).normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().trim();
 const key=v=>norm(v).replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'');
-const aliases={power:'power',powerade:'power',vivant:'vivant',kataboom:'kataboom',manicho:'manicho',tru:'tru'};
-const plateNames=new Set(['power','powerade','vivant','kataboom','manicho','tru']);
-const scales={power:'132% 124%',powerade:'132% 124%',vivant:'128% 122%',kataboom:'120% 114%',manicho:'120% 114%',tru:'120% 114%'};
+const aliases={mias:'mias',power:'power',powerade:'power',vivant:'vivant',kataboom:'kataboom',manicho:'manicho',tru:'tru'};
+const plateNames=new Set(['mias','power','powerade','vivant','kataboom','manicho','tru']);
+const scales={mias:'108% auto',power:'98% auto',powerade:'98% auto',vivant:'108% auto',kataboom:'120% 114%',manicho:'120% 114%',tru:'120% 114%'};
+const plateColors={mias:'#e6332e',power:'#050505',powerade:'#050505',vivant:'#eaf4f6',kataboom:'#ec0a76',manicho:'#f47a26',tru:'#0566a8'};
 
 if(!document.getElementById('hmBrandOpticalTuning')){
   const style=document.createElement('style');
@@ -27,9 +28,6 @@ if(!document.getElementById('hmBrandOpticalTuning')){
   .hm-v104-catalog-brands [data-brand-chip] .hm-brand-visual.has-image img{
     width:96%!important;height:88%!important;max-width:none!important;object-fit:contain!important;display:block!important;margin:auto!important;
   }
-  #homeView [data-brand-chip="Mías"],.hm-v104-catalog-brands [data-brand-chip="Mías"]{background:#e4312c!important;overflow:hidden!important;}
-  #homeView [data-brand-chip="Mías"] .hm-brand-visual,.hm-v104-catalog-brands [data-brand-chip="Mías"] .hm-brand-visual{padding:0!important;border-radius:inherit!important;}
-  #homeView [data-brand-chip="Mías"] img,.hm-v104-catalog-brands [data-brand-chip="Mías"] img{width:118%!important;height:114%!important;object-fit:cover!important;transform:scale(1.10)!important;}
   #homeView [data-brand-chip="Natura"] img,.hm-v104-catalog-brands [data-brand-chip="Natura"] img,
   #homeView [data-brand-chip="Inacake"] img,.hm-v104-catalog-brands [data-brand-chip="Inacake"] img,
   #homeView [data-brand-chip="Rellenitas"] img,.hm-v104-catalog-brands [data-brand-chip="Rellenitas"] img{width:106%!important;height:94%!important;}
@@ -52,6 +50,7 @@ function applyPlate(chip){
   chip.dataset.hmFullBleed='1';
   chip.style.setProperty('overflow','hidden','important');
   chip.style.setProperty('padding','0','important');
+  chip.style.setProperty('background-color',plateColors[k]||'#fff','important');
   chip.style.setProperty('background-image',`url("${url}")`,'important');
   chip.style.setProperty('background-repeat','no-repeat','important');
   chip.style.setProperty('background-position','center','important');
