@@ -1,4 +1,4 @@
-/* Hakuna Panel 10.8 — single, durable photo pipeline + mobile modal stability. */
+/* Hakuna Panel 10.8.2 — durable autosave photos + stable mobile editor. */
 (()=>{
 'use strict';
 if(window.__hakunaPanel108)return;window.__hakunaPanel108=true;
@@ -8,7 +8,7 @@ const $=(s,r=document)=>r.querySelector(s),$$=(s,r=document)=>[...r.querySelecto
 const slug=(new URLSearchParams(location.search).get('slug')||C.defaultSlug||'hakuna-matata').toLowerCase().replace(/[^a-z0-9-]/g,'');
 const QKEY=`hm108-photo-queue:${slug}`;
 const objectUrls=new WeakMap();
-let flushing=false;
+let flushing=false,activeProductId='';
 
 const token=()=>sessionStorage.getItem(`kiubo-provider-session:${slug}`)||'';
 const readQueue=()=>{try{return JSON.parse(localStorage.getItem(QKEY)||'[]')}catch{return[]}};
@@ -47,25 +47,30 @@ async function upload(file,oldPath=''){
   if(!data.public_url||!data.path)throw new Error('upload_incomplete');
   return data;
 }
-async function verify(id,url){
-  const b=await api('provider_bootstrap',{},18000),p=(b.presentations||[]).find(x=>String(x.id)===String(id));
-  return Boolean(p&&String(p.image_url||'')===String(url||''));
+async function verifyItem(item){
+  const b=await api('provider_bootstrap',{},18000);
+  if(item.kind==='product'){
+    const p=(b.products||[]).find(x=>String(x.id)===String(item.id));
+    return Boolean(p&&String(p.image_url||'')===String(item.url||''));
+  }
+  const p=(b.presentations||[]).find(x=>String(x.id)===String(item.id));
+  return Boolean(p&&String(p.image_url||'')===String(item.url||''));
 }
 function enqueue(item){
-  const q=readQueue().filter(x=>String(x.id)!==String(item.id));q.push({...item,at:Date.now(),tries:Number(item.tries||0)});writeQueue(q);
+  const kind=item.kind||'presentation';
+  const q=readQueue().filter(x=>!(String(x.id)===String(item.id)&&String(x.kind||'presentation')===kind));
+  q.push({...item,kind,at:Date.now(),tries:Number(item.tries||0)});writeQueue(q);
 }
 async function persist(item,shouldVerify=true){
-  await api('save_presentation_image',{presentation_id:item.id,image_url:item.url,image_path:item.path},18000);
-  if(shouldVerify&&!(await verify(item.id,item.url)))throw new Error('verify_failed');
+  if(item.kind==='product')await api('save_product_image',{product_id:item.id,image_url:item.url,image_path:item.path},18000);
+  else await api('save_presentation_image',{presentation_id:item.id,image_url:item.url,image_path:item.path},18000);
+  if(shouldVerify&&!(await verifyItem(item)))throw new Error('verify_failed');
 }
 async function flush(){
   if(flushing||!navigator.onLine||!token())return;flushing=true;
   try{
     const source=readQueue(),left=[];
-    for(const item of source){
-      try{await persist(item,false)}
-      catch{left.push({...item,tries:Number(item.tries||0)+1})}
-    }
+    for(const raw of source){const item={...raw,kind:raw.kind||'presentation'};try{await persist(item,false)}catch{left.push({...item,tries:Number(item.tries||0)+1})}}
     writeQueue(left);
   }finally{flushing=false}
 }
@@ -89,18 +94,18 @@ async function handlePresentation(input){
   if(!id){input.value='';return toast('Guarda el producto primero; luego sube la foto de Unidad, Caja o Jaba.',true)}
   if(file.size>5*1024*1024){input.value='';return toast('La imagen supera 5 MB.',true)}
   if(!/^image\/(png|jpeg|webp)$/i.test(file.type)){input.value='';return toast('Usa PNG, JPG o WebP.',true)}
-  const local=URL.createObjectURL(file);setPreview(row,local);setRowState(row,'saving','Subiendo y verificando la foto…');
+  const local=URL.createObjectURL(file);setPreview(row,local);setRowState(row,'saving','Subiendo y guardando automáticamente…');
   try{
     const up=await upload(file,row.dataset.hm108ImagePath||'');
-    const item={id,url:up.public_url,path:up.path};
+    const item={kind:'presentation',id,url:up.public_url,path:up.path};
     row.dataset.hm108ImageUrl=item.url;row.dataset.hm108ImagePath=item.path;
     try{
-      await persist(item,true);writeQueue(readQueue().filter(x=>String(x.id)!==id));
-      setPreview(row,item.url);setRowState(row,'saved',row.dataset.hm108IsDefault==='true'?'Guardada · también es la portada principal.':'Guardada correctamente para esta presentación.');
-      window.dispatchEvent(new CustomEvent('hm108:photo-saved',{detail:item}));toast('Foto guardada');
+      await persist(item,true);writeQueue(readQueue().filter(x=>!(String(x.id)===id&&String(x.kind||'presentation')==='presentation')));
+      setPreview(row,item.url);setRowState(row,'saved',row.dataset.hm108IsDefault==='true'?'Guardada automáticamente · también es la portada principal.':'Guardada automáticamente para esta presentación.');
+      window.dispatchEvent(new CustomEvent('hm108:photo-saved',{detail:item}));toast('Foto guardada automáticamente');
     }catch{
-      enqueue(item);setPreview(row,item.url);setRowState(row,'pending','Foto subida. Quedó en cola y se guardará automáticamente al reconectar.');
-      toast('La foto quedó protegida en cola; reintentaremos automáticamente.',true)
+      enqueue(item);setPreview(row,item.url);setRowState(row,'pending','Foto subida. Quedó protegida y se guardará automáticamente al reconectar.');
+      toast('Foto protegida en cola; reintentaremos automáticamente.',true)
     }
   }catch(error){
     setRowState(row,'','No pudimos subirla. Intenta otra vez; el resto del producto sigue editable.');
@@ -111,34 +116,62 @@ function polishGeneral(){
   const wrap=$('.product-image-upload');if(!wrap)return;
   const title=$('label b',wrap),hint=$('label small',wrap);
   if(title)title.textContent='Portada general (opcional)';
-  if(hint)hint.textContent='No necesitas subir la misma foto dos veces: la foto de la presentación principal también se usa como portada.';
+  if(hint)hint.textContent=activeProductId?'Al elegir una foto se guarda automáticamente. No necesitas pulsar “Guardar producto”.':'Crea el producto una vez; después las fotos se guardan automáticamente.';
 }
-
-function generalPhotoState(file){
+function setGeneralState(message='',type=''){
   const wrap=$('.product-image-upload');if(!wrap)return;
   let state=$('#hm108GeneralPhotoState',wrap);
   if(!state){state=document.createElement('span');state.id='hm108GeneralPhotoState';state.className='hm108-general-state';wrap.querySelector('label')?.append(state)}
-  state.textContent=file?'Foto seleccionada · se guardará junto con el producto.':'';
+  state.textContent=message;state.dataset.state=type||'';
+}
+function setGeneralPreview(url){
+  const preview=$('#productImagePreview');if(!preview)return;
+  preview.innerHTML=url?'<img alt="Portada del producto">':'<svg class="icon"><use href="#i-image"/></svg>';
+  const img=$('img',preview);if(img)img.src=url;
+}
+async function handleGeneral(input){
+  const file=input.files?.[0];if(!file)return;
+  if(!activeProductId){setGeneralState('Foto seleccionada · se guardará cuando crees el producto.','pending');return}
+  if(file.size>5*1024*1024){input.value='';return toast('La imagen supera 5 MB.',true)}
+  if(!/^image\/(png|jpeg|webp)$/i.test(file.type)){input.value='';return toast('Usa PNG, JPG o WebP.',true)}
+  const local=URL.createObjectURL(file);setGeneralPreview(local);setGeneralState('Subiendo y guardando automáticamente…','saving');input.disabled=true;
+  try{
+    const before=await api('provider_bootstrap',{},18000),product=(before.products||[]).find(x=>String(x.id)===String(activeProductId));
+    const up=await upload(file,product?.image_path||'');
+    const item={kind:'product',id:activeProductId,url:up.public_url,path:up.path};
+    try{
+      await persist(item,true);writeQueue(readQueue().filter(x=>!(String(x.id)===String(activeProductId)&&x.kind==='product')));
+      setGeneralPreview(item.url);setGeneralState('Guardada automáticamente.','saved');toast('Portada guardada automáticamente');
+    }catch{
+      enqueue(item);setGeneralPreview(item.url);setGeneralState('Subida y protegida · se terminará de guardar automáticamente al reconectar.','pending');toast('Portada protegida en cola; reintentaremos automáticamente.',true)
+    }
+    input.value='';
+  }catch(error){
+    input.value='';setGeneralState('No pudimos subirla. Toca “Elegir foto” para reintentar.','error');toast(error?.name==='AbortError'?'La subida tardó demasiado. Intenta nuevamente.':'No pudimos subir la portada.',true)
+  }finally{input.disabled=false}
 }
 function stabilizeModal(){
   const modal=$('#productModal');if(!modal)return;
   modal.classList.toggle('hm108-open',!modal.hidden);
   if(!modal.hidden){
-    const form=$('#productForm',modal);if(form)form.style.webkitOverflowScrolling='touch';
+    const form=$('#productForm',modal);if(form){form.style.webkitOverflowScrolling='touch';form.scrollTop=Math.min(form.scrollTop,form.scrollHeight)}
     const close=$('[data-close-modal]',modal);if(close)close.setAttribute('aria-label','Cerrar editor');
   }
 }
 document.addEventListener('change',e=>{
   if(e.target?.matches?.('.v77-presentation-file')){e.preventDefault();handlePresentation(e.target);return}
-  if(e.target?.id==='productImage')generalPhotoState(e.target.files?.[0]||null);
+  if(e.target?.id==='productImage'){handleGeneral(e.target);return}
 },true);
 document.addEventListener('click',e=>{
-  if(e.target.closest?.('[data-edit-product],#newProductBtn,#mobileCreateBtn,[data-quick="new-product"]'))setTimeout(()=>{polishGeneral();generalPhotoState(null);stabilizeModal()},50);
+  const edit=e.target.closest?.('[data-edit-product]');
+  if(edit)activeProductId=String(edit.dataset.editProduct||'');
+  if(e.target.closest?.('#newProductBtn,#mobileCreateBtn,[data-quick="new-product"]'))activeProductId='';
+  if(edit||e.target.closest?.('#newProductBtn,#mobileCreateBtn,[data-quick="new-product"]'))setTimeout(()=>{polishGeneral();setGeneralState('');stabilizeModal()},50);
   if(e.target.closest?.('[data-close-modal]'))setTimeout(stabilizeModal,0);
 },true);
 window.addEventListener('online',()=>setTimeout(flush,250));window.addEventListener('focus',()=>setTimeout(flush,250));
 document.addEventListener('visibilitychange',()=>{if(!document.hidden)setTimeout(flush,250)});
 const modal=$('#productModal');if(modal)new MutationObserver(stabilizeModal).observe(modal,{attributes:true,attributeFilter:['hidden','class']});
-const start=()=>{polishGeneral();stabilizeModal();flush();setInterval(flush,30000);document.documentElement.dataset.hmPanel='10.8'};
+const start=()=>{polishGeneral();stabilizeModal();flush();setInterval(flush,30000);document.documentElement.dataset.hmPanel='10.8.2'};
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start,{once:true});else start();
 })();

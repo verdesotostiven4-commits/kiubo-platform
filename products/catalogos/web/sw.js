@@ -1,4 +1,4 @@
-const CACHE='kiubo-catalog-v10-8-1-20260912';
+const CACHE='kiubo-catalog-v10-8-2-20260912';
 const SHELL=[
 '/','/index.html','/panel.html','/pedido.html',
 '/catalog-v10.css','/catalog-v10.2.css','/catalog-v10.3.css','/catalog-v10.4.css','/catalog-v10.4.1.css','/catalog-v10.4.2.css','/catalog-v10.5.css','/catalog-v10.5.1.css','/catalog-v10.6.css','/catalog-v10.7.1.css','/catalog-v10.7.2.css','/catalog-v10.7.3.css','/catalog-v10.7.4.css','/catalog-v10.8.css',
