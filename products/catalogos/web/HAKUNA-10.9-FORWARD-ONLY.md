@@ -1,0 +1,1 @@
+Hakuna Matata 10.9 stabilization is forward-only from production 10.8.2. Do not roll back client or provider behavior. Consolidate white-screen recovery, single-scroll mobile product editor, independent photo autosave, and final QA.
