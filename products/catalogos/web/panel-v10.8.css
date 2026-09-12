@@ -1,0 +1,24 @@
+/* Hakuna Panel 10.8 — non-blocking editor and photo upload polish. */
+#productModal{overscroll-behavior:contain!important}
+#productModal .modal-form{min-height:0!important;overflow-y:auto!important;overflow-x:hidden!important;-webkit-overflow-scrolling:touch!important;touch-action:pan-y!important;overscroll-behavior:contain!important}
+#productModal>header{position:relative!important;z-index:8!important;background:#fff!important}
+#productModal>footer{position:relative!important;z-index:8!important;background:#fff!important}
+#productModal .sheet-close{position:relative!important;z-index:10!important;flex:0 0 auto!important}
+.v77-presentation-image{contain:layout paint}
+.v77-presentation-image.busy{opacity:1!important;pointer-events:auto!important}
+.v77-presentation-image.busy>label{pointer-events:none!important;opacity:.55!important}
+.v77-presentation-image.busy .v77-presentation-preview:after{content:"SUBIENDO";position:absolute;inset:auto 4px 4px;padding:3px 5px;border-radius:6px;background:rgba(20,50,35,.84);color:#fff;font-size:5px;font-weight:900;letter-spacing:.06em;text-align:center}
+.v77-presentation-image.hm108-saved{border-color:#bcdcc7!important;background:#f4fbf6!important}
+.v77-presentation-image.hm108-pending{border-color:#e9cf9d!important;background:#fff9ef!important}
+.hm108-general-state{display:block;margin-top:7px;color:#387052;font-size:8px;font-weight:800;line-height:1.35}
+.hm108-toast{position:fixed;z-index:12000;left:50%;bottom:calc(88px + env(safe-area-inset-bottom));max-width:calc(100% - 28px);padding:10px 14px;border-radius:999px;background:#153426;color:#fff;font-size:9px;font-weight:850;box-shadow:0 12px 28px rgba(15,38,24,.2);opacity:0;transform:translate(-50%,12px);transition:.16s;pointer-events:none;text-align:center}.hm108-toast.show{opacity:1;transform:translate(-50%,0)}.hm108-toast.error{background:#8a4747}
+@media(max-width:760px){
+ html.hm106-modal-lock,body.hm106-modal-lock{overscroll-behavior:none!important}
+ #productModal{height:min(94dvh,calc(100dvh - env(safe-area-inset-top)))!important;max-height:min(94dvh,calc(100dvh - env(safe-area-inset-top)))!important}
+ #productModal>header{padding-top:max(15px,env(safe-area-inset-top))!important}
+ #productModal .modal-form{padding-bottom:24px!important}
+ #productModal>footer{padding-bottom:max(14px,calc(env(safe-area-inset-bottom) + 8px))!important}
+ .product-image-upload{display:grid!important;grid-template-columns:82px minmax(0,1fr)!important;align-items:center!important}
+ .product-image-preview{width:82px!important;height:82px!important}
+ .product-image-upload label{min-width:0!important}
+}

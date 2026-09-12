@@ -1,0 +1,14 @@
+/* Hakuna Matata 10.8 — brand picker containment + invisible routing bridge. */
+html.hm108-brand-routing #sheetHost{visibility:hidden!important;pointer-events:none!important}
+@media(max-width:760px){
+ #sheetHost{max-width:100vw!important;overflow-x:hidden!important}
+ .v10-sheet.hm1073-keyboard,.v10-sheet.hm108-keyboard{
+   position:fixed!important;
+   left:8px!important;right:8px!important;top:var(--hm108-vv-top,var(--hm1073-top,8px))!important;bottom:auto!important;
+   width:auto!important;max-width:none!important;height:var(--hm108-vv-height,var(--hm1073-height,70dvh))!important;max-height:var(--hm108-vv-height,var(--hm1073-height,70dvh))!important;
+   margin:0!important;transform:none!important;border-radius:24px 24px 18px 18px!important;overflow:hidden!important
+ }
+ .v10-sheet.hm1073-keyboard.show,.v10-sheet.hm108-keyboard.show{transform:none!important}
+ .v10-sheet.hm108-keyboard .v10-sheet-scroll{height:100%!important;max-height:100%!important;overflow-y:auto!important;overflow-x:hidden!important;-webkit-overflow-scrolling:touch!important;overscroll-behavior:contain!important}
+ .v10-sheet.hm108-keyboard .v10-brand-search{position:sticky!important;top:0!important;z-index:6!important;background:#fff!important}
+}
