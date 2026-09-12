@@ -112,7 +112,7 @@
       return json({ok:true,product_id:body.product_id,deferred:true});
     }
 
-    if(body.action==='delete_product'||body.action==='reset_orders')return nativeFetch(input,init);
+    if(['delete_product','reset_orders','save_product_image','save_presentation_image'].includes(body.action))return nativeFetch(input,init);
     return nativeFetch(V6,init);
   };
 
