@@ -107,6 +107,13 @@ async function handlePresentation(input){
     toast(error?.name==='AbortError'?'La subida tardó demasiado. Intenta nuevamente.':'No pudimos subir la foto.',true)
   }finally{input.value=''}
 }
+function polishGeneral(){
+  const wrap=$('.product-image-upload');if(!wrap)return;
+  const title=$('label b',wrap),hint=$('label small',wrap);
+  if(title)title.textContent='Portada general (opcional)';
+  if(hint)hint.textContent='No necesitas subir la misma foto dos veces: la foto de la presentación principal también se usa como portada.';
+}
+
 function generalPhotoState(file){
   const wrap=$('.product-image-upload');if(!wrap)return;
   let state=$('#hm108GeneralPhotoState',wrap);
@@ -126,12 +133,12 @@ document.addEventListener('change',e=>{
   if(e.target?.id==='productImage')generalPhotoState(e.target.files?.[0]||null);
 },true);
 document.addEventListener('click',e=>{
-  if(e.target.closest?.('[data-edit-product],#newProductBtn,#mobileCreateBtn,[data-quick="new-product"]'))setTimeout(()=>{generalPhotoState(null);stabilizeModal()},50);
+  if(e.target.closest?.('[data-edit-product],#newProductBtn,#mobileCreateBtn,[data-quick="new-product"]'))setTimeout(()=>{polishGeneral();generalPhotoState(null);stabilizeModal()},50);
   if(e.target.closest?.('[data-close-modal]'))setTimeout(stabilizeModal,0);
 },true);
 window.addEventListener('online',()=>setTimeout(flush,250));window.addEventListener('focus',()=>setTimeout(flush,250));
 document.addEventListener('visibilitychange',()=>{if(!document.hidden)setTimeout(flush,250)});
 const modal=$('#productModal');if(modal)new MutationObserver(stabilizeModal).observe(modal,{attributes:true,attributeFilter:['hidden','class']});
-const start=()=>{stabilizeModal();flush();setInterval(flush,30000);document.documentElement.dataset.hmPanel='10.8'};
+const start=()=>{polishGeneral();stabilizeModal();flush();setInterval(flush,30000);document.documentElement.dataset.hmPanel='10.8'};
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start,{once:true});else start();
 })();
