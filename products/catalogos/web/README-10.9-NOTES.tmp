@@ -1,0 +1,1 @@
+10.9.1 runtime freeze hotfix prepared in commit 0ead0b51d95db2120c4d0143510c5dd0c94582c1. Forward-only: removes problematic legacy observer layers from runtime loading; no data/backend rollback.
