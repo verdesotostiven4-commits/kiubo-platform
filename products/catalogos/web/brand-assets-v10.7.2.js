@@ -72,6 +72,49 @@ style.textContent=`
 .hm1072-search-brands [data-brand-chip="Vivant"] img{width:110%!important;height:100%!important;object-fit:cover!important;}
 .hm1072-search-brands [data-brand-chip="Halls"] .hm-brand-visual{padding:0!important;background:#fff url('${HALLS}') center/96% 90% no-repeat!important;}
 .hm1072-search-brands [data-brand-chip="Halls"] .hm-brand-visual b{display:none!important;}
+
+/* Full-bleed plate pass: crop rectangular artwork under the chip's rounded mask. */
+#homeView [data-brand-chip="Mías"],#homeView [data-brand-chip="Power"],#homeView [data-brand-chip="Powerade"],
+#homeView [data-brand-chip="Vivant"],#homeView [data-brand-chip="Kataboom"],#homeView [data-brand-chip="Manicho"],
+#homeView [data-brand-chip="Tru"],#homeView [data-brand-chip="TRU"],
+.hm-v104-catalog-brands [data-brand-chip="Mías"],.hm-v104-catalog-brands [data-brand-chip="Power"],.hm-v104-catalog-brands [data-brand-chip="Powerade"],
+.hm-v104-catalog-brands [data-brand-chip="Vivant"],.hm-v104-catalog-brands [data-brand-chip="Kataboom"],.hm-v104-catalog-brands [data-brand-chip="Manicho"],
+.hm-v104-catalog-brands [data-brand-chip="Tru"],.hm-v104-catalog-brands [data-brand-chip="TRU"]{
+  position:relative!important;overflow:hidden!important;padding:0!important;
+}
+#homeView [data-brand-chip="Mías"] .hm-brand-visual,#homeView [data-brand-chip="Power"] .hm-brand-visual,#homeView [data-brand-chip="Powerade"] .hm-brand-visual,
+#homeView [data-brand-chip="Vivant"] .hm-brand-visual,#homeView [data-brand-chip="Kataboom"] .hm-brand-visual,#homeView [data-brand-chip="Manicho"] .hm-brand-visual,
+#homeView [data-brand-chip="Tru"] .hm-brand-visual,#homeView [data-brand-chip="TRU"] .hm-brand-visual,
+.hm-v104-catalog-brands [data-brand-chip="Mías"] .hm-brand-visual,.hm-v104-catalog-brands [data-brand-chip="Power"] .hm-brand-visual,.hm-v104-catalog-brands [data-brand-chip="Powerade"] .hm-brand-visual,
+.hm-v104-catalog-brands [data-brand-chip="Vivant"] .hm-brand-visual,.hm-v104-catalog-brands [data-brand-chip="Kataboom"] .hm-brand-visual,.hm-v104-catalog-brands [data-brand-chip="Manicho"] .hm-brand-visual,
+.hm-v104-catalog-brands [data-brand-chip="Tru"] .hm-brand-visual,.hm-v104-catalog-brands [data-brand-chip="TRU"] .hm-brand-visual{
+  width:calc(100% - 4px)!important;height:calc(100% - 4px)!important;margin:2px!important;padding:0!important;
+  border-radius:14px!important;overflow:hidden!important;background:transparent!important;
+}
+#homeView [data-brand-chip="Mías"] img,#homeView [data-brand-chip="Power"] img,#homeView [data-brand-chip="Powerade"] img,
+#homeView [data-brand-chip="Vivant"] img,#homeView [data-brand-chip="Kataboom"] img,#homeView [data-brand-chip="Manicho"] img,
+#homeView [data-brand-chip="Tru"] img,#homeView [data-brand-chip="TRU"] img,
+.hm-v104-catalog-brands [data-brand-chip="Mías"] img,.hm-v104-catalog-brands [data-brand-chip="Power"] img,.hm-v104-catalog-brands [data-brand-chip="Powerade"] img,
+.hm-v104-catalog-brands [data-brand-chip="Vivant"] img,.hm-v104-catalog-brands [data-brand-chip="Kataboom"] img,.hm-v104-catalog-brands [data-brand-chip="Manicho"] img,
+.hm-v104-catalog-brands [data-brand-chip="Tru"] img,.hm-v104-catalog-brands [data-brand-chip="TRU"] img{
+  width:118%!important;height:112%!important;max-width:none!important;object-fit:cover!important;margin:0!important;transform:scale(1.12)!important;
+}
+/* Vivant and Power need a touch more crop because their source artwork carries more white margin. */
+#homeView [data-brand-chip="Power"] img,#homeView [data-brand-chip="Powerade"] img,#homeView [data-brand-chip="Vivant"] img,
+.hm-v104-catalog-brands [data-brand-chip="Power"] img,.hm-v104-catalog-brands [data-brand-chip="Powerade"] img,.hm-v104-catalog-brands [data-brand-chip="Vivant"] img{
+  width:124%!important;height:116%!important;transform:scale(1.16)!important;
+}
+/* Keep the same treatment in brand search cards. */
+.hm1072-search-brands [data-brand-chip="Mías"] .hm-brand-visual,.hm1072-search-brands [data-brand-chip="Power"] .hm-brand-visual,.hm1072-search-brands [data-brand-chip="Powerade"] .hm-brand-visual,
+.hm1072-search-brands [data-brand-chip="Vivant"] .hm-brand-visual,.hm1072-search-brands [data-brand-chip="Kataboom"] .hm-brand-visual,.hm1072-search-brands [data-brand-chip="Manicho"] .hm-brand-visual,
+.hm1072-search-brands [data-brand-chip="Tru"] .hm-brand-visual,.hm1072-search-brands [data-brand-chip="TRU"] .hm-brand-visual{
+  padding:0!important;border-radius:12px!important;overflow:hidden!important;
+}
+.hm1072-search-brands [data-brand-chip="Mías"] img,.hm1072-search-brands [data-brand-chip="Power"] img,.hm1072-search-brands [data-brand-chip="Powerade"] img,
+.hm1072-search-brands [data-brand-chip="Vivant"] img,.hm1072-search-brands [data-brand-chip="Kataboom"] img,.hm1072-search-brands [data-brand-chip="Manicho"] img,
+.hm1072-search-brands [data-brand-chip="Tru"] img,.hm1072-search-brands [data-brand-chip="TRU"] img{
+  width:120%!important;height:114%!important;object-fit:cover!important;transform:scale(1.12)!important;
+}
 `;
 document.head.append(style);
 })();
