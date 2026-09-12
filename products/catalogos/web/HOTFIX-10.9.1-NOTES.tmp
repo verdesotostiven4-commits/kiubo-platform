@@ -1,0 +1,1 @@
+Hakuna 10.9.1 forward-only runtime hotfix: disable the legacy Catalog 10.7.3 DOM observer that can self-trigger indefinitely on fallback brand thumbnails, and disable the legacy Panel 10.5 observer layer that can continuously rewrite observed DOM. No rollback of data, backend, catalog base, panel base, presentation/photo logic, or 10.9 fixes.
