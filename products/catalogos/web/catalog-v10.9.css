@@ -1,0 +1,13 @@
+/* Hakuna Matata 10.9 — visible-first client safety layer. */
+html,body{background:#fff!important;min-height:100%}
+html.hm105-boot .v10-app,html.hm105-ready .v10-app,html .v10-app{opacity:1!important;visibility:visible!important}
+#hm109BootFallback{min-height:100dvh;display:grid;place-items:center;align-content:center;gap:12px;padding:28px;text-align:center;background:#fff;color:#163d2b;font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+#hm109BootFallback img{width:82px;height:82px;object-fit:contain;border-radius:18px;background:#fff}
+#hm109BootFallback b{font-size:20px;letter-spacing:-.03em}
+#hm109BootFallback span{max-width:300px;color:#78827b;font-size:12px;line-height:1.5}
+#hm109BootFallback i{width:34px;height:4px;overflow:hidden;border-radius:99px;background:#e9eee9;position:relative}
+#hm109BootFallback i:after{content:"";position:absolute;inset:0 auto 0 0;width:45%;border-radius:inherit;background:#19583c;animation:hm109load 1s ease-in-out infinite}
+#hm109BootFallback button{min-height:42px;padding:0 18px;border:0;border-radius:13px;background:#19583c;color:#fff;font-size:11px;font-weight:850}
+#hm109BootFallback.hm109-boot-error i{display:none}
+@keyframes hm109load{from{transform:translateX(-110%)}to{transform:translateX(330%)}}
+@media(prefers-reduced-motion:reduce){#hm109BootFallback i:after{animation:none;width:100%}}
