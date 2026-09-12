@@ -1,4 +1,4 @@
-/* Hakuna Matata 10.7 — background Web Push for customers and provider. */
+/* Hakuna Matata 10.9.2 — background Web Push with guarded DOM sync. */
 (()=>{'use strict';
 if(window.__hakunaPush107)return;window.__hakunaPush107=true;
 const C=window.KIUBO_CATALOG_CONFIG||{};
@@ -30,13 +30,14 @@ document.addEventListener('click',e=>{if(e.target.closest?.('[data-hm1051-notify
 window.addEventListener('pageshow',()=>{if(Notification.permission==='granted')subscribeNow({ask:false}).catch(()=>{})});
 document.addEventListener('visibilitychange',()=>{if(!document.hidden&&Notification.permission==='granted')subscribeNow({ask:false}).catch(()=>{})});
 if(!isPanel){const upstream=window.fetch.bind(window);window.fetch=async(input,init={})=>{const url=typeof input==='string'?input:input?.url||'';let body=null;if(url===C.apiUrl&&typeof init?.body==='string'){try{body=JSON.parse(init.body)}catch{}}const res=await upstream(input,init);if(res.ok&&body?.action==='create_order')res.clone().json().then(p=>bindOrder(p?.order?.public_token)).catch(()=>{});return res}}
+function setCopy(selector,text){const el=document.querySelector(selector);if(el&&Notification.permission==='granted'&&el.textContent!==text)el.textContent=text}
 function refreshCopy(){
- const c=document.querySelector('.hm1051-notify-card small');
- if(c&&Notification.permission==='granted')c.textContent='Te avisaremos de cambios del pedido incluso si cierras Hakuna.';
- const p=document.querySelector('.hm1051-panel-notify small');
- if(p&&Notification.permission==='granted')p.textContent='Mayra recibirá avisos de pedidos nuevos incluso con el panel cerrado.';
+ setCopy('.hm1051-notify-card small','Te avisaremos de cambios del pedido incluso si cierras Hakuna.');
+ setCopy('.hm1051-panel-notify small','Mayra recibirá avisos de pedidos nuevos incluso con el panel cerrado.');
 }
-new MutationObserver(refreshCopy).observe(document.documentElement,{childList:true,subtree:true});
-refreshCopy();
+let copyFrame=0;
+const scheduleCopy=()=>{if(copyFrame)return;copyFrame=requestAnimationFrame(()=>{copyFrame=0;refreshCopy()})};
+new MutationObserver(scheduleCopy).observe(document.documentElement,{childList:true,subtree:true});
+scheduleCopy();
 window.HakunaPush={subscribe:()=>subscribeNow({ask:true})};
 })();
