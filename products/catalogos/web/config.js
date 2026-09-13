@@ -1,15 +1,15 @@
-/* Hakuna 10.10.1 — forward-only panel z-index + touch fix. */
+/* Hakuna 10.10.2 — forward-only panel z-index + touch fix + searched-brand safety router. */
 window.KIUBO_CATALOG_CONFIG=Object.freeze({
   supabaseUrl:'https://hysrlckmnzlmscwwbibn.supabase.co',
   publishableKey:'sb_publishable_hnsAgTsI1c_wErMMwAYwMQ_crWdOBpT',
   apiUrl:'https://hysrlckmnzlmscwwbibn.supabase.co/functions/v1/catalog-v7',
   notifyUrl:'https://hysrlckmnzlmscwwbibn.supabase.co/functions/v1/catalog-notify',
   defaultSlug:'hakuna-matata',
-  version:'10.10.1',
+  version:'10.10.2',
   brandLogoUrl:'https://cdn.phototourl.com/free/2026-09-09-81972c89-9fb3-4bb7-ad34-74c1fe90aca9.jpg'
 });
 (()=>{
-  const path=location.pathname,v='10.10.1',logo=window.KIUBO_CATALOG_CONFIG.brandLogoUrl;
+  const path=location.pathname,v='10.10.2',logo=window.KIUBO_CATALOG_CONFIG.brandLogoUrl;
   document.documentElement.dataset.hmBuild=v;
   const setIcon=(rel,href)=>{let l=document.querySelector(`link[rel="${rel}"]`);if(!l){l=document.createElement('link');l.rel=rel;document.head.append(l)}l.href=href};
   if(logo){setIcon('icon',logo);setIcon('apple-touch-icon',logo)}
@@ -34,5 +34,6 @@ window.KIUBO_CATALOG_CONFIG=Object.freeze({
     addStyle('/orders-v5.css');
   }else{
     addManifest('/manifest.webmanifest');
+    document.write(`<script src="/catalog-v10.10.2.js?v=${v}"><\/script>`);
   }
 })();
