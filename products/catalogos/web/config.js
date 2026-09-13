@@ -1,15 +1,15 @@
-/* Hakuna 10.11 — simple product editor + presentation promos. */
+/* Hakuna 10.12 — consolidated approved catalog UX + panel 10.11. */
 window.KIUBO_CATALOG_CONFIG=Object.freeze({
   supabaseUrl:'https://hysrlckmnzlmscwwbibn.supabase.co',
   publishableKey:'sb_publishable_hnsAgTsI1c_wErMMwAYwMQ_crWdOBpT',
   apiUrl:'https://hysrlckmnzlmscwwbibn.supabase.co/functions/v1/catalog-v8',
   notifyUrl:'https://hysrlckmnzlmscwwbibn.supabase.co/functions/v1/catalog-notify',
   defaultSlug:'hakuna-matata',
-  version:'10.11.0',
+  version:'10.12.0',
   brandLogoUrl:'https://cdn.phototourl.com/free/2026-09-09-81972c89-9fb3-4bb7-ad34-74c1fe90aca9.jpg'
 });
 (()=>{
-  const path=location.pathname,v='10.11.0',logo=window.KIUBO_CATALOG_CONFIG.brandLogoUrl;
+  const path=location.pathname,v='10.12.0',logo=window.KIUBO_CATALOG_CONFIG.brandLogoUrl;
   document.documentElement.dataset.hmBuild=v;
   const setIcon=(rel,href)=>{let l=document.querySelector(`link[rel="${rel}"]`);if(!l){l=document.createElement('link');l.rel=rel;document.head.append(l)}l.href=href};
   if(logo){setIcon('icon',logo);setIcon('apple-touch-icon',logo)}
@@ -33,8 +33,15 @@ window.KIUBO_CATALOG_CONFIG=Object.freeze({
   }else if(/^\/pedido/.test(path)){
     addStyle('/orders-v5.css');
   }else{
+    document.documentElement.classList.add('hm112-boot');
+    if(!document.getElementById('hm112Critical')){
+      const s=document.createElement('style');s.id='hm112Critical';s.textContent=`html.hm112-boot:not(.hm112-ready) .v10-app{opacity:0!important;visibility:hidden!important;pointer-events:none!important}html.hm112-boot:not(.hm112-ready) body::before{content:"";position:fixed;inset:0;z-index:2147483000;background:#fff}html.hm112-boot:not(.hm112-ready) body::after{content:"";position:fixed;z-index:2147483001;left:50%;top:50%;width:78px;height:78px;transform:translate(-50%,-50%);border-radius:18px;background:#fff url("${logo||'/assets/brand-mark.svg'}") center/contain no-repeat;box-shadow:0 8px 30px rgba(15,66,44,.08)}html.hm112-ready body::before,html.hm112-ready body::after{display:none!important}`;document.head.append(s);
+    }
+    const hero='https://blogger.googleusercontent.com/img/a/AVvXsEi0hDelNFtHhwoe6guvslOKkEqE0a4o3qVn_Mnut7m2IPdXwfoGDifE1S5QksIbMEDzm_LFESZjvksQ3JEKR_i5iFIYzTkCryXadiPRtu7R9w00ZOtqLTFnDZEUdStZX1IyEbuPqy4CR8QCVlqrVoMEl2Q7FqCzkreaLh26NUkdZJ-TCRQbrvooScWcthA';
+    if(!document.querySelector('link[data-hm112-hero]')){const l=document.createElement('link');l.rel='preload';l.as='image';l.href=hero;l.dataset.hm112Hero='1';try{l.fetchPriority='high'}catch{}document.head.append(l)}
     addManifest('/manifest.webmanifest');
     addStyle('/catalog-v10.11.css');
-    document.write(`<script src="/catalog-v10.11.js?v=${v}"><\/script>`);
+    addStyle('/catalog-v10.12.css');
+    document.write(`<script src="/catalog-v10.12.js?v=${v}"><\/script><script src="/catalog-v10.11.js?v=${v}"><\/script>`);
   }
 })();
