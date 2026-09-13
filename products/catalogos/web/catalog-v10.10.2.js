@@ -1,78 +1,57 @@
-/* Hakuna Matata 10.10.3 — deterministic search-result router using native catalog actions. */
+/* Hakuna Matata 10.10.4 — sheet/search collision guard. */
 (()=>{
 'use strict';
-if(window.__hakunaCatalog10103)return;window.__hakunaCatalog10103=true;
+if(window.__hakunaCatalog10104)return;window.__hakunaCatalog10104=true;
 if(/^\/(?:panel|master|pedido)(?:\/|$)/.test(location.pathname))return;
-const $=(s,r=document)=>r.querySelector(s),$$=(s,r=document)=>[...r.querySelectorAll(s)];
-const norm=(v='')=>String(v).normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().trim();
-let routing=false;
-const afterPaint=fn=>requestAnimationFrame(()=>requestAnimationFrame(fn));
-function resetVisualSearch(){
+const root=document.documentElement;
+const $=(s,r=document)=>r.querySelector(s);
+root.classList.remove('hm108-brand-routing');
+function installStyle(){
+  if($('#hm10104InteractionFix'))return;
+  const style=document.createElement('style');
+  style.id='hm10104InteractionFix';
+  style.textContent=`
+    #sheetHost .v10-backdrop{z-index:5000!important}
+    #sheetHost .v10-sheet{z-index:5001!important}
+    html.hm10104-sheet-open #searchSuggestions{visibility:hidden!important;pointer-events:none!important}
+    html.hm10104-sheet-open #catalogView.hm105-search-mode .v10-catalog-body{visibility:visible!important}
+  `;
+  document.head.append(style);
+}
+function hideSearchSurface(){
   const view=$('#catalogView'),box=$('#searchSuggestions');
   view?.classList.remove('hm105-search-mode','hm1072-searching');
-  if(box){box.hidden=true;box.classList.remove('hm105-results');box.style.removeProperty('--hm-search-top');box.style.removeProperty('--hm-search-max');box.dataset.hm1072Q=''}
-}
-function clearSearch(done){
-  const clear=$('#clearSearch');
-  if(clear&&!clear.hidden){
-    clear.click();
-    afterPaint(()=>{resetVisualSearch();done()});
-    return;
+  if(box){
+    box.hidden=true;
+    box.classList.remove('hm105-results');
+    box.style.removeProperty('--hm-search-top');
+    box.style.removeProperty('--hm-search-max');
   }
-  const input=$('#catalogSearch');
-  if(input?.value){
-    input.value='';
-    input.dispatchEvent(new Event('input',{bubbles:true,composed:true}));
-    setTimeout(()=>{resetVisualSearch();done()},130);
-    return;
-  }
-  resetVisualSearch();done();
 }
-function finishSoon(){setTimeout(()=>{routing=false},180)}
-function routeProduct(id){
-  if(!id||routing)return;routing=true;
-  clearSearch(()=>{
-    const card=$(`[data-product="${CSS.escape(String(id))}"]`,$('#catalogResults'));
-    const open=card?.querySelector(`[data-open="${CSS.escape(String(id))}"]`);
-    if(open){open.click();finishSoon();return}
-    routing=false;
-  });
+function syncSheetState(){
+  installStyle();
+  root.classList.remove('hm108-brand-routing');
+  const open=!!$('#sheetHost .v10-sheet');
+  root.classList.toggle('hm10104-sheet-open',open);
+  if(open)hideSearchSurface();
 }
-function routeBrand(name){
-  const wanted=norm(name);if(!wanted||routing)return;routing=true;
-  clearSearch(()=>{
-    const chip=$$('[data-brand-chip]').find(el=>!el.closest('#searchSuggestions')&&norm(el.dataset.brandChip||'')===wanted);
-    if(chip){chip.click();afterPaint(()=>{$('.v10-catalog-body')?.scrollIntoView({block:'start',behavior:'smooth'});finishSoon()});return}
-    const filter=$('#filterBtn');
-    if(!filter){routing=false;return}
-    filter.click();
-    let tries=0;
-    const pick=()=>{
-      const option=$$('#sheetHost [data-brand-option]').find(el=>norm(el.dataset.brandOption||'')===wanted);
-      if(option){option.click();afterPaint(finishSoon);return}
-      if(tries++<15){requestAnimationFrame(pick);return}
-      $('#sheetHost .v10-sheet-close')?.click();routing=false;
-    };
-    requestAnimationFrame(pick);
-  });
+let hostObserver=null;
+function bindHost(){
+  const host=$('#sheetHost');
+  if(!host||host.dataset.hm10104Bound==='1')return false;
+  host.dataset.hm10104Bound='1';
+  hostObserver?.disconnect();
+  hostObserver=new MutationObserver(syncSheetState);
+  hostObserver.observe(host,{childList:true,subtree:true});
+  syncSheetState();
+  return true;
 }
-window.addEventListener('click',e=>{
-  if(!e.target.closest?.('#searchSuggestions'))return;
-  const brand=e.target.closest?.('[data-hm-search-brand],[data-brand-chip]');
-  if(brand){
-    const name=String(brand.dataset.hmSearchBrand??brand.dataset.brandChip??'').trim();
-    if(!name)return;
-    e.preventDefault();e.stopPropagation();e.stopImmediatePropagation();
-    routeBrand(name);return;
-  }
-  const product=e.target.closest?.('[data-search-product],[data-open]');
-  if(product){
-    const id=String(product.dataset.searchProduct??product.dataset.open??'').trim();
-    if(!id)return;
-    e.preventDefault();e.stopPropagation();e.stopImmediatePropagation();
-    routeProduct(id);
-  }
-},true);
-window.addEventListener('pageshow',()=>{routing=false;resetVisualSearch()});
-document.documentElement.dataset.hmSearchRouter='10.10.3';
+installStyle();
+if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>{bindHost();syncSheetState()},{once:true});
+else{bindHost();syncSheetState()}
+const shellObserver=new MutationObserver(()=>{if(bindHost())syncSheetState()});
+shellObserver.observe(document.documentElement,{childList:true,subtree:true});
+window.addEventListener('pageshow',()=>{root.classList.remove('hm108-brand-routing');syncSheetState()});
+document.addEventListener('click',()=>queueMicrotask(syncSheetState),true);
+document.documentElement.dataset.hmInteractionFix='10.10.4';
 })();
