@@ -1,0 +1,4 @@
+/* Hakuna Matata 10.10.6 — first-paint guard for final homepage artwork. */
+html:not(.hm10106-hero-ready):not(.hm10106-hero-fallback) #homeView .hm-hero-carousel{opacity:0!important;visibility:hidden!important}
+html.hm10106-hero-ready #homeView .hm-hero-carousel{opacity:1!important;visibility:visible!important;transition:opacity .14s ease!important}
+html.hm10106-hero-fallback #homeView .hm-hero-carousel{opacity:1!important;visibility:visible!important}
