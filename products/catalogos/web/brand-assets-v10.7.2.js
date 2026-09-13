@@ -16,9 +16,9 @@ const norm=(v='')=>String(v).normalize('NFD').replace(/[\u0300-\u036f]/g,'').toL
 const key=v=>norm(v).replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'');
 const aliases={mias:'mias',power:'power',powerade:'power',fiora:'fiora',kataboom:'kataboom',manicho:'manicho',tru:'tru'};
 const plateNames=new Set(['mias','power','powerade','fiora','kataboom','manicho','tru']);
-const scales={mias:'108% auto',power:'98% auto',powerade:'98% auto',fiora:'168% auto',kataboom:'120% 114%',manicho:'120% 114%',tru:'120% 114%'};
+const scales={mias:'108% auto',power:'98% auto',powerade:'98% auto',fiora:'auto 100%',kataboom:'120% 114%',manicho:'120% 114%',tru:'120% 114%'};
 const positions={fiora:'center center'};
-const plateColors={mias:'#e6332e',power:'#050505',powerade:'#050505',fiora:'#ff2d68',kataboom:'#ec0a76',manicho:'#f47a26',tru:'#0566a8'};
+const plateColors={mias:'#e6332e',power:'#050505',powerade:'#050505',fiora:'#f92d66',kataboom:'#ec0a76',manicho:'#f47a26',tru:'#0566a8'};
 
 if(!document.getElementById('hmBrandOpticalTuning')){
   const style=document.createElement('style');
