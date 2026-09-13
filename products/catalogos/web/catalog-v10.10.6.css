@@ -1,4 +1,75 @@
-/* Hakuna Matata 10.10.6 — first-paint guard for final homepage artwork. */
-html:not(.hm10106-hero-ready):not(.hm10106-hero-fallback) #homeView .hm-hero-carousel{opacity:0!important;visibility:hidden!important}
-html.hm10106-hero-ready #homeView .hm-hero-carousel{opacity:1!important;visibility:visible!important;transition:opacity .14s ease!important}
-html.hm10106-hero-fallback #homeView .hm-hero-carousel{opacity:1!important;visibility:visible!important}
+/* Hakuna Matata 10.10.8 — zero legacy flash + polished image loading. */
+
+/*
+ * Do not expose the base/legacy home while the final 10.9 artwork is mounting.
+ * The body pseudo-elements survive catalog-v10.2 replacing body.innerHTML, so this
+ * guard works from the first rendered frame without touching catalog logic.
+ */
+html:not(.hm10106-hero-ready):not(.hm10106-hero-fallback) .v10-app{
+  opacity:0!important;
+  visibility:hidden!important;
+  pointer-events:none!important;
+}
+html:not(.hm10106-hero-ready):not(.hm10106-hero-fallback) body{
+  overflow:hidden!important;
+  background:#fff!important;
+}
+html:not(.hm10106-hero-ready):not(.hm10106-hero-fallback) body::before{
+  content:"";
+  position:fixed;
+  inset:0;
+  z-index:2147483645;
+  background:#fff url("https://cdn.phototourl.com/free/2026-09-09-81972c89-9fb3-4bb7-ad34-74c1fe90aca9.jpg") center calc(50% - 22px)/74px 74px no-repeat;
+  pointer-events:auto;
+}
+html:not(.hm10106-hero-ready):not(.hm10106-hero-fallback) body::after{
+  content:"";
+  position:fixed;
+  z-index:2147483646;
+  left:50%;
+  top:calc(50% + 44px);
+  width:24px;
+  height:24px;
+  margin:-12px 0 0 -12px;
+  border:2px solid #dfe9e2;
+  border-top-color:#17583c;
+  border-radius:50%;
+  animation:hm10108-spin .72s linear infinite;
+  pointer-events:none;
+}
+@keyframes hm10108-spin{to{transform:rotate(360deg)}}
+
+html.hm10106-hero-ready .v10-app,
+html.hm10106-hero-fallback .v10-app{
+  opacity:1!important;
+  visibility:visible!important;
+}
+html.hm10106-hero-ready #homeView .hm-hero-carousel{
+  opacity:1!important;
+  visibility:visible!important;
+  transition:opacity .12s ease!important;
+}
+html.hm10106-hero-fallback #homeView .hm-hero-carousel{
+  opacity:1!important;
+  visibility:visible!important;
+}
+
+/* If an image ever misses the warm cache, show a neutral surface rather than a white flash. */
+.v10-product-media,
+.hm-brand-visual,
+.v10-logo,
+.hm109-image-slide{
+  background-color:#f5f8f5;
+}
+.v10-app img.hm10108-img-pending{
+  opacity:0!important;
+}
+.v10-app img.hm10108-img-ready{
+  opacity:1!important;
+  transition:opacity .1s ease!important;
+}
+
+@media (prefers-reduced-motion:reduce){
+  html:not(.hm10106-hero-ready):not(.hm10106-hero-fallback) body::after{animation-duration:1.25s}
+  .v10-app img.hm10108-img-ready{transition:none!important}
+}
