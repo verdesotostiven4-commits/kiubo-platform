@@ -49,9 +49,9 @@ html.hm10106-hero-ready #homeView .hm-hero-carousel{
   visibility:visible!important;
   transition:opacity .12s ease!important;
 }
+/* On a true image failure/very slow network, never fall back to the legacy green artwork. */
 html.hm10106-hero-fallback #homeView .hm-hero-carousel{
-  opacity:1!important;
-  visibility:visible!important;
+  display:none!important;
 }
 
 /* If an image ever misses the warm cache, show a neutral surface rather than a white flash. */
