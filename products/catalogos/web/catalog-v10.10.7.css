@@ -1,0 +1,137 @@
+/* Hakuna Matata 10.10.7 — visual-only responsive brand picker grid. No routing/logic changes. */
+
+/* Give the brand picker enough breathing room on desktop without turning it into a full-screen panel. */
+@media (min-width: 901px){
+  #sheetHost .v10-sheet:has(.hm-brand-sheet){
+    width:min(1040px,calc(100vw - 64px))!important;
+    max-width:1040px!important;
+    max-height:min(86vh,780px)!important;
+    left:50%!important;
+    right:auto!important;
+    transform:translate(-50%,110%)!important;
+    border-radius:28px 28px 22px 22px!important;
+  }
+  #sheetHost .v10-sheet:has(.hm-brand-sheet).show{transform:translate(-50%,0)!important}
+  #sheetHost .v10-sheet:has(.hm-brand-sheet) .v10-sheet-scroll{padding:16px 20px 22px!important}
+  .hm-brand-sheet h2{font-size:30px!important}
+  .hm-brand-sheet .v10-brand-search{height:54px!important;margin-bottom:14px!important}
+  .hm-brand-sheet .v10-brand-options{
+    display:grid!important;
+    grid-template-columns:repeat(3,minmax(0,1fr))!important;
+    gap:10px!important;
+    align-items:stretch!important;
+  }
+  .hm-brand-sheet .v10-brand-options>[data-brand-option]{
+    min-width:0!important;
+    width:100%!important;
+  }
+  .hm-brand-sheet .v10-brand-options>[data-brand-option=""]{
+    grid-column:1/-1!important;
+    min-height:70px!important;
+  }
+  .hm-brand-option{
+    min-height:92px!important;
+    padding:9px 11px!important;
+    border-radius:18px!important;
+    grid-template-columns:84px minmax(0,1fr) 18px!important;
+    gap:10px!important;
+    box-shadow:0 4px 14px rgba(22,55,36,.025)!important;
+  }
+  .hm-brand-option .hm-brand-visual{
+    width:84px!important;
+    height:62px!important;
+    border-radius:14px!important;
+  }
+  .hm-brand-option .hm-brand-visual.has-image img{width:94%!important;height:90%!important;object-fit:contain!important}
+  .hm-brand-option>span:nth-child(2) b{font-size:12px!important;line-height:1.15!important}
+  .hm-brand-option>span:nth-child(2) small{font-size:8px!important;margin-top:4px!important}
+  .hm-brand-option>i{font-size:20px!important}
+  .hm-brand-sheet .v10-brand-options>[data-brand-option=""] .hm-all-brands{width:54px!important;height:54px!important}
+}
+
+/* Tablet: two roomy columns. */
+@media (min-width: 621px) and (max-width: 900px){
+  #sheetHost .v10-sheet:has(.hm-brand-sheet){
+    width:min(760px,calc(100vw - 28px))!important;
+    max-width:760px!important;
+  }
+  .hm-brand-sheet .v10-brand-options{
+    display:grid!important;
+    grid-template-columns:repeat(2,minmax(0,1fr))!important;
+    gap:9px!important;
+  }
+  .hm-brand-sheet .v10-brand-options>[data-brand-option=""]{grid-column:1/-1!important}
+  .hm-brand-option{
+    min-height:82px!important;
+    padding:8px 10px!important;
+    border-radius:17px!important;
+    grid-template-columns:74px minmax(0,1fr) 18px!important;
+    gap:9px!important;
+  }
+  .hm-brand-option .hm-brand-visual{width:74px!important;height:56px!important;border-radius:13px!important}
+}
+
+/* Mobile: compact visual cards, still two columns, with no clipped text. */
+@media (max-width: 620px){
+  .hm-brand-sheet{padding-top:4px!important}
+  .hm-brand-sheet>div:first-child{padding-right:40px!important}
+  .hm-brand-sheet h2{font-size:24px!important;margin-top:2px!important}
+  .hm-brand-sheet>div>p{font-size:9px!important;margin-bottom:11px!important}
+  .hm-brand-sheet .v10-brand-search{height:48px!important;border-radius:14px!important;margin-bottom:10px!important}
+  .hm-brand-sheet .v10-brand-options{
+    display:grid!important;
+    grid-template-columns:repeat(2,minmax(0,1fr))!important;
+    gap:8px!important;
+  }
+  .hm-brand-sheet .v10-brand-options>[data-brand-option=""]{
+    grid-column:1/-1!important;
+    min-height:62px!important;
+  }
+  .hm-brand-option{
+    min-height:108px!important;
+    padding:9px 8px!important;
+    border-radius:16px!important;
+    display:grid!important;
+    grid-template-columns:1fr!important;
+    grid-template-rows:58px auto!important;
+    justify-items:center!important;
+    align-content:center!important;
+    gap:7px!important;
+    text-align:center!important;
+    overflow:hidden!important;
+  }
+  .hm-brand-option .hm-brand-visual{
+    width:min(118px,100%)!important;
+    height:58px!important;
+    min-width:0!important;
+    border-radius:13px!important;
+    padding:4px 7px!important;
+  }
+  .hm-brand-option .hm-brand-visual.has-image img{width:94%!important;height:90%!important;object-fit:contain!important}
+  .hm-brand-option>span:nth-child(2){width:100%!important;min-width:0!important}
+  .hm-brand-option>span:nth-child(2) b{
+    font-size:10px!important;
+    line-height:1.15!important;
+    white-space:nowrap!important;
+    overflow:hidden!important;
+    text-overflow:ellipsis!important;
+  }
+  .hm-brand-option>span:nth-child(2) small{display:none!important}
+  .hm-brand-option>i{display:none!important}
+  .hm-brand-sheet .v10-brand-options>[data-brand-option=""]{
+    display:grid!important;
+    grid-template-columns:50px minmax(0,1fr)!important;
+    grid-template-rows:1fr!important;
+    justify-items:start!important;
+    text-align:left!important;
+    gap:10px!important;
+    padding:6px 11px!important;
+  }
+  .hm-brand-sheet .v10-brand-options>[data-brand-option=""]>span:nth-child(2) small{display:block!important;font-size:7px!important}
+  .hm-brand-sheet .v10-brand-options>[data-brand-option=""] .hm-all-brands{width:48px!important;height:48px!important}
+}
+
+/* Active/press states remain lightweight and do not alter click behavior. */
+.hm-brand-option{transition:border-color .12s ease,background .12s ease,transform .1s ease!important}
+.hm-brand-option:active{transform:scale(.985)!important}
+.hm-brand-option.active{box-shadow:inset 0 0 0 1px rgba(34,92,60,.08)!important}
