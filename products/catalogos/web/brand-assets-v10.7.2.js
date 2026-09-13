@@ -14,11 +14,11 @@ window.KIUBO_BRAND_ASSETS=Object.freeze({...current,
 const A=window.KIUBO_BRAND_ASSETS||{};
 const norm=(v='')=>String(v).normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().trim();
 const key=v=>norm(v).replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'');
-const aliases={mias:'mias',power:'power',powerade:'power',vivant:'vivant',fiora:'fiora',kataboom:'kataboom',manicho:'manicho',tru:'tru'};
-const plateNames=new Set(['mias','power','powerade','vivant','fiora','kataboom','manicho','tru']);
-const scales={mias:'108% auto',power:'98% auto',powerade:'98% auto',vivant:'108% auto',fiora:'150% auto',kataboom:'120% 114%',manicho:'120% 114%',tru:'120% 114%'};
-const positions={fiora:'66% center'};
-const plateColors={mias:'#e6332e',power:'#050505',powerade:'#050505',vivant:'#eaf4f6',fiora:'#ff2d68',kataboom:'#ec0a76',manicho:'#f47a26',tru:'#0566a8'};
+const aliases={mias:'mias',power:'power',powerade:'power',fiora:'fiora',kataboom:'kataboom',manicho:'manicho',tru:'tru'};
+const plateNames=new Set(['mias','power','powerade','fiora','kataboom','manicho','tru']);
+const scales={mias:'108% auto',power:'98% auto',powerade:'98% auto',fiora:'168% auto',kataboom:'120% 114%',manicho:'120% 114%',tru:'120% 114%'};
+const positions={fiora:'center center'};
+const plateColors={mias:'#e6332e',power:'#050505',powerade:'#050505',fiora:'#ff2d68',kataboom:'#ec0a76',manicho:'#f47a26',tru:'#0566a8'};
 
 if(!document.getElementById('hmBrandOpticalTuning')){
   const style=document.createElement('style');
@@ -36,10 +36,24 @@ if(!document.getElementById('hmBrandOpticalTuning')){
   #homeView [data-brand-chip="Natura"] img,.hm-v104-catalog-brands [data-brand-chip="Natura"] img,
   #homeView [data-brand-chip="Inacake"] img,.hm-v104-catalog-brands [data-brand-chip="Inacake"] img,
   #homeView [data-brand-chip="Rellenitas"] img,.hm-v104-catalog-brands [data-brand-chip="Rellenitas"] img{width:106%!important;height:94%!important;}
+
+  /* Vivant stays on a clean white chip; no full-bleed colored plate. */
+  #homeView [data-brand-chip="Vivant"],.hm-v104-catalog-brands [data-brand-chip="Vivant"]{
+    background:#fff!important;overflow:hidden!important;
+  }
+  #homeView [data-brand-chip="Vivant"] .hm-brand-visual,.hm-v104-catalog-brands [data-brand-chip="Vivant"] .hm-brand-visual{
+    background:#fff!important;padding:3px!important;border-radius:13px!important;
+  }
+  #homeView [data-brand-chip="Vivant"] img,.hm-v104-catalog-brands [data-brand-chip="Vivant"] img{
+    width:96%!important;height:88%!important;object-fit:contain!important;transform:none!important;opacity:1!important;
+  }
+
   #homeView [data-brand-chip="Halls"] .hm-brand-visual,.hm-v104-catalog-brands [data-brand-chip="Halls"] .hm-brand-visual{padding:0!important;background:#fff url('${HALLS}') center/98% 92% no-repeat!important;}
   #homeView [data-brand-chip="Halls"] .hm-brand-visual b,.hm-v104-catalog-brands [data-brand-chip="Halls"] .hm-brand-visual b{display:none!important;}
   .hm1072-search-brands [data-brand-chip] .hm-brand-visual{padding:2px!important;overflow:hidden!important;border-radius:12px!important;}
   .hm1072-search-brands [data-brand-chip] .hm-brand-visual img{width:98%!important;height:92%!important;max-width:none!important;object-fit:contain!important;}
+  .hm1072-search-brands [data-brand-chip="Vivant"] .hm-brand-visual{background:#fff!important;padding:3px!important;}
+  .hm1072-search-brands [data-brand-chip="Vivant"] img{width:96%!important;height:88%!important;object-fit:contain!important;opacity:1!important;transform:none!important;}
   `;
   document.head.append(style);
 }
