@@ -1,8 +1,8 @@
-const CACHE='kiubo-catalog-v10-10-1-20260912';
+const CACHE='kiubo-catalog-v10-10-5-20260912';
 const SHELL=[
 '/','/index.html','/panel.html','/pedido.html',
 '/catalog-v10.css','/catalog-v10.2.css','/catalog-v10.3.css','/catalog-v10.4.css','/catalog-v10.4.1.css','/catalog-v10.4.2.css','/catalog-v10.5.css','/catalog-v10.5.1.css','/catalog-v10.6.css','/catalog-v10.7.1.css','/catalog-v10.7.2.css','/catalog-v10.7.3.css','/catalog-v10.7.4.css','/catalog-v10.8.css','/catalog-v10.9.css',
-'/catalog-v10.2.js','/catalog-v10.3.js','/catalog-v10.4.js','/catalog-v10.4.1.js','/catalog-v10.4.2.js','/catalog-v10.5.js','/catalog-v10.5.1.js','/catalog-v10.6.js','/catalog-v10.7.1.js','/catalog-v10.7.2.js','/catalog-v10.7.4.js','/catalog-v10.8.js','/catalog-v10.9.js','/push-v10.7.js','/brand-assets-v10.js','/brand-assets-v10.7.2.js',
+'/catalog-v10.2.js','/catalog-v10.3.js','/catalog-v10.4.js','/catalog-v10.4.1.js','/catalog-v10.4.2.js','/catalog-v10.5.js','/catalog-v10.5.1.js','/catalog-v10.6.js','/catalog-v10.7.1.js','/catalog-v10.7.2.js','/catalog-v10.7.4.js','/catalog-v10.8.js','/catalog-v10.9.js','/catalog-v10.10.2.js','/push-v10.7.js','/brand-assets-v10.js','/brand-assets-v10.7.2.js',
 '/panel-v5.css','/panel-v6.css','/panel-v7.css','/panel-v7.1.css','/panel-v7.2.1.css','/panel-v7.5.css','/panel-v7.6.css','/panel-v7.7.css','/panel-v10-stability.css','/panel-v10.4.2.css','/panel-v10.5.css','/panel-v10.5.1.css','/panel-v10.6.css','/panel-v10.9.css','/panel-v10.10.css',
 '/panel-fast-save-v7.4.js','/panel-v6.js','/panel-v5.js','/panel-extras-v5.js','/panel-orders-v6.js','/panel-v7.js','/panel-v7.5.js','/panel-v7.5.1.js','/panel-v7.6.js','/panel-v7.7.js','/panel-v10-stability.js','/panel-v10.5.1.js','/panel-v10.6.js','/panel-v10.9.js','/panel-v10.10.js',
 '/panel.css','/styles.css','/pedido.css','/orders-v5.css','/core.js','/config.js','/manifest.webmanifest','/panel.webmanifest'
