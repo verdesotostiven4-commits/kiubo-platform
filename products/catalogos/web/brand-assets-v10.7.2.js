@@ -3,17 +3,22 @@
 'use strict';
 const current=window.KIUBO_BRAND_ASSETS||{};
 const HALLS='https://blogger.googleusercontent.com/img/a/AVvXsEgbQYF-4TAbUEmeIDMmF6BEQEd8x7s22rHzckWMSpF5LJluu8_Tq48tzEuc8xKQFWZkv7m78rxOmRWeHYdXQSz7YLvyk8_xsDn7fjGxxLyuH_OLsZfr4j_pCelg4yRKSqDMrdgAvyergqaMUmB8fSb6hGn6_Cx0-H1Bk9caBSGCiHRRQuogmV3H1FUW5no';
+const VIVANT='https://blogger.googleusercontent.com/img/a/AVvXsEhFa2z3w05Qy3bcmuc0gB53pRAaVMvLHEZYVqErFOI7VWnS4JuknW8V5bYepnqsBJzsBgbK-PaKeXmcCuCJ1tXgmLQzrEATKuvd5-8LCsIXFQ53TfxvP4V2dH0Kg4-P0Q6SZ4GfHGUOg9LVLYD6LdLnkt_gBS7N02INYWXhrthcMkJg11w2stHJhdCjdas';
+const FIORA='https://blogger.googleusercontent.com/img/a/AVvXsEjY0AYzWc4HklnXKGIyNp040HmX6Efmz0dcawcUI8OlKwwPX_fbmHwhNOcN525DuP1MFpWmkycsMf84wKvk19Bva7wmYr2GmWyClvpqIlRCMdw9mEAfJ9r_WvmhRfpBrfIhbOUjIS_RPlmsvry0ex8IcHNzkHv_hBIrtHvhTBNvELzjKDzdnuviJPneeSw';
 window.KIUBO_BRAND_ASSETS=Object.freeze({...current,
   'kinder':'https://blogger.googleusercontent.com/img/a/AVvXsEjhCWtIsLsNpwkLtqVHznwvqoRhanhsB0GanfRzb5QODLbcY_PaeIpYM_atG1Y1FGbRlSP9AO0qL13D67JUbWddLcXnGDsx71-WwmrabZa5phtFj-bgV1B8vLdXgJDX3_a7u1TmUhd2OV6hF-cYb-PX8vVI2HtWnvhh_tOmMYFspUkZ8mjdSklPks8qhGc',
-  'halls':HALLS
+  'halls':HALLS,
+  'vivant':VIVANT,
+  'fiora':FIORA
 });
 const A=window.KIUBO_BRAND_ASSETS||{};
 const norm=(v='')=>String(v).normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().trim();
 const key=v=>norm(v).replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'');
-const aliases={mias:'mias',power:'power',powerade:'power',vivant:'vivant',kataboom:'kataboom',manicho:'manicho',tru:'tru'};
-const plateNames=new Set(['mias','power','powerade','vivant','kataboom','manicho','tru']);
-const scales={mias:'108% auto',power:'98% auto',powerade:'98% auto',vivant:'108% auto',kataboom:'120% 114%',manicho:'120% 114%',tru:'120% 114%'};
-const plateColors={mias:'#e6332e',power:'#050505',powerade:'#050505',vivant:'#eaf4f6',kataboom:'#ec0a76',manicho:'#f47a26',tru:'#0566a8'};
+const aliases={mias:'mias',power:'power',powerade:'power',vivant:'vivant',fiora:'fiora',kataboom:'kataboom',manicho:'manicho',tru:'tru'};
+const plateNames=new Set(['mias','power','powerade','vivant','fiora','kataboom','manicho','tru']);
+const scales={mias:'108% auto',power:'98% auto',powerade:'98% auto',vivant:'108% auto',fiora:'150% auto',kataboom:'120% 114%',manicho:'120% 114%',tru:'120% 114%'};
+const positions={fiora:'66% center'};
+const plateColors={mias:'#e6332e',power:'#050505',powerade:'#050505',vivant:'#eaf4f6',fiora:'#ff2d68',kataboom:'#ec0a76',manicho:'#f47a26',tru:'#0566a8'};
 
 if(!document.getElementById('hmBrandOpticalTuning')){
   const style=document.createElement('style');
@@ -53,7 +58,7 @@ function applyPlate(chip){
   chip.style.setProperty('background-color',plateColors[k]||'#fff','important');
   chip.style.setProperty('background-image',`url("${url}")`,'important');
   chip.style.setProperty('background-repeat','no-repeat','important');
-  chip.style.setProperty('background-position','center','important');
+  chip.style.setProperty('background-position',positions[k]||'center','important');
   chip.style.setProperty('background-size',scales[k]||'120% 114%','important');
   const visual=chip.querySelector('.hm-brand-visual');
   if(visual){
