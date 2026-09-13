@@ -39,7 +39,6 @@
     border-radius:18px!important;
     grid-template-columns:84px minmax(0,1fr) 18px!important;
     gap:10px!important;
-    box-shadow:0 4px 14px rgba(22,55,36,.025)!important;
   }
   .hm-brand-option .hm-brand-visual{
     width:84px!important;
@@ -145,7 +144,30 @@
   .hm-brand-sheet .v10-brand-options>[data-brand-option=""] .hm-all-brands{width:48px!important;height:48px!important}
 }
 
-/* Active/press states remain lightweight and do not alter click behavior. */
-.hm-brand-option{transition:border-color .12s ease,background .12s ease,transform .1s ease!important}
-.hm-brand-option:active{transform:scale(.985)!important}
+/* Scroll performance: preserve native scrolling and reduce per-frame repaint work. */
+#sheetHost .v10-sheet:has(.hm-brand-sheet) .v10-sheet-scroll{
+  overflow-y:auto!important;
+  overflow-x:hidden!important;
+  -webkit-overflow-scrolling:touch!important;
+  overscroll-behavior-y:contain!important;
+  touch-action:pan-y!important;
+  scroll-behavior:auto!important;
+  scrollbar-gutter:stable;
+  will-change:scroll-position;
+}
+.hm-brand-sheet .v10-brand-options{contain:layout style!important}
+.hm-brand-sheet .hm-brand-option{
+  box-shadow:none!important;
+  contain:layout paint style!important;
+  content-visibility:auto;
+  contain-intrinsic-size:auto 92px;
+  transition:border-color .1s ease,background-color .1s ease!important;
+}
+.hm-brand-sheet .hm-brand-option:active{
+  transform:none!important;
+  background:#f8faf8!important;
+}
 .hm-brand-option.active{box-shadow:inset 0 0 0 1px rgba(34,92,60,.08)!important}
+@media(max-width:620px){
+  .hm-brand-sheet .hm-brand-option{contain-intrinsic-size:auto 108px}
+}
