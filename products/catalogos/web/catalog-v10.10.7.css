@@ -12,7 +12,10 @@
     border-radius:28px 28px 22px 22px!important;
   }
   #sheetHost .v10-sheet:has(.hm-brand-sheet).show{transform:translate(-50%,0)!important}
-  #sheetHost .v10-sheet:has(.hm-brand-sheet) .v10-sheet-scroll{padding:16px 20px 22px!important}
+  #sheetHost .v10-sheet:has(.hm-brand-sheet) .v10-sheet-scroll{
+    padding:16px 20px 58px!important;
+    scroll-padding-bottom:58px!important;
+  }
   .hm-brand-sheet h2{font-size:30px!important}
   .hm-brand-sheet .v10-brand-search{height:54px!important;margin-bottom:14px!important}
   .hm-brand-sheet .v10-brand-options{
@@ -20,6 +23,7 @@
     grid-template-columns:repeat(3,minmax(0,1fr))!important;
     gap:10px!important;
     align-items:stretch!important;
+    padding-bottom:8px!important;
   }
   .hm-brand-sheet .v10-brand-options>[data-brand-option]{
     min-width:0!important;
@@ -55,10 +59,15 @@
     width:min(760px,calc(100vw - 28px))!important;
     max-width:760px!important;
   }
+  #sheetHost .v10-sheet:has(.hm-brand-sheet) .v10-sheet-scroll{
+    padding-bottom:48px!important;
+    scroll-padding-bottom:48px!important;
+  }
   .hm-brand-sheet .v10-brand-options{
     display:grid!important;
     grid-template-columns:repeat(2,minmax(0,1fr))!important;
     gap:9px!important;
+    padding-bottom:8px!important;
   }
   .hm-brand-sheet .v10-brand-options>[data-brand-option=""]{grid-column:1/-1!important}
   .hm-brand-option{
@@ -73,6 +82,10 @@
 
 /* Mobile: compact visual cards, still two columns, with no clipped text. */
 @media (max-width: 620px){
+  #sheetHost .v10-sheet:has(.hm-brand-sheet) .v10-sheet-scroll{
+    padding-bottom:calc(34px + env(safe-area-inset-bottom))!important;
+    scroll-padding-bottom:calc(34px + env(safe-area-inset-bottom))!important;
+  }
   .hm-brand-sheet{padding-top:4px!important}
   .hm-brand-sheet>div:first-child{padding-right:40px!important}
   .hm-brand-sheet h2{font-size:24px!important;margin-top:2px!important}
@@ -82,6 +95,7 @@
     display:grid!important;
     grid-template-columns:repeat(2,minmax(0,1fr))!important;
     gap:8px!important;
+    padding-bottom:6px!important;
   }
   .hm-brand-sheet .v10-brand-options>[data-brand-option=""]{
     grid-column:1/-1!important;
