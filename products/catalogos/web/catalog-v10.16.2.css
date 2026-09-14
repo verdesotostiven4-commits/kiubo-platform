@@ -1,0 +1,138 @@
+/* Hakuna Catalog 10.16.2 — final startup/cart/brand polish. */
+
+/* Never expose the cached/partial brand strip (the Toni flash) before the live registry + images settle. */
+html.hm1162-home-brands-pending #homeView .hm-brand-block,
+html.hm1162-home-brands-pending #homeView .v10-brand-block{
+  visibility:hidden!important;
+  opacity:0!important;
+}
+html.hm1162-home-brands-ready #homeView .hm-brand-block,
+html.hm1162-home-brands-ready #homeView .v10-brand-block{
+  visibility:visible!important;
+  opacity:1!important;
+}
+
+/* Floating “Ver carrito” is a Catalog-only affordance. */
+#hm112Cart{display:none!important}
+html.hm1162-catalog-active #hm112Cart:not([hidden]){display:flex!important}
+#hm112Cart[hidden]{display:none!important}
+
+/* The horizontal brand rail gets its own stable wrapper and right arrow. */
+#catalogView .hm1162-brand-wrap{
+  position:relative!important;
+  width:100%!important;
+  min-width:0!important;
+}
+#catalogView .hm1162-brand-wrap>.hm-v104-catalog-brands{
+  width:100%!important;
+}
+#catalogView .hm1162-brand-next{
+  position:absolute!important;
+  z-index:12!important;
+  right:4px!important;
+  top:50%!important;
+  width:36px!important;
+  height:36px!important;
+  transform:translateY(-50%)!important;
+  display:grid!important;
+  place-items:center!important;
+  padding:0!important;
+  border:1px solid rgba(20,76,52,.14)!important;
+  border-radius:999px!important;
+  background:rgba(255,255,255,.97)!important;
+  color:#164f36!important;
+  box-shadow:0 6px 18px rgba(15,55,38,.17)!important;
+  opacity:0!important;
+  visibility:hidden!important;
+  pointer-events:none!important;
+  transition:opacity .14s ease,visibility .14s ease,transform .14s ease!important;
+}
+#catalogView .hm1162-brand-next.hm1162-visible{
+  opacity:1!important;
+  visibility:visible!important;
+  pointer-events:auto!important;
+}
+#catalogView .hm1162-brand-next span{
+  display:block!important;
+  font-size:26px!important;
+  line-height:1!important;
+  transform:translate(1px,-1px)!important;
+}
+
+/* Cart rows: only minus / quantity / plus. No per-product trash affordance. */
+#cartView .v10-cart-line [data-remove],
+#cartView .v10-cart-line [data-delete],
+#cartView .v10-cart-line .v10-remove,
+#cartView .v10-cart-line .v10-trash,
+#cartView .v10-cart-line .trash{display:none!important}
+#cartView .v10-mini-step [data-cart-minus],
+#cartView .v10-mini-step [data-cart-plus]{
+  background-image:none!important;
+  opacity:1!important;
+  visibility:visible!important;
+}
+#cartView .v10-mini-step [data-cart-minus]::before,
+#cartView .v10-mini-step [data-cart-minus]::after,
+#cartView .v10-mini-step [data-cart-plus]::before,
+#cartView .v10-mini-step [data-cart-plus]::after{content:none!important}
+#cartView .v10-mini-step .hm1162-minus svg,
+#cartView .v10-mini-step .hm1162-plus svg{
+  display:block!important;
+  width:15px!important;
+  height:15px!important;
+  fill:none!important;
+  stroke:currentColor!important;
+  stroke-width:2!important;
+  stroke-linecap:round!important;
+}
+
+@media(max-width:700px){
+  html.hm113-cart-focus #cartView .v10-cart-line{
+    grid-template-columns:48px minmax(0,1fr) 110px!important;
+    gap:7px!important;
+  }
+  html.hm113-cart-focus #cartView .v10-cart-side{
+    grid-column:3!important;
+    width:110px!important;
+    min-width:110px!important;
+    overflow:visible!important;
+  }
+  html.hm113-cart-focus #cartView .v10-mini-step{
+    width:106px!important;
+    min-width:106px!important;
+    height:34px!important;
+    display:grid!important;
+    grid-template-columns:32px 42px 32px!important;
+    align-items:center!important;
+    overflow:visible!important;
+  }
+  html.hm113-cart-focus #cartView .v10-mini-step button{
+    width:32px!important;
+    min-width:32px!important;
+    height:32px!important;
+    display:grid!important;
+    place-items:center!important;
+    overflow:visible!important;
+  }
+  html.hm113-cart-focus #cartView .v10-mini-step b{
+    min-width:42px!important;
+    text-align:center!important;
+  }
+}
+@media(max-width:380px){
+  html.hm113-cart-focus #cartView .v10-cart-line{
+    grid-template-columns:42px minmax(0,1fr) 104px!important;
+    gap:5px!important;
+  }
+  html.hm113-cart-focus #cartView .v10-cart-photo{width:42px!important;height:42px!important}
+  html.hm113-cart-focus #cartView .v10-cart-side{width:104px!important;min-width:104px!important}
+  html.hm113-cart-focus #cartView .v10-mini-step{
+    width:100px!important;min-width:100px!important;
+    grid-template-columns:30px 40px 30px!important;
+  }
+  html.hm113-cart-focus #cartView .v10-mini-step button{width:30px!important;min-width:30px!important}
+  html.hm113-cart-focus #cartView .v10-mini-step b{min-width:40px!important}
+}
+@media(prefers-reduced-motion:reduce){
+  #catalogView .hm1162-brand-next{transition:none!important}
+}

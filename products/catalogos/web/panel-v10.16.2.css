@@ -1,0 +1,52 @@
+/* Hakuna Panel 10.16.2 — sale form order and stable pack editor. */
+.hm114-editor .hm114-sale-mode{order:1!important}
+.hm114-editor .v5-presentations{order:2!important}
+.hm114-editor #hm111Stock.hm114-stock{order:3!important}
+
+/* Keep the requested field flow visually explicit. */
+.hm114-editor .v5-presentation-row[data-hm1162-role="pack"]{
+  grid-template-columns:minmax(0,1fr) minmax(0,.72fr)!important;
+}
+.hm114-editor .v5-presentation-row[data-hm1162-role="pack"]>label:has([data-p-name]),
+.hm114-editor .v5-presentation-row[data-hm1162-role="pack"]>label:has([data-p-units]),
+.hm114-editor .v5-presentation-row[data-hm1162-role="pack"]>label:has([data-p-price]){
+  display:grid!important;
+}
+.hm114-editor .v5-presentation-row[data-hm1162-role="pack"]>label:has([data-p-name]){order:10!important}
+.hm114-editor .v5-presentation-row[data-hm1162-role="pack"]>label:has([data-p-units]){order:11!important}
+.hm114-editor .v5-presentation-row[data-hm1162-role="pack"]>label:has([data-p-price]){order:12!important}
+.hm114-editor .v5-presentation-row[data-hm1162-role="pack"] .hm114-tools{order:20!important}
+.hm114-editor .v5-presentation-row[data-hm1162-role="pack"] .v77-presentation-image{order:21!important}
+.hm114-editor .v5-presentation-row[data-hm1162-role="pack"] .hm114-row-head{order:1!important}
+
+/* Intent wins visually over the legacy unit-count inference while a number is being edited. */
+.hm114-editor #hm111SaleMode[data-hm1162-mode] [data-m]{
+  background:#f8faf8!important;
+  border-color:#d9e4dc!important;
+  color:#315441!important;
+  box-shadow:none!important;
+}
+.hm114-editor #hm111SaleMode[data-hm1162-mode="unit"] [data-m="unit"],
+.hm114-editor #hm111SaleMode[data-hm1162-mode="both"] [data-m="both"],
+.hm114-editor #hm111SaleMode[data-hm1162-mode="pack"] [data-m="pack"]{
+  background:#174b34!important;
+  border-color:#174b34!important;
+  color:#fff!important;
+  box-shadow:0 7px 18px rgba(23,75,52,.14)!important;
+}
+
+.hm114-editor [data-p-units].hm1162-invalid{
+  border-color:#d68b83!important;
+  box-shadow:0 0 0 3px rgba(173,67,55,.08)!important;
+}
+.hm114-editor #saveProductBtn[data-hm1162-disabled="1"]{
+  opacity:.58!important;
+  cursor:not-allowed!important;
+}
+
+@media(max-width:520px){
+  .hm114-editor .v5-presentation-row[data-hm1162-role="pack"]{grid-template-columns:1fr!important}
+  .hm114-editor .v5-presentation-row[data-hm1162-role="pack"]>label:has([data-p-name]),
+  .hm114-editor .v5-presentation-row[data-hm1162-role="pack"]>label:has([data-p-units]),
+  .hm114-editor .v5-presentation-row[data-hm1162-role="pack"]>label:has([data-p-price]){grid-column:1/-1!important}
+}
