@@ -1,0 +1,255 @@
+/* Hakuna Matata 10.16 — balanced mobile product detail + fixed cart workspace.
+   This layer only corrects the visual rules introduced by 10.13. */
+
+@media(max-width:700px){
+  /* Floating cart: still obvious, but no longer covers the catalog. */
+  .hm112-cart{
+    right:max(10px,env(safe-area-inset-right))!important;
+    bottom:calc(74px + env(safe-area-inset-bottom))!important;
+    min-height:44px!important;
+    max-width:min(190px,calc(100vw - 20px))!important;
+    padding:4px 8px 4px 4px!important;
+    border-radius:14px!important;
+    gap:6px!important;
+    box-shadow:0 8px 22px rgba(10,48,32,.18),0 2px 6px rgba(10,48,32,.10)!important;
+  }
+  .hm112-cart-icon{
+    width:32px!important;height:32px!important;flex:0 0 32px!important;border-radius:10px!important;
+  }
+  .hm112-cart-icon svg{width:18px!important;height:18px!important}
+  .hm112-cart-icon b{
+    top:-5px!important;right:-5px!important;min-width:18px!important;height:18px!important;
+    padding:0 4px!important;font-size:8px!important;
+  }
+  .hm112-cart-copy{gap:0!important}
+  .hm112-cart-copy strong{font-size:10.5px!important}
+  .hm112-cart-copy small{display:none!important}
+  .hm112-cart-total{font-size:10.5px!important;padding-left:2px!important}
+
+  /* Product detail: content-sized sheet, never a stretched empty full-screen canvas. */
+  html.hm113-product-open,html.hm113-product-open body{
+    height:100%!important;overflow:hidden!important;overscroll-behavior:none!important;
+  }
+  #sheetHost .v10-sheet:has(.v102-detail){
+    top:auto!important;
+    bottom:0!important;
+    height:auto!important;
+    max-height:calc(100dvh - max(6px,env(safe-area-inset-top)))!important;
+    width:100%!important;
+    border-radius:24px 24px 0 0!important;
+    overflow:hidden!important;
+  }
+  #sheetHost .v10-sheet:has(.v102-detail) .v10-grab{
+    height:4px!important;margin:7px auto 1px!important;
+  }
+  #sheetHost .v10-sheet:has(.v102-detail) .v10-sheet-close{
+    right:10px!important;top:9px!important;width:36px!important;height:36px!important;
+    border-radius:11px!important;font-size:20px!important;
+  }
+  #sheetHost .v10-sheet:has(.v102-detail) .v10-sheet-scroll{
+    height:auto!important;max-height:none!important;overflow:hidden!important;
+    padding:2px 12px max(8px,env(safe-area-inset-bottom))!important;
+  }
+  #sheetHost .v102-detail{
+    height:auto!important;min-height:0!important;display:block!important;overflow:visible!important;
+  }
+  #sheetHost .v102-detail .v10-detail-media{
+    height:clamp(180px,28dvh,245px)!important;
+    min-height:0!important;aspect-ratio:auto!important;
+    padding:0 44px!important;overflow:hidden!important;
+  }
+  #sheetHost .v102-detail .v10-detail-media>img{
+    width:100%!important;height:100%!important;max-height:100%!important;object-fit:contain!important;
+  }
+  #sheetHost .v102-detail .v10-stock{
+    top:8px!important;left:8px!important;padding:5px 7px!important;
+  }
+  #sheetHost .v102-detail .v10-detail-body{
+    min-height:0!important;padding:1px 4px 3px!important;display:block!important;overflow:visible!important;
+  }
+  #sheetHost .v102-detail .v10-detail-body>small{font-size:7.5px!important;line-height:1.1!important}
+  #sheetHost .v102-detail .v10-detail-body h2{
+    margin:3px 0 4px!important;font-size:20px!important;line-height:1.06!important;letter-spacing:-.035em!important;
+  }
+  #sheetHost .v102-detail .v10-detail-body>p{
+    margin:0 0 5px!important;font-size:7.5px!important;line-height:1.35!important;
+    display:-webkit-box!important;-webkit-line-clamp:2!important;-webkit-box-orient:vertical!important;overflow:hidden!important;
+  }
+  #sheetHost .v102-detail .v102-detail-label{
+    margin:6px 0 5px!important;display:flex!important;flex-direction:row!important;
+    align-items:center!important;justify-content:space-between!important;gap:8px!important;
+  }
+  #sheetHost .v102-detail .v102-detail-label label{font-size:8px!important}
+  #sheetHost .v102-detail .v102-detail-label span{font-size:6.5px!important}
+
+  #sheetHost .v102-detail .v102-presentation-list{
+    min-height:0!important;display:grid!important;gap:5px!important;overflow:visible!important;
+  }
+  #sheetHost .v102-detail .v102-presentation-row{
+    min-height:48px!important;padding:4px!important;border-radius:13px!important;
+    display:grid!important;grid-template-columns:minmax(0,1fr) auto!important;align-items:center!important;gap:5px!important;
+  }
+  #sheetHost .v102-detail .v102-presentation-main{
+    min-width:0!important;padding:0!important;grid-template-columns:36px minmax(0,1fr) auto!important;gap:6px!important;
+  }
+  #sheetHost .v102-detail .v10-presentation-thumb{
+    width:34px!important;height:34px!important;border-radius:9px!important;
+  }
+  #sheetHost .v102-detail .v102-presentation-main>span:nth-child(2)>b{
+    font-size:8px!important;line-height:1.15!important;
+  }
+  #sheetHost .v102-detail .v102-presentation-main>span:nth-child(2)>small{
+    font-size:6.5px!important;line-height:1.1!important;margin-top:1px!important;
+  }
+  #sheetHost .v102-detail .v102-presentation-main>strong{font-size:8.5px!important}
+  #sheetHost .v102-detail .v102-pick-step{
+    justify-self:end!important;align-self:center!important;height:34px!important;
+    display:flex!important;grid-template-columns:unset!important;border-radius:10px!important;
+  }
+  #sheetHost .v102-detail .v102-pick-step button{width:30px!important;height:32px!important}
+  #sheetHost .v102-detail .v102-pick-step svg{width:14px!important;height:14px!important}
+  #sheetHost .v102-detail .v102-pick-step b{min-width:22px!important;font-size:10px!important}
+
+  #sheetHost .v102-detail .v10-note-toggle{
+    margin-top:3px!important;padding:2px 0!important;font-size:7px!important;line-height:1.1!important;
+  }
+  #sheetHost .v102-detail .v10-note-box textarea{
+    max-height:44px!important;min-height:38px!important;padding:7px!important;font-size:8px!important;resize:none!important;
+  }
+  #sheetHost .v102-detail .v102-detail-total{
+    margin-top:6px!important;padding:6px 0 2px!important;min-height:28px!important;
+    display:flex!important;justify-content:space-between!important;align-items:center!important;
+  }
+  #sheetHost .v102-detail .v102-detail-total span{font-size:7px!important}
+  #sheetHost .v102-detail .v102-detail-total strong{font-size:12px!important}
+  #sheetHost .v102-detail .v102-add-all{
+    width:100%!important;min-height:44px!important;margin-top:4px!important;border-radius:13px!important;font-size:9px!important;
+  }
+
+  /* More presentations trade image space for controls. The sheet itself still does not scroll. */
+  #sheetHost .v10-sheet:has(.v102-presentation-row:nth-child(3)) .v10-detail-media{
+    height:clamp(135px,20dvh,175px)!important;
+  }
+  #sheetHost .v10-sheet:has(.v102-presentation-row:nth-child(4)) .v10-detail-media{
+    height:clamp(105px,15dvh,145px)!important;
+  }
+  #sheetHost .v10-sheet:has(.v102-presentation-row:nth-child(4)) .v102-presentation-row{
+    min-height:43px!important;padding:3px!important;
+  }
+  #sheetHost .v10-sheet:has(.v102-presentation-row:nth-child(5)) .v102-presentation-list{
+    max-height:148px!important;overflow-y:auto!important;overscroll-behavior-y:contain!important;
+    -webkit-overflow-scrolling:touch!important;scrollbar-width:none!important;
+  }
+  #sheetHost .v10-sheet:has(.v102-presentation-row:nth-child(5)) .v102-presentation-list::-webkit-scrollbar{display:none!important}
+
+  /* Optional note may need a little vertical room; only then allow the sheet itself to move. */
+  #sheetHost .v10-sheet:has(.v102-detail .v10-note-box:not([hidden])) .v10-sheet-scroll{
+    max-height:calc(100dvh - max(6px,env(safe-area-inset-top)))!important;
+    overflow-y:auto!important;overscroll-behavior-y:contain!important;-webkit-overflow-scrolling:touch!important;
+  }
+
+  /* Inside a product the cart becomes a tiny utility next to Close, never over the product photo. */
+  html.hm113-product-open .hm112-cart{
+    z-index:86!important;top:max(9px,env(safe-area-inset-top))!important;bottom:auto!important;
+    right:max(56px,calc(env(safe-area-inset-right) + 56px))!important;left:auto!important;
+    width:42px!important;min-width:42px!important;max-width:42px!important;height:42px!important;min-height:42px!important;
+    padding:4px!important;border-radius:13px!important;display:grid!important;place-items:center!important;
+  }
+  html.hm113-product-open .hm112-cart-icon{
+    width:32px!important;height:32px!important;flex-basis:32px!important;border-radius:10px!important;
+  }
+  html.hm113-product-open .hm112-cart-copy,
+  html.hm113-product-open .hm112-cart-total{display:none!important}
+
+  /* Cart = one screen. Only the product list scrolls; total + Continue remain visible. */
+  html.hm113-cart-focus,html.hm113-cart-focus body{
+    height:100%!important;overflow:hidden!important;overscroll-behavior:none!important;
+  }
+  html.hm113-cart-focus #cartView.active{
+    position:fixed!important;z-index:40!important;top:58px!important;right:0!important;
+    bottom:calc(var(--nav-h) + env(safe-area-inset-bottom))!important;left:0!important;
+    display:block!important;overflow:hidden!important;background:var(--bg)!important;
+  }
+  html.hm113-cart-focus #cartView>.v10-shell.v10-page{
+    width:calc(100% - 20px)!important;height:100%!important;min-height:0!important;
+    padding:9px 0 7px!important;display:grid!important;grid-template-rows:auto minmax(0,1fr)!important;overflow:hidden!important;
+  }
+  html.hm113-cart-focus #cartView .v10-page-head{
+    margin-bottom:7px!important;min-height:45px!important;align-items:center!important;
+  }
+  html.hm113-cart-focus #cartView .v10-page-head h1{font-size:23px!important}
+  html.hm113-cart-focus #cartView .v102-cart-head-actions>span,
+  html.hm113-cart-focus #cartView .v102-cart-head-actions>button{height:31px!important}
+  html.hm113-cart-focus #cartView .v10-cart-layout{
+    min-height:0!important;height:100%!important;display:grid!important;grid-template-columns:1fr!important;
+    grid-template-rows:minmax(0,1fr) auto!important;gap:7px!important;overflow:hidden!important;
+  }
+  html.hm113-cart-focus #cartView .v10-cart-lines{
+    min-height:0!important;overflow-y:auto!important;overflow-x:hidden!important;
+    overscroll-behavior-y:contain!important;-webkit-overflow-scrolling:touch!important;
+    scrollbar-width:none!important;padding:0 1px 4px 0!important;touch-action:pan-y!important;display:grid!important;gap:6px!important;
+  }
+  html.hm113-cart-focus #cartView .v10-cart-lines::-webkit-scrollbar{display:none!important}
+  html.hm113-cart-focus #cartView .v10-cart-line{
+    margin:0!important;min-height:74px!important;padding:7px!important;border-radius:15px!important;
+    grid-template-columns:50px minmax(0,1fr) 94px!important;align-items:center!important;gap:7px!important;
+  }
+  html.hm113-cart-focus #cartView .v10-cart-photo{
+    width:50px!important;height:50px!important;border-radius:11px!important;
+  }
+  html.hm113-cart-focus #cartView .v10-cart-line>div:nth-child(2){min-width:0!important}
+  html.hm113-cart-focus #cartView .v10-cart-line h3{
+    margin:0 0 2px!important;font-size:9.5px!important;line-height:1.15!important;
+    display:-webkit-box!important;-webkit-line-clamp:2!important;-webkit-box-orient:vertical!important;overflow:hidden!important;
+  }
+  html.hm113-cart-focus #cartView .v10-cart-line p,
+  html.hm113-cart-focus #cartView .v10-cart-line small{
+    font-size:7px!important;line-height:1.15!important;white-space:nowrap!important;overflow:hidden!important;text-overflow:ellipsis!important;
+  }
+  html.hm113-cart-focus #cartView .v10-cart-side{
+    grid-column:3!important;text-align:right!important;display:grid!important;justify-items:end!important;gap:5px!important;
+  }
+  html.hm113-cart-focus #cartView .v10-cart-side>strong{
+    margin:0!important;font-size:10.5px!important;line-height:1!important;
+  }
+  html.hm113-cart-focus #cartView .v10-mini-step{
+    height:32px!important;border-radius:10px!important;
+  }
+  html.hm113-cart-focus #cartView .v10-mini-step button{width:30px!important;height:30px!important}
+  html.hm113-cart-focus #cartView .v10-mini-step b{min-width:28px!important;font-size:9px!important}
+
+  html.hm113-cart-focus #cartView .v10-summary{
+    position:static!important;min-height:62px!important;margin:0!important;padding:8px 9px!important;border-radius:16px!important;
+    display:grid!important;grid-template-columns:minmax(0,1fr) minmax(126px,42%)!important;
+    grid-template-areas:"total action"!important;align-items:center!important;gap:8px!important;
+    box-shadow:0 -7px 20px rgba(19,42,28,.05)!important;
+  }
+  html.hm113-cart-focus #cartView .v10-summary>div:first-child{display:none!important}
+  html.hm113-cart-focus #cartView .v10-summary .total{
+    grid-area:total!important;border:0!important;padding:0!important;margin:0!important;
+    display:grid!important;justify-items:start!important;align-content:center!important;gap:1px!important;
+  }
+  html.hm113-cart-focus #cartView .v10-summary .total span{font-size:7px!important}
+  html.hm113-cart-focus #cartView .v10-summary .total strong{font-size:19px!important;line-height:1!important}
+  html.hm113-cart-focus #cartView #checkoutStart{
+    grid-area:action!important;width:100%!important;min-width:0!important;min-height:43px!important;
+    margin:0!important;padding:0 12px!important;border-radius:12px!important;font-size:9px!important;
+  }
+}
+
+@media(max-width:380px){
+  .hm112-cart{max-width:176px!important}
+  #sheetHost .v102-detail .v10-detail-media{height:clamp(155px,24dvh,205px)!important;padding-inline:38px!important}
+  #sheetHost .v102-detail .v10-detail-body h2{font-size:18.5px!important}
+  #sheetHost .v102-detail .v102-presentation-main{grid-template-columns:31px minmax(0,1fr) auto!important;gap:4px!important}
+  #sheetHost .v102-detail .v10-presentation-thumb{width:30px!important;height:30px!important}
+  #sheetHost .v102-detail .v102-pick-step button{width:27px!important}
+  #sheetHost .v102-detail .v102-pick-step b{min-width:20px!important}
+  html.hm113-cart-focus #cartView .v10-cart-line{grid-template-columns:46px minmax(0,1fr) 88px!important;gap:6px!important}
+  html.hm113-cart-focus #cartView .v10-cart-photo{width:46px!important;height:46px!important}
+  html.hm113-cart-focus #cartView .v10-summary{grid-template-columns:minmax(0,1fr) minmax(116px,42%)!important}
+}
+
+@media(prefers-reduced-motion:reduce){
+  .hm112-cart.hm113-live{animation:none!important}
+}
