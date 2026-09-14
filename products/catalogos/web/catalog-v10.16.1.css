@@ -1,0 +1,99 @@
+/* Hakuna Matata 10.16.1 — final catalog/mobile polish. */
+
+/* v10.8 routes brand chips through the filter sheet internally.
+   Keep that implementation invisible so Toni/brand selection has no sheet flash. */
+html.hm108-brand-routing #sheetHost{
+  opacity:0!important;
+  visibility:hidden!important;
+  pointer-events:none!important;
+}
+
+/* Horizontal brand rail: explicit scroll affordance without covering the chips. */
+#catalogView .hm116-brand-scroll-wrap{position:relative!important}
+#catalogView .hm116-brand-next{
+  position:absolute!important;
+  z-index:8!important;
+  right:2px!important;
+  top:50%!important;
+  width:34px!important;
+  height:34px!important;
+  transform:translateY(-50%)!important;
+  border:1px solid rgba(19,76,52,.12)!important;
+  border-radius:999px!important;
+  background:rgba(255,255,255,.96)!important;
+  color:#164f36!important;
+  display:grid!important;
+  place-items:center!important;
+  padding:0!important;
+  box-shadow:0 5px 16px rgba(15,55,38,.15)!important;
+  opacity:0!important;
+  pointer-events:none!important;
+  transition:opacity .15s ease,transform .15s ease!important;
+}
+#catalogView .hm116-brand-next.is-visible{
+  opacity:1!important;
+  pointer-events:auto!important;
+}
+#catalogView .hm116-brand-next span{
+  display:block!important;
+  font-size:25px!important;
+  line-height:1!important;
+  transform:translate(1px,-1px)!important;
+}
+#catalogView .hm116-brand-next:active{transform:translateY(-50%) scale(.94)!important}
+
+/* Never show an item-level trash action in the compact cart; quantity is controlled with - / +. */
+#cartView .v10-cart-line [data-remove],
+#cartView .v10-cart-line .v10-remove,
+#cartView .v10-cart-line .v10-trash,
+#cartView .v10-cart-line .trash{display:none!important}
+
+@media(max-width:700px){
+  html.hm113-cart-focus #cartView .v10-cart-line{
+    grid-template-columns:50px minmax(0,1fr) 104px!important;
+  }
+  html.hm113-cart-focus #cartView .v10-cart-side{
+    min-width:104px!important;
+    overflow:visible!important;
+  }
+  html.hm113-cart-focus #cartView .v10-mini-step{
+    width:100px!important;
+    min-width:100px!important;
+    display:grid!important;
+    grid-template-columns:30px 38px 30px!important;
+    align-items:center!important;
+    overflow:visible!important;
+  }
+  html.hm113-cart-focus #cartView .v10-mini-step button{
+    display:grid!important;
+    place-items:center!important;
+    opacity:1!important;
+    visibility:visible!important;
+    overflow:visible!important;
+  }
+  html.hm113-cart-focus #cartView .v10-mini-step .hm116-plus{
+    grid-column:3!important;
+  }
+  html.hm113-cart-focus #cartView .v10-mini-step .hm116-plus svg{
+    display:block!important;
+    width:15px!important;
+    height:15px!important;
+  }
+}
+@media(max-width:380px){
+  html.hm113-cart-focus #cartView .v10-cart-line{
+    grid-template-columns:44px minmax(0,1fr) 98px!important;
+    gap:5px!important;
+  }
+  html.hm113-cart-focus #cartView .v10-cart-photo{width:44px!important;height:44px!important}
+  html.hm113-cart-focus #cartView .v10-cart-side{min-width:98px!important}
+  html.hm113-cart-focus #cartView .v10-mini-step{
+    width:94px!important;min-width:94px!important;
+    grid-template-columns:28px 38px 28px!important;
+  }
+  html.hm113-cart-focus #cartView .v10-mini-step button{width:28px!important}
+}
+
+@media(prefers-reduced-motion:reduce){
+  #catalogView .hm116-brand-next{transition:none!important}
+}
