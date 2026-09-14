@@ -1,0 +1,70 @@
+/* Hakuna Matata 10.13 — compact one-viewport product detail + fixed cart workspace. */
+
+/* Floating cart: same feature, smaller footprint. */
+.hm112-cart{min-height:48px!important;max-width:min(246px,calc(100vw - 24px))!important;padding:5px 9px 5px 5px!important;border-radius:16px!important;gap:7px!important;box-shadow:0 10px 26px rgba(10,48,32,.20),0 2px 8px rgba(10,48,32,.12)!important}
+.hm112-cart-icon{width:36px!important;height:36px!important;flex:0 0 36px!important;border-radius:11px!important}.hm112-cart-icon svg{width:20px!important;height:20px!important}.hm112-cart-icon b{top:-5px!important;right:-5px!important;min-width:19px!important;height:19px!important;padding:0 4px!important;font-size:9px!important}
+.hm112-cart-copy{gap:1px!important}.hm112-cart-copy strong{font-size:11.5px!important}.hm112-cart-copy small{font-size:8px!important}.hm112-cart-total{font-size:11.5px!important;padding-left:3px!important}.hm112-cart.hm113-live{animation:hm113-live .26s ease}@keyframes hm113-live{0%{transform:scale(.97)}50%{transform:scale(1.025)}100%{transform:scale(1)}}
+
+@media(max-width:700px){
+  .hm112-cart{right:max(10px,env(safe-area-inset-right))!important;bottom:calc(74px + env(safe-area-inset-bottom))!important;min-height:46px!important;max-width:min(224px,calc(100vw - 20px))!important;padding:5px 8px 5px 5px!important;border-radius:15px!important}
+  .hm112-cart-icon{width:34px!important;height:34px!important;flex-basis:34px!important}.hm112-cart-copy strong{font-size:11px!important}.hm112-cart-copy small{display:none!important}.hm112-cart-total{font-size:11px!important}
+
+  /* Product detail becomes a true one-screen workspace. */
+  html.hm113-product-open,html.hm113-product-open body{height:100%!important;overflow:hidden!important;overscroll-behavior:none!important}
+  #sheetHost .v10-sheet:has(.v102-detail){top:max(6px,env(safe-area-inset-top))!important;bottom:0!important;height:calc(100dvh - max(6px,env(safe-area-inset-top)))!important;max-height:none!important;width:100%!important;border-radius:24px 24px 0 0!important;overflow:hidden!important}
+  #sheetHost .v10-sheet:has(.v102-detail) .v10-grab{height:4px!important;margin:7px auto 1px!important}
+  #sheetHost .v10-sheet:has(.v102-detail) .v10-sheet-close{right:11px!important;top:10px!important;width:36px!important;height:36px!important;border-radius:11px!important;font-size:20px!important}
+  #sheetHost .v10-sheet:has(.v102-detail) .v10-sheet-scroll{height:calc(100% - 12px)!important;max-height:none!important;overflow:hidden!important;overscroll-behavior:none!important;padding:4px 12px max(8px,env(safe-area-inset-bottom))!important}
+  #sheetHost .v102-detail{height:100%!important;min-height:0!important;display:grid!important;grid-template-columns:1fr!important;grid-template-rows:minmax(150px,31dvh) minmax(0,1fr)!important;gap:0!important;overflow:hidden!important}
+  #sheetHost .v102-detail .v10-detail-media{min-height:0!important;aspect-ratio:auto!important;padding:2px 34px 0!important;overflow:hidden!important}
+  #sheetHost .v102-detail .v10-detail-media>img{width:100%!important;height:100%!important;max-height:100%!important;object-fit:contain!important}
+  #sheetHost .v102-detail .v10-stock{top:6px!important;left:8px!important;padding:5px 7px!important}
+  #sheetHost .v102-detail .v10-detail-body{min-height:0!important;padding:2px 3px 3px!important;display:flex!important;flex-direction:column!important;overflow:hidden!important}
+  #sheetHost .v102-detail .v10-detail-body>small{font-size:7px!important;line-height:1.1!important}
+  #sheetHost .v102-detail .v10-detail-body h2{margin:3px 0 4px!important;font-size:20px!important;line-height:1.05!important;letter-spacing:-.035em!important}
+  #sheetHost .v102-detail .v10-detail-body>p{margin:0 0 4px!important;font-size:7.5px!important;line-height:1.35!important;display:-webkit-box!important;-webkit-line-clamp:2!important;-webkit-box-orient:vertical!important;overflow:hidden!important}
+  #sheetHost .v102-detail .v102-detail-label{flex:0 0 auto!important;margin:5px 0 5px!important;display:flex!important;flex-direction:row!important;align-items:center!important;justify-content:space-between!important;gap:8px!important}
+  #sheetHost .v102-detail .v102-detail-label label{font-size:8px!important}#sheetHost .v102-detail .v102-detail-label span{font-size:6.5px!important}
+  #sheetHost .v102-detail .v102-presentation-list{flex:1 1 auto!important;min-height:0!important;display:grid!important;grid-auto-rows:minmax(42px,auto)!important;align-content:start!important;gap:5px!important;overflow:hidden!important}
+  #sheetHost .v102-detail .v102-presentation-row{min-height:42px!important;padding:4px!important;border-radius:13px!important;display:grid!important;grid-template-columns:minmax(0,1fr) auto!important;align-items:center!important;gap:5px!important}
+  #sheetHost .v102-detail .v102-presentation-main{min-width:0!important;padding:0!important;grid-template-columns:36px minmax(0,1fr) auto!important;gap:6px!important}
+  #sheetHost .v102-detail .v10-presentation-thumb{width:34px!important;height:34px!important;border-radius:9px!important}
+  #sheetHost .v102-detail .v102-presentation-main>span:nth-child(2)>b{font-size:8px!important;line-height:1.1!important}#sheetHost .v102-detail .v102-presentation-main>span:nth-child(2)>small{font-size:6.5px!important;line-height:1.1!important;margin-top:1px!important}
+  #sheetHost .v102-detail .v102-presentation-main>strong{font-size:8.5px!important}
+  #sheetHost .v102-detail .v102-pick-step{justify-self:end!important;align-self:center!important;height:34px!important;display:flex!important;grid-template-columns:unset!important;border-radius:10px!important}
+  #sheetHost .v102-detail .v102-pick-step button{width:31px!important;height:32px!important}#sheetHost .v102-detail .v102-pick-step svg{width:15px!important;height:15px!important}#sheetHost .v102-detail .v102-pick-step b{min-width:23px!important;font-size:10px!important}
+  #sheetHost .v102-detail .v10-note-toggle{flex:0 0 auto!important;margin-top:3px!important;padding:2px 0!important;font-size:7px!important;line-height:1.1!important}
+  #sheetHost .v102-detail .v10-note-box{flex:0 0 auto!important}#sheetHost .v102-detail .v10-note-box textarea{max-height:46px!important;min-height:38px!important;padding:7px!important;font-size:8px!important;resize:none!important}
+  #sheetHost .v102-detail .v102-detail-total{flex:0 0 auto!important;margin-top:4px!important;padding:5px 0 2px!important;min-height:28px!important}.v102-detail-total span{font-size:7px!important}.v102-detail-total strong{font-size:12px!important}
+  #sheetHost .v102-detail .v102-add-all{flex:0 0 auto!important;width:100%!important;min-height:44px!important;margin-top:4px!important;border-radius:13px!important;font-size:9px!important}
+
+  /* More presentations automatically trade image height for controls, never page scroll. */
+  #sheetHost .v10-sheet:has(.v102-presentation-row:nth-child(4)) .v102-detail{grid-template-rows:minmax(118px,24dvh) minmax(0,1fr)!important}
+  #sheetHost .v10-sheet:has(.v102-presentation-row:nth-child(5)) .v102-presentation-list{gap:3px!important}
+  #sheetHost .v10-sheet:has(.v102-presentation-row:nth-child(5)) .v102-presentation-row{min-height:38px!important;padding:3px!important}
+
+  /* Keep the smaller cart visible inside product detail, away from the close button and CTA. */
+  html.hm113-product-open .hm112-cart{z-index:86!important;top:max(58px,calc(env(safe-area-inset-top) + 48px))!important;bottom:auto!important;right:max(10px,env(safe-area-inset-right))!important;max-width:min(210px,calc(100vw - 86px))!important}
+
+  /* Cart: header + product viewport + summary/Continue all stay on one screen. */
+  html.hm113-cart-focus,html.hm113-cart-focus body{height:100%!important;overflow:hidden!important;overscroll-behavior:none!important}
+  html.hm113-cart-focus #cartView.active{position:fixed!important;z-index:40!important;top:58px!important;right:0!important;bottom:calc(var(--nav-h) + env(safe-area-inset-bottom))!important;left:0!important;display:block!important;overflow:hidden!important;background:var(--bg)!important}
+  html.hm113-cart-focus #cartView>.v10-shell.v10-page{height:100%!important;min-height:0!important;padding:10px 0 8px!important;display:grid!important;grid-template-rows:auto minmax(0,1fr)!important;overflow:hidden!important}
+  html.hm113-cart-focus #cartView .v10-page-head{margin-bottom:8px!important;min-height:48px!important;flex:0 0 auto!important}html.hm113-cart-focus #cartView .v10-page-head h1{font-size:24px!important}html.hm113-cart-focus #cartView .v102-cart-head-actions>span,html.hm113-cart-focus #cartView .v102-cart-head-actions>button{height:32px!important}
+  html.hm113-cart-focus #cartView .v10-cart-layout{min-height:0!important;height:100%!important;display:grid!important;grid-template-columns:1fr!important;grid-template-rows:minmax(0,1fr) auto!important;gap:8px!important;overflow:hidden!important}
+  html.hm113-cart-focus #cartView .v10-cart-lines{min-height:0!important;overflow-y:auto!important;overflow-x:hidden!important;overscroll-behavior-y:contain!important;-webkit-overflow-scrolling:touch!important;scrollbar-width:none!important;padding:0 1px 3px 0!important;touch-action:pan-y!important}html.hm113-cart-focus #cartView .v10-cart-lines::-webkit-scrollbar{display:none!important}
+  html.hm113-cart-focus #cartView .v10-cart-line{flex:0 0 auto!important;margin:0!important}
+  html.hm113-cart-focus #cartView .v10-summary{position:static!important;min-height:62px!important;margin:0!important;padding:8px 9px!important;border-radius:16px!important;display:grid!important;grid-template-columns:minmax(0,1fr) auto!important;grid-template-areas:"total action"!important;align-items:center!important;gap:9px!important;box-shadow:0 -8px 22px rgba(19,42,28,.05)!important}
+  html.hm113-cart-focus #cartView .v10-summary>div:first-child{display:none!important}
+  html.hm113-cart-focus #cartView .v10-summary .total{grid-area:total!important;border:0!important;padding:0!important;margin:0!important;display:grid!important;justify-items:start!important;align-content:center!important;gap:1px!important}html.hm113-cart-focus #cartView .v10-summary .total span{font-size:7px!important}html.hm113-cart-focus #cartView .v10-summary .total strong{font-size:20px!important;line-height:1!important}
+  html.hm113-cart-focus #cartView #checkoutStart{grid-area:action!important;min-width:132px!important;min-height:44px!important;margin:0!important;padding:0 18px!important;border-radius:12px!important;font-size:9px!important}
+}
+
+@media(max-width:380px){
+  .hm112-cart{max-width:202px!important}.hm112-cart-total{font-size:10.5px!important}
+  #sheetHost .v102-detail{grid-template-rows:minmax(132px,27dvh) minmax(0,1fr)!important}
+  #sheetHost .v102-detail .v102-presentation-main{grid-template-columns:32px minmax(0,1fr) auto!important;gap:4px!important}#sheetHost .v102-detail .v10-presentation-thumb{width:31px!important;height:31px!important}#sheetHost .v102-detail .v102-pick-step button{width:28px!important}#sheetHost .v102-detail .v102-pick-step b{min-width:20px!important}
+  html.hm113-cart-focus #cartView #checkoutStart{min-width:118px!important;padding-inline:13px!important}
+}
+
+@media(prefers-reduced-motion:reduce){.hm112-cart.hm113-live{animation:none!important}}
