@@ -1,0 +1,207 @@
+/* Hakuna Catalog 10.16.3 — stable client UX: one final first paint, fixed search, clean detail/cart. */
+
+/* One clean first paint. Cached/partial catalog stays hidden until live bootstrap + brands settle. */
+html.hm1163-boot body{
+  background:#fff url("https://cdn.phototourl.com/free/2026-09-09-81972c89-9fb3-4bb7-ad34-74c1fe90aca9.jpg") center 45vh/78px 78px no-repeat fixed!important;
+}
+html.hm1163-boot .v10-app{opacity:0!important;visibility:hidden!important;pointer-events:none!important}
+html.hm1163-ready body{background:#fff!important}
+html.hm1163-ready .v10-app{opacity:1!important;visibility:visible!important;animation:none!important;transition:none!important}
+
+/* Remove both custom arrows added in 10.16.1/10.16.2. */
+.hm116-brand-next,.hm1162-brand-next{display:none!important;visibility:hidden!important;pointer-events:none!important}
+
+/* Floating cart only in the plain, unfiltered catalog. Never in brand/search/product-sheet views. */
+html.hm1163-float-blocked #hm112Cart:not([hidden]),
+html.hm113-product-open #hm112Cart:not([hidden]){display:none!important}
+html.hm1163-float-allowed #hm112Cart:not([hidden]){display:flex!important}
+
+/* Search target: take the customer to the card and make it obvious for a moment. */
+#catalogResults .v10-product.hm1163-search-target{
+  outline:3px solid #ef7048!important;outline-offset:2px!important;
+  box-shadow:0 0 0 5px rgba(239,112,72,.14),0 12px 28px rgba(21,61,43,.12)!important;
+  animation:hm1163Hit 1.05s ease 2!important;
+}
+@keyframes hm1163Hit{0%,100%{transform:translateY(0)}45%{transform:translateY(-3px)}}
+
+/* Catalog search is a stable viewport workspace. Only the result panel scrolls. */
+html.hm1163-search-active,html.hm1163-search-active body{height:100%!important;overflow:hidden!important;overscroll-behavior:none!important}
+html.hm1163-search-active #catalogView.active{
+  position:fixed!important;z-index:45!important;left:0!important;right:0!important;
+  top:calc(var(--hm1163-vvtop,0px) + 58px)!important;
+  height:max(220px,calc(var(--hm1163-vvh,100dvh) - 58px - var(--nav-h) - env(safe-area-inset-bottom)))!important;
+  bottom:auto!important;overflow:hidden!important;background:#fbfcf9!important;
+}
+html.hm1163-search-active #catalogView .v10-catalog-head{
+  position:absolute!important;inset:0!important;top:0!important;height:100%!important;min-height:0!important;
+  transform:none!important;padding:10px 0 8px!important;overflow:hidden!important;background:#fbfcf9!important;border-bottom:0!important;
+}
+html.hm1163-search-active #catalogView .v10-catalog-head>.v10-shell{
+  width:calc(100% - 24px)!important;height:100%!important;min-height:0!important;padding:0!important;
+}
+html.hm1163-search-active #catalogView .v10-search-row{
+  height:100%!important;min-height:0!important;margin:0!important;display:block!important;
+}
+html.hm1163-search-active #catalogView .v102-search-wrap{
+  width:100%!important;height:100%!important;min-height:0!important;display:grid!important;
+  grid-template-rows:60px minmax(0,1fr)!important;gap:10px!important;
+}
+html.hm1163-search-active #catalogView .v10-search{height:60px!important;min-height:60px!important}
+html.hm1163-search-active #catalogView #searchSuggestions{
+  position:relative!important;inset:auto!important;top:auto!important;left:auto!important;right:auto!important;
+  width:100%!important;height:auto!important;min-height:0!important;max-height:none!important;margin:0!important;
+  overflow-y:auto!important;overflow-x:hidden!important;overscroll-behavior-y:contain!important;touch-action:pan-y!important;
+  -webkit-overflow-scrolling:touch!important;scrollbar-width:none!important;
+}
+html.hm1163-search-active #catalogView #searchSuggestions::-webkit-scrollbar{display:none!important}
+html.hm1163-search-active #catalogView .v10-catalog-body{display:none!important}
+
+/* Power logo was visually oversized in the general search brand result. */
+#searchSuggestions .hm1072-search-brands [data-brand-chip="Power"] .hm-brand-visual img,
+#searchSuggestions .hm1072-search-brands img.hm1163-power-logo{
+  width:64%!important;height:58%!important;max-width:64%!important;max-height:58%!important;object-fit:contain!important;
+}
+
+/* Brand picker keyboard: fixed visual-viewport sheet, sticky search, no layout jump after closing keyboard. */
+#sheetHost .v10-sheet:has(#brandSearch){overflow:hidden!important}
+#sheetHost .v10-sheet:has(#brandSearch).hm1163-brand-focus{
+  position:fixed!important;left:50%!important;right:auto!important;
+  top:calc(var(--hm1163-vvtop,0px) + 6px)!important;bottom:auto!important;
+  width:min(640px,100%)!important;height:max(250px,calc(var(--hm1163-vvh,100dvh) - 12px))!important;
+  max-height:max(250px,calc(var(--hm1163-vvh,100dvh) - 12px))!important;
+  transform:translateX(-50%)!important;border-radius:22px 22px 0 0!important;
+  transition:none!important;
+}
+#sheetHost .v10-sheet:has(#brandSearch).hm1163-brand-focus.show{transform:translateX(-50%)!important}
+#sheetHost .v10-sheet:has(#brandSearch).hm1163-brand-focus .v10-sheet-scroll{
+  height:100%!important;max-height:100%!important;overflow-y:auto!important;overflow-x:hidden!important;
+  overscroll-behavior-y:contain!important;-webkit-overflow-scrolling:touch!important;touch-action:pan-y!important;
+  padding-bottom:20px!important;scroll-behavior:auto!important;
+}
+#sheetHost .v10-sheet:has(#brandSearch).hm1163-brand-focus .hm-brand-sheet>div:first-child{display:none!important}
+#sheetHost .v10-sheet:has(#brandSearch).hm1163-brand-focus .v10-brand-search{
+  position:sticky!important;top:0!important;z-index:20!important;margin:0 0 8px!important;background:#fff!important;
+  box-shadow:0 10px 18px -17px rgba(10,45,28,.42)!important;
+}
+
+/* Product sheet: keep original 1:1 product photography, readable text, all core controls in one screen. */
+@media(max-width:700px){
+  html.hm113-product-open,html.hm113-product-open body{height:100%!important;overflow:hidden!important;overscroll-behavior:none!important}
+  #sheetHost .v10-sheet:has(.v102-detail){
+    top:max(4px,env(safe-area-inset-top))!important;bottom:0!important;
+    height:calc(100dvh - max(4px,env(safe-area-inset-top)))!important;max-height:none!important;
+    width:100%!important;border-radius:24px 24px 0 0!important;overflow:hidden!important;
+  }
+  #sheetHost .v10-sheet:has(.v102-detail) .v10-grab{
+    position:relative!important;width:72px!important;height:18px!important;margin:2px auto 0!important;
+    background:transparent!important;border-radius:0!important;touch-action:none!important;cursor:grab!important;z-index:10!important;
+  }
+  #sheetHost .v10-sheet:has(.v102-detail) .v10-grab:after{
+    content:""!important;position:absolute!important;left:50%!important;top:7px!important;transform:translateX(-50%)!important;
+    width:48px!important;height:5px!important;border-radius:999px!important;background:#cfd5d1!important;
+  }
+  #sheetHost .v10-sheet:has(.v102-detail) .v10-sheet-close{
+    right:10px!important;top:8px!important;width:37px!important;height:37px!important;border-radius:12px!important;font-size:21px!important;
+  }
+  #sheetHost .v10-sheet:has(.v102-detail) .v10-sheet-scroll{
+    height:calc(100% - 20px)!important;max-height:none!important;overflow:hidden!important;
+    padding:0 12px max(8px,env(safe-area-inset-bottom))!important;
+  }
+  #sheetHost .v102-detail{
+    height:100%!important;min-height:0!important;display:grid!important;
+    grid-template-columns:1fr!important;grid-template-rows:minmax(190px,29dvh) minmax(0,1fr)!important;
+    gap:0!important;overflow:hidden!important;
+  }
+  #sheetHost .v102-detail .v10-detail-media{
+    height:auto!important;min-height:0!important;aspect-ratio:auto!important;padding:4px 44px 2px!important;
+    display:grid!important;place-items:center!important;overflow:hidden!important;background:#fff!important;
+  }
+  #sheetHost .v102-detail .v10-detail-media>img{
+    width:min(68vw,260px)!important;height:min(68vw,260px)!important;max-width:100%!important;max-height:100%!important;
+    aspect-ratio:1/1!important;object-fit:contain!important;object-position:center!important;padding:0!important;
+  }
+  #sheetHost .v102-detail .v10-stock{top:7px!important;left:7px!important;font-size:7.5px!important}
+  #sheetHost .v102-detail .v10-detail-body{
+    min-height:0!important;padding:2px 3px 2px!important;display:flex!important;flex-direction:column!important;overflow:hidden!important;
+  }
+  #sheetHost .v102-detail .v10-detail-body>small{font-size:9px!important;line-height:1.1!important;font-weight:850!important}
+  #sheetHost .v102-detail .v10-detail-body h2{
+    margin:4px 0 4px!important;font-size:22px!important;line-height:1.06!important;letter-spacing:-.035em!important;
+  }
+  #sheetHost .v102-detail .v10-detail-body>p{
+    margin:0 0 5px!important;font-size:9.5px!important;line-height:1.3!important;
+    display:-webkit-box!important;-webkit-line-clamp:1!important;-webkit-box-orient:vertical!important;overflow:hidden!important;
+  }
+  #sheetHost .v102-detail .v102-detail-label{
+    flex:0 0 auto!important;margin:5px 0 5px!important;display:flex!important;align-items:center!important;justify-content:space-between!important;gap:8px!important;
+  }
+  #sheetHost .v102-detail .v102-detail-label label{font-size:9.5px!important}
+  #sheetHost .v102-detail .v102-detail-label span{font-size:8px!important}
+  #sheetHost .v102-detail .v102-presentation-list{
+    flex:0 1 auto!important;min-height:0!important;display:grid!important;gap:6px!important;overflow:hidden!important;
+  }
+  #sheetHost .v102-detail .v102-presentation-row{
+    min-height:50px!important;padding:5px!important;border-radius:13px!important;display:grid!important;
+    grid-template-columns:minmax(0,1fr) auto!important;align-items:center!important;gap:6px!important;
+  }
+  #sheetHost .v102-detail .v102-presentation-main{
+    min-width:0!important;padding:0!important;grid-template-columns:38px minmax(0,1fr) auto!important;gap:7px!important;
+  }
+  #sheetHost .v102-detail .v10-presentation-thumb{width:36px!important;height:36px!important;border-radius:10px!important}
+  #sheetHost .v102-detail .v102-presentation-main>span:nth-child(2)>b{font-size:10.5px!important;line-height:1.12!important}
+  #sheetHost .v102-detail .v102-presentation-main>span:nth-child(2)>small{font-size:8px!important;line-height:1.15!important;margin-top:2px!important}
+  #sheetHost .v102-detail .v102-presentation-main>strong{font-size:11.5px!important;white-space:nowrap!important}
+  #sheetHost .v102-detail .v102-pick-step{height:36px!important;border-radius:10px!important;display:flex!important;align-items:center!important}
+  #sheetHost .v102-detail .v102-pick-step button{width:33px!important;height:34px!important}
+  #sheetHost .v102-detail .v102-pick-step svg{width:15px!important;height:15px!important}
+  #sheetHost .v102-detail .v102-pick-step b{min-width:25px!important;font-size:10.5px!important}
+  #sheetHost .v102-detail .v10-note-toggle{flex:0 0 auto!important;margin-top:3px!important;padding:2px 0!important;font-size:8.5px!important}
+  #sheetHost .v102-detail .v10-note-box{flex:0 0 auto!important}
+  #sheetHost .v102-detail .v10-note-box textarea{min-height:38px!important;max-height:42px!important;padding:7px!important;font-size:8.5px!important;resize:none!important}
+  #sheetHost .v102-detail .v102-detail-total{
+    flex:0 0 auto!important;margin-top:auto!important;padding:6px 0 2px!important;min-height:30px!important;
+    display:flex!important;align-items:center!important;justify-content:space-between!important;
+  }
+  #sheetHost .v102-detail .v102-detail-total span{font-size:8.5px!important}
+  #sheetHost .v102-detail .v102-detail-total strong{font-size:13.5px!important}
+  #sheetHost .v102-detail .v102-add-all{
+    flex:0 0 46px!important;width:100%!important;min-height:46px!important;height:46px!important;margin-top:4px!important;
+    border-radius:13px!important;font-size:10.5px!important;
+  }
+  #sheetHost .v10-sheet[data-hm113-presentations="3"] .v102-detail{grid-template-rows:minmax(145px,22dvh) minmax(0,1fr)!important}
+  #sheetHost .v10-sheet[data-hm113-presentations="4"] .v102-detail,
+  #sheetHost .v10-sheet[data-hm113-presentations="5"] .v102-detail{grid-template-rows:minmax(105px,16dvh) minmax(0,1fr)!important}
+  #sheetHost .v10-sheet[data-hm113-presentations="4"] .v102-presentation-row,
+  #sheetHost .v10-sheet[data-hm113-presentations="5"] .v102-presentation-row{min-height:43px!important;padding:3px!important}
+  #sheetHost .v10-sheet[data-hm113-presentations="5"] .v102-presentation-list{gap:3px!important;overflow:hidden!important;max-height:none!important}
+  #sheetHost .v10-sheet.hm1163-dragging{transition:none!important}
+  #sheetHost .v10-sheet.hm1163-snapback{transition:transform .18s cubic-bezier(.2,.8,.2,1)!important}
+}
+
+/* Cart: the old 10.3 layer keeps creating this trash button. Keep it inert/hidden and give +/- the whole space. */
+#cartView .hm-line-remove,#cartView .hm-line-remove[hidden]{display:none!important;visibility:hidden!important;pointer-events:none!important}
+#cartView .v10-cart-side{padding-top:0!important}
+#cartView .v10-mini-step [data-cart-minus],#cartView .v10-mini-step [data-cart-plus]{position:relative!important;z-index:2!important;opacity:1!important;visibility:visible!important}
+html.hm113-cart-focus #cartView .v10-cart-layout{position:relative!important}
+.hm1163-cart-more{
+  position:absolute!important;z-index:8!important;left:46%!important;bottom:68px!important;width:34px!important;height:28px!important;
+  display:grid!important;place-items:center!important;opacity:0!important;transform:translate(-50%,5px)!important;pointer-events:none!important;
+  color:#ef7048!important;transition:opacity .15s ease,transform .15s ease!important;
+}
+.hm1163-cart-more.show{opacity:1!important;transform:translate(-50%,0)!important;animation:hm1163Down 1.05s ease-in-out infinite!important}
+.hm1163-cart-more svg{width:26px!important;height:26px!important;fill:none!important;stroke:currentColor!important;stroke-width:2.4!important;stroke-linecap:round!important;stroke-linejoin:round!important;filter:drop-shadow(0 2px 3px rgba(255,255,255,.9))}
+@keyframes hm1163Down{0%,100%{transform:translate(-50%,0)}50%{transform:translate(-50%,6px)}}
+
+@media(max-width:380px){
+  #sheetHost .v102-detail{grid-template-rows:minmax(160px,25dvh) minmax(0,1fr)!important}
+  #sheetHost .v102-detail .v10-detail-media{padding-inline:40px!important}
+  #sheetHost .v102-detail .v10-detail-body h2{font-size:20px!important}
+  #sheetHost .v102-detail .v102-presentation-main{grid-template-columns:34px minmax(0,1fr) auto!important;gap:5px!important}
+  #sheetHost .v102-detail .v10-presentation-thumb{width:33px!important;height:33px!important}
+  #sheetHost .v102-detail .v102-presentation-main>span:nth-child(2)>b{font-size:9.5px!important}
+  #sheetHost .v102-detail .v102-presentation-main>strong{font-size:10.5px!important}
+  .hm1163-cart-more{left:43%!important}
+}
+@media(prefers-reduced-motion:reduce){
+  #catalogResults .v10-product.hm1163-search-target,.hm1163-cart-more.show{animation:none!important}
+}

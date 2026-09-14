@@ -1,15 +1,15 @@
-/* Hakuna 10.16.2 — stable sale-mode editor + final catalog polish. */
+/* Hakuna 10.16.3 — stable customer first paint, search, product detail and cart UX. */
 window.KIUBO_CATALOG_CONFIG=Object.freeze({
   supabaseUrl:'https://hysrlckmnzlmscwwbibn.supabase.co',
   publishableKey:'sb_publishable_hnsAgTsI1c_wErMMwAYwMQ_crWdOBpT',
   apiUrl:'https://hysrlckmnzlmscwwbibn.supabase.co/functions/v1/catalog-v9',
   notifyUrl:'https://hysrlckmnzlmscwwbibn.supabase.co/functions/v1/catalog-notify',
   defaultSlug:'hakuna-matata',
-  version:'10.16.2',
+  version:'10.16.3',
   brandLogoUrl:'https://cdn.phototourl.com/free/2026-09-09-81972c89-9fb3-4bb7-ad34-74c1fe90aca9.jpg'
 });
 (()=>{
-  const path=location.pathname,v='10.16.2',logo=window.KIUBO_CATALOG_CONFIG.brandLogoUrl;
+  const path=location.pathname,v='10.16.3',logo=window.KIUBO_CATALOG_CONFIG.brandLogoUrl;
   document.documentElement.dataset.hmBuild=v;
   const setIcon=(rel,href)=>{let l=document.querySelector(`link[rel="${rel}"]`);if(!l){l=document.createElement('link');l.rel=rel;document.head.append(l)}l.href=href};
   if(logo){setIcon('icon',logo);setIcon('apple-touch-icon',logo)}
@@ -33,7 +33,7 @@ window.KIUBO_CATALOG_CONFIG=Object.freeze({
   }else if(/^\/pedido/.test(path)){
     addStyle('/orders-v5.css');
   }else{
-    document.documentElement.classList.add('hm112-boot','hm1162-home-brands-pending');
+    document.documentElement.classList.add('hm112-boot','hm1162-home-brands-pending','hm1163-boot');
     if(!document.getElementById('hm112Critical')){
       const s=document.createElement('style');s.id='hm112Critical';s.textContent=`html.hm112-boot:not(.hm112-ready) .v10-app{opacity:0!important;visibility:hidden!important;pointer-events:none!important}html.hm112-boot:not(.hm112-ready) body::before{content:"";position:fixed;inset:0;z-index:2147483000;background:#fff}html.hm112-boot:not(.hm112-ready) body::after{content:"";position:fixed;z-index:2147483001;left:50%;top:50%;width:78px;height:78px;transform:translate(-50%,-50%);border-radius:18px;background:#fff url("${logo||'/assets/brand-mark.svg'}") center/contain no-repeat;box-shadow:0 8px 30px rgba(15,66,44,.08)}html.hm112-ready body::before,html.hm112-ready body::after{display:none!important}`;document.head.append(s);
     }
@@ -46,6 +46,7 @@ window.KIUBO_CATALOG_CONFIG=Object.freeze({
     addStyle('/catalog-v10.16.css');
     addStyle('/catalog-v10.16.1.css');
     addStyle('/catalog-v10.16.2.css');
-    document.write(`<script src="/catalog-v10.12.js?v=${v}"><\/script><script src="/catalog-v10.13.js?v=${v}"><\/script><script src="/catalog-v10.11.js?v=${v}"><\/script><script src="/catalog-v10.16.1.js?v=${v}"><\/script><script src="/catalog-v10.16.2.js?v=${v}"><\/script>`);
+    addStyle('/catalog-v10.16.3.css');
+    document.write(`<script src="/catalog-v10.12.js?v=${v}"><\/script><script src="/catalog-v10.13.js?v=${v}"><\/script><script src="/catalog-v10.11.js?v=${v}"><\/script><script src="/catalog-v10.16.1.js?v=${v}"><\/script><script src="/catalog-v10.16.2.js?v=${v}"><\/script><script src="/catalog-v10.16.3.js?v=${v}"><\/script>`);
   }
 })();
