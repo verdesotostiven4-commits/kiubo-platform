@@ -1,0 +1,13 @@
+/* Hakuna Catalog 10.16.7 — isolated visual marquee, no legacy rail fighting. */
+.hm-v104-catalog-brands.hm1167-brand-source{display:none!important}
+.hm1167-brand-marquee{width:100%!important;overflow-x:auto!important;overflow-y:hidden!important;scrollbar-width:none!important;-webkit-overflow-scrolling:touch!important;overscroll-behavior-inline:contain!important;scroll-snap-type:none!important;scroll-behavior:auto!important;touch-action:pan-x!important;padding:0 0 5px!important}
+.hm1167-brand-marquee::-webkit-scrollbar{display:none!important}
+.hm1167-brand-track{display:flex!important;width:max-content!important;align-items:stretch!important;gap:8px!important}
+.hm1167-segment{display:flex!important;align-items:stretch!important;gap:8px!important;flex:none!important}
+.hm1167-brand-chip{flex:0 0 94px!important;width:94px!important;height:64px!important;min-width:94px!important;border:1px solid #e1e7e2!important;border-radius:16px!important;background:#fff!important;padding:7px!important;display:grid!important;place-items:center!important;overflow:hidden!important;color:#244937!important;box-shadow:none!important}
+.hm1167-brand-chip.active{border-color:#557c67!important;box-shadow:0 0 0 1px rgba(44,105,71,.16)!important;background:#fbfdfb!important}
+.hm1167-brand-chip .hm-brand-visual{width:100%!important;height:100%!important;display:grid!important;place-items:center!important;overflow:hidden!important}
+.hm1167-brand-chip .hm-brand-visual img{display:block!important;width:92%!important;height:88%!important;max-width:92%!important;max-height:88%!important;object-fit:contain!important;object-position:center!important;transform:none!important}
+.hm1167-brand-chip .hm1072-fallback b{font-size:10px!important;line-height:1.1!important;text-align:center!important;white-space:normal!important}
+html.hm1167-detail-locked body{overscroll-behavior:none!important}
+@media(max-width:620px){.hm1167-brand-chip{flex-basis:92px!important;width:92px!important;min-width:92px!important;height:62px!important}}
