@@ -1,0 +1,75 @@
+/* Hakuna Catalog 10.16.9 — manual brands, clean rail, safe sheet spacing. */
+
+#hm1168BrandMarquee,
+#hm1167BrandMarquee,
+.hm116-brand-next,
+.hm1162-brand-next,
+.hm1164-brand-next,
+.hm1169-marquee-sentinel{
+  display:none!important;
+}
+
+#catalogView .hm-v104-catalog-brands{
+  display:flex!important;
+  align-items:stretch!important;
+  gap:8px!important;
+  width:100%!important;
+  max-width:100%!important;
+  overflow-x:auto!important;
+  overflow-y:hidden!important;
+  scroll-behavior:auto!important;
+  scroll-snap-type:none!important;
+  overscroll-behavior-inline:contain!important;
+  -webkit-overflow-scrolling:touch!important;
+  touch-action:pan-x pan-y!important;
+  scrollbar-width:none!important;
+  border:0!important;
+  border-top:0!important;
+  border-bottom:0!important;
+  box-shadow:none!important;
+  background-image:none!important;
+  padding-bottom:4px!important;
+}
+#catalogView .hm-v104-catalog-brands::-webkit-scrollbar{
+  display:none!important;
+  width:0!important;
+  height:0!important;
+}
+#catalogView .hm-v104-catalog-brands::before,
+#catalogView .hm-v104-catalog-brands::after{
+  content:none!important;
+  display:none!important;
+}
+#catalogView .hm-v104-catalog-brands > [data-brand-chip=""]{
+  display:none!important;
+}
+
+.hm1071-brand-sheet .v10-sheet-scroll{
+  scroll-padding-bottom:max(104px,calc(72px + env(safe-area-inset-bottom)))!important;
+}
+.hm1071-brand-sheet .v10-brand-options{
+  padding-bottom:max(104px,calc(72px + env(safe-area-inset-bottom)))!important;
+  margin-bottom:0!important;
+}
+
+@media(max-width:700px){
+  html.hm113-product-open,
+  html.hm113-product-open body{
+    height:auto!important;
+    min-height:100%!important;
+    overflow:visible!important;
+    overscroll-behavior:auto!important;
+    position:static!important;
+    top:auto!important;
+    left:auto!important;
+    right:auto!important;
+    width:auto!important;
+  }
+  html.hm113-product-open #sheetHost .v10-backdrop{
+    touch-action:none!important;
+    overscroll-behavior:none!important;
+  }
+  html.hm113-product-open #sheetHost .v10-sheet{
+    overscroll-behavior:contain!important;
+  }
+}
