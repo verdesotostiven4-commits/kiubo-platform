@@ -9,6 +9,22 @@
   display:none!important;
 }
 
+#catalogView .hm1164-brand-wrap,
+#catalogView .hm-v104-catalog-brands{
+  border:0!important;
+  border-top:0!important;
+  border-bottom:0!important;
+  box-shadow:none!important;
+  background-image:none!important;
+}
+#catalogView .hm1164-brand-wrap::before,
+#catalogView .hm1164-brand-wrap::after,
+#catalogView .hm-v104-catalog-brands::before,
+#catalogView .hm-v104-catalog-brands::after{
+  content:none!important;
+  display:none!important;
+}
+
 #catalogView .hm-v104-catalog-brands{
   display:flex!important;
   align-items:stretch!important;
@@ -23,22 +39,12 @@
   -webkit-overflow-scrolling:touch!important;
   touch-action:pan-x pan-y!important;
   scrollbar-width:none!important;
-  border:0!important;
-  border-top:0!important;
-  border-bottom:0!important;
-  box-shadow:none!important;
-  background-image:none!important;
   padding-bottom:4px!important;
 }
 #catalogView .hm-v104-catalog-brands::-webkit-scrollbar{
   display:none!important;
   width:0!important;
   height:0!important;
-}
-#catalogView .hm-v104-catalog-brands::before,
-#catalogView .hm-v104-catalog-brands::after{
-  content:none!important;
-  display:none!important;
 }
 #catalogView .hm-v104-catalog-brands > [data-brand-chip=""]{
   display:none!important;
