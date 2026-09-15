@@ -1,15 +1,15 @@
-/* Hakuna 10.16.3 — stable customer first paint, search, product detail and cart UX. */
+/* Hakuna 10.16.4 — final mobile stabilization from customer device review. */
 window.KIUBO_CATALOG_CONFIG=Object.freeze({
   supabaseUrl:'https://hysrlckmnzlmscwwbibn.supabase.co',
   publishableKey:'sb_publishable_hnsAgTsI1c_wErMMwAYwMQ_crWdOBpT',
   apiUrl:'https://hysrlckmnzlmscwwbibn.supabase.co/functions/v1/catalog-v9',
   notifyUrl:'https://hysrlckmnzlmscwwbibn.supabase.co/functions/v1/catalog-notify',
   defaultSlug:'hakuna-matata',
-  version:'10.16.3',
+  version:'10.16.4',
   brandLogoUrl:'https://cdn.phototourl.com/free/2026-09-09-81972c89-9fb3-4bb7-ad34-74c1fe90aca9.jpg'
 });
 (()=>{
-  const path=location.pathname,v='10.16.3',logo=window.KIUBO_CATALOG_CONFIG.brandLogoUrl;
+  const path=location.pathname,v='10.16.4',logo=window.KIUBO_CATALOG_CONFIG.brandLogoUrl;
   document.documentElement.dataset.hmBuild=v;
   const setIcon=(rel,href)=>{let l=document.querySelector(`link[rel="${rel}"]`);if(!l){l=document.createElement('link');l.rel=rel;document.head.append(l)}l.href=href};
   if(logo){setIcon('icon',logo);setIcon('apple-touch-icon',logo)}
@@ -33,9 +33,9 @@ window.KIUBO_CATALOG_CONFIG=Object.freeze({
   }else if(/^\/pedido/.test(path)){
     addStyle('/orders-v5.css');
   }else{
-    document.documentElement.classList.add('hm112-boot','hm1162-home-brands-pending','hm1163-boot');
+    document.documentElement.classList.add('hm112-boot','hm1162-home-brands-pending','hm1163-boot','hm1164-boot');
     if(!document.getElementById('hm112Critical')){
-      const s=document.createElement('style');s.id='hm112Critical';s.textContent=`html.hm112-boot:not(.hm112-ready) .v10-app{opacity:0!important;visibility:hidden!important;pointer-events:none!important}html.hm112-boot:not(.hm112-ready) body::before{content:"";position:fixed;inset:0;z-index:2147483000;background:#fff}html.hm112-boot:not(.hm112-ready) body::after{content:"";position:fixed;z-index:2147483001;left:50%;top:50%;width:78px;height:78px;transform:translate(-50%,-50%);border-radius:18px;background:#fff url("${logo||'/assets/brand-mark.svg'}") center/contain no-repeat;box-shadow:0 8px 30px rgba(15,66,44,.08)}html.hm112-ready body::before,html.hm112-ready body::after{display:none!important}`;document.head.append(s);
+      const s=document.createElement('style');s.id='hm112Critical';s.textContent=`html.hm112-boot:not(.hm112-ready) .v10-app,html.hm1164-boot .v10-app{opacity:0!important;visibility:hidden!important;pointer-events:none!important}html.hm112-boot:not(.hm112-ready) body::before,html.hm1164-boot body::before{content:"";position:fixed;inset:0;z-index:2147483000;background:#fff}html.hm112-boot:not(.hm112-ready) body::after,html.hm1164-boot body::after{content:"";position:fixed;z-index:2147483001;left:50%;top:50%;width:78px;height:78px;transform:translate(-50%,-50%);border-radius:18px;background:#fff url("${logo||'/assets/brand-mark.svg'}") center/contain no-repeat;box-shadow:0 8px 30px rgba(15,66,44,.08)}html.hm1164-ready body::before,html.hm1164-ready body::after{display:none!important}`;document.head.append(s);
     }
     const hero='https://blogger.googleusercontent.com/img/a/AVvXsEi0hDelNFtHhwoe6guvslOKkEqE0a4o3qVn_Mnut7m2IPdXwfoGDifE1S5QksIbMEDzm_LFESZjvksQ3JEKR_i5iFIYzTkCryXadiPRtu7R9w00ZOtqLTFnDZEUdStZX1IyEbuPqy4CR8QCVlqrVoMEl2Q7FqCzkreaLh26NUkdZJ-TCRQbrvooScWcthA';
     if(!document.querySelector('link[data-hm112-hero]')){const l=document.createElement('link');l.rel='preload';l.as='image';l.href=hero;l.dataset.hm112Hero='1';try{l.fetchPriority='high'}catch{}document.head.append(l)}
@@ -47,6 +47,7 @@ window.KIUBO_CATALOG_CONFIG=Object.freeze({
     addStyle('/catalog-v10.16.1.css');
     addStyle('/catalog-v10.16.2.css');
     addStyle('/catalog-v10.16.3.css');
-    document.write(`<script src="/catalog-v10.12.js?v=${v}"><\/script><script src="/catalog-v10.13.js?v=${v}"><\/script><script src="/catalog-v10.11.js?v=${v}"><\/script><script src="/catalog-v10.16.1.js?v=${v}"><\/script><script src="/catalog-v10.16.2.js?v=${v}"><\/script><script src="/catalog-v10.16.3.js?v=${v}"><\/script>`);
+    addStyle('/catalog-v10.16.4.css');
+    document.write(`<script src="/catalog-v10.12.js?v=${v}"><\/script><script src="/catalog-v10.13.js?v=${v}"><\/script><script src="/catalog-v10.11.js?v=${v}"><\/script><script src="/catalog-v10.16.1.js?v=${v}"><\/script><script src="/catalog-v10.16.2.js?v=${v}"><\/script><script src="/catalog-v10.16.3.js?v=${v}"><\/script><script src="/catalog-v10.16.4.js?v=${v}"><\/script>`);
   }
 })();

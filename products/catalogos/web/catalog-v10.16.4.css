@@ -1,0 +1,98 @@
+/* Hakuna Catalog 10.16.4 — final customer polish from device review. */
+
+/* Critical first-paint guard. config.js also injects this inline so stale home never appears first. */
+html.hm1164-boot .v10-app{opacity:0!important;visibility:hidden!important;pointer-events:none!important}
+html.hm1164-ready .v10-app{opacity:1!important;visibility:visible!important;animation:none!important;transition:none!important}
+
+/* Search: use a true flex scroll viewport. This prevents the result list from growing behind a clipped parent. */
+html.hm1163-search-active #catalogView .v102-search-wrap{
+  display:flex!important;flex-direction:column!important;height:100%!important;min-height:0!important;overflow:hidden!important;gap:10px!important;
+}
+html.hm1163-search-active #catalogView #searchSuggestions,
+html.hm1163-search-active #catalogView #searchSuggestions.hm1164-search-scroll{
+  flex:1 1 0!important;height:0!important;min-height:0!important;max-height:none!important;
+  overflow-y:scroll!important;overflow-x:hidden!important;-webkit-overflow-scrolling:touch!important;
+  overscroll-behavior-y:auto!important;touch-action:pan-y!important;scroll-behavior:auto!important;
+  contain:layout paint!important;
+}
+html.hm1163-search-active #catalogView #searchSuggestions .hm1072-search-panel{min-height:max-content!important;overflow:visible!important}
+
+/* Search brand cards: hard bounds for every logo, not just Power. */
+#searchSuggestions .hm1072-search-brands>.hm1164-brand-result{
+  display:grid!important;grid-template-columns:58px minmax(0,1fr) 28px!important;grid-template-rows:auto!important;
+  align-items:center!important;gap:10px!important;width:100%!important;min-height:72px!important;overflow:hidden!important;
+  padding:7px 10px!important;border-radius:17px!important;
+}
+#searchSuggestions .hm1072-search-brands>.hm1164-brand-result>.hm1164-brand-result-visual{
+  grid-column:1!important;display:grid!important;place-items:center!important;width:52px!important;height:52px!important;
+  min-width:52px!important;max-width:52px!important;min-height:52px!important;max-height:52px!important;
+  padding:0!important;margin:0!important;overflow:hidden!important;border-radius:13px!important;background:#fff!important;
+}
+#searchSuggestions .hm1072-search-brands .hm1164-brand-result-logo{
+  width:52px!important;height:52px!important;min-width:0!important;max-width:52px!important;min-height:0!important;max-height:52px!important;
+  display:grid!important;place-items:center!important;padding:5px!important;overflow:hidden!important;border-radius:12px!important;
+}
+#searchSuggestions .hm1072-search-brands .hm1164-brand-result-logo img{
+  display:block!important;width:88%!important;height:80%!important;max-width:88%!important;max-height:80%!important;
+  object-fit:contain!important;object-position:center!important;margin:auto!important;transform:none!important;
+}
+#searchSuggestions .hm1072-search-brands>.hm1164-brand-result>div{grid-column:2!important;min-width:0!important}
+#searchSuggestions .hm1072-search-brands>.hm1164-brand-result>i{grid-column:3!important}
+
+/* Keep exactly one discoverability arrow. It exists only while the brand rail is at its start. */
+.hm116-brand-next,.hm1162-brand-next{display:none!important}
+#catalogView .hm1164-brand-wrap{position:relative!important;width:100%!important;min-width:0!important}
+#catalogView .hm1164-brand-wrap>.hm-v104-catalog-brands{width:100%!important}
+#catalogView .hm1164-brand-next{
+  position:absolute!important;z-index:14!important;right:4px!important;top:50%!important;transform:translateY(-50%)!important;
+  width:38px!important;height:38px!important;padding:0!important;border:1px solid rgba(20,76,52,.14)!important;border-radius:999px!important;
+  background:rgba(255,255,255,.97)!important;color:#164f36!important;box-shadow:0 6px 18px rgba(15,55,38,.17)!important;
+  display:none!important;place-items:center!important;
+}
+#catalogView .hm1164-brand-next.show:not([hidden]){display:grid!important}
+#catalogView .hm1164-brand-next span{font-size:27px!important;line-height:1!important;transform:translate(1px,-1px)!important}
+
+/* Product detail: content-sized bottom sheet. No giant blank zone between presentations and Add. */
+@media(max-width:700px){
+  #sheetHost .v10-sheet:has(.v102-detail){
+    top:auto!important;bottom:0!important;height:auto!important;max-height:calc(100dvh - max(54px,env(safe-area-inset-top)))!important;
+    width:100%!important;border-radius:24px 24px 0 0!important;overflow:hidden!important;
+  }
+  #sheetHost .v10-sheet:has(.v102-detail) .v10-sheet-scroll{
+    height:auto!important;max-height:calc(100dvh - max(74px,env(safe-area-inset-top)))!important;
+    overflow:hidden!important;padding:0 12px max(10px,env(safe-area-inset-bottom))!important;
+  }
+  #sheetHost .v102-detail{
+    height:auto!important;min-height:0!important;display:block!important;overflow:visible!important;
+  }
+  #sheetHost .v102-detail .v10-detail-media{
+    height:clamp(225px,31dvh,300px)!important;min-height:0!important;aspect-ratio:auto!important;padding:2px 44px!important;overflow:hidden!important;
+  }
+  #sheetHost .v102-detail .v10-detail-media>img{
+    width:min(68vw,275px)!important;height:min(68vw,275px)!important;max-width:100%!important;max-height:100%!important;
+    aspect-ratio:1/1!important;object-fit:contain!important;object-position:center!important;
+  }
+  #sheetHost .v102-detail .v10-detail-body{display:block!important;min-height:0!important;overflow:visible!important;padding:2px 3px 2px!important}
+  #sheetHost .v102-detail .v102-detail-label{margin:6px 0 5px!important}
+  #sheetHost .v102-detail .v102-presentation-list{display:grid!important;gap:6px!important;overflow:visible!important;max-height:none!important}
+  #sheetHost .v102-detail .v102-detail-total{
+    margin-top:10px!important;padding:7px 0 2px!important;min-height:31px!important;display:flex!important;align-items:center!important;justify-content:space-between!important;
+  }
+  #sheetHost .v102-detail .v102-add-all{width:100%!important;min-height:46px!important;height:46px!important;margin-top:5px!important}
+  #sheetHost .v10-sheet[data-hm113-presentations="3"] .v10-detail-media{height:clamp(170px,23dvh,220px)!important}
+  #sheetHost .v10-sheet[data-hm113-presentations="4"] .v10-detail-media,
+  #sheetHost .v10-sheet[data-hm113-presentations="5"] .v10-detail-media{height:clamp(115px,16dvh,155px)!important}
+  #sheetHost .v10-sheet[data-hm113-presentations="4"] .v102-presentation-row,
+  #sheetHost .v10-sheet[data-hm113-presentations="5"] .v102-presentation-row{min-height:43px!important;padding:3px!important}
+  #sheetHost .v10-sheet[data-hm113-presentations="5"] .v102-presentation-list{
+    max-height:178px!important;overflow-y:auto!important;overscroll-behavior-y:contain!important;-webkit-overflow-scrolling:touch!important;scrollbar-width:none!important;
+  }
+  #sheetHost .v10-sheet[data-hm113-presentations="5"] .v102-presentation-list::-webkit-scrollbar{display:none!important}
+  #sheetHost .v10-sheet:has(.v102-detail .v10-note-box:not([hidden])) .v10-sheet-scroll{
+    overflow-y:auto!important;-webkit-overflow-scrolling:touch!important;overscroll-behavior-y:contain!important;
+  }
+}
+@media(max-width:380px){
+  #sheetHost .v102-detail .v10-detail-media{height:clamp(190px,28dvh,245px)!important;padding-inline:38px!important}
+}
+@media(prefers-reduced-motion:reduce){#catalogView .hm1164-brand-next{transition:none!important}}
