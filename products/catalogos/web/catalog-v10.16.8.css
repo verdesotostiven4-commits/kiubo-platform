@@ -1,0 +1,76 @@
+/* Hakuna Catalog 10.16.8 — fluid marquee + visible blurred catalog behind product detail. */
+
+/* The legacy rail remains as the filter source only. The customer sees one independent marquee. */
+.hm-v104-catalog-brands.hm1168-brand-source{display:none!important}
+#hm1167BrandMarquee{display:none!important}
+
+#catalogView .hm1164-brand-wrap,
+#catalogView .hm1168-brand-marquee{
+  border:0!important;border-bottom:0!important;box-shadow:none!important;background-image:none!important;
+}
+#catalogView .hm1164-brand-wrap::before,
+#catalogView .hm1164-brand-wrap::after,
+#catalogView .hm1168-brand-marquee::before,
+#catalogView .hm1168-brand-marquee::after{
+  content:none!important;display:none!important;
+}
+
+.hm1168-brand-marquee{
+  width:100%!important;overflow:hidden!important;position:relative!important;
+  padding:0 0 5px!important;touch-action:pan-y!important;overscroll-behavior:none!important;
+  scrollbar-width:none!important;-webkit-overflow-scrolling:auto!important;
+}
+.hm1168-brand-marquee::-webkit-scrollbar{display:none!important;width:0!important;height:0!important}
+.hm1168-brand-track{
+  display:flex!important;width:max-content!important;align-items:stretch!important;gap:8px!important;
+  will-change:transform!important;transform:translate3d(0,0,0);
+}
+.hm1168-segment{display:flex!important;align-items:stretch!important;gap:8px!important;flex:none!important}
+.hm1168-brand-chip{
+  flex:0 0 94px!important;width:94px!important;height:64px!important;min-width:94px!important;
+  border:1px solid #e1e7e2!important;border-radius:16px!important;background:#fff!important;padding:7px!important;
+  display:grid!important;place-items:center!important;overflow:hidden!important;color:#244937!important;
+  box-shadow:none!important;user-select:none!important;-webkit-user-select:none!important;
+}
+.hm1168-brand-chip.active{
+  border-color:#557c67!important;box-shadow:0 0 0 1px rgba(44,105,71,.16)!important;background:#fbfdfb!important
+}
+.hm1168-brand-chip .hm-brand-visual{
+  width:100%!important;height:100%!important;display:grid!important;place-items:center!important;overflow:hidden!important
+}
+.hm1168-brand-chip .hm-brand-visual img{
+  display:block!important;width:92%!important;height:88%!important;max-width:92%!important;max-height:88%!important;
+  object-fit:contain!important;object-position:center!important;transform:none!important;pointer-events:none!important
+}
+.hm1168-brand-chip .hm1072-fallback b{
+  font-size:10px!important;line-height:1.1!important;text-align:center!important;white-space:normal!important;pointer-events:none!important
+}
+
+/*
+  Do not freeze the whole body when a product sheet opens.
+  Chrome Android can stop painting the scrolled catalog when body is fixed/height:100%.
+  The fixed backdrop blocks background touches; the real catalog stays at its current scroll position
+  and remains visible through the existing blur.
+*/
+@media(max-width:700px){
+  html.hm113-product-open,
+  html.hm113-product-open body,
+  html.hm1168-detail-open,
+  html.hm1168-detail-open body{
+    height:auto!important;min-height:100%!important;overflow:visible!important;overscroll-behavior:auto!important;
+    position:static!important;top:auto!important;left:auto!important;right:auto!important;width:auto!important;
+  }
+  html.hm1168-detail-open #sheetHost .v10-backdrop{
+    touch-action:none!important;overscroll-behavior:none!important;
+  }
+  html.hm1168-detail-open #sheetHost .v10-sheet{
+    overscroll-behavior:contain!important;
+  }
+}
+
+@media(max-width:620px){
+  .hm1168-brand-chip{flex-basis:92px!important;width:92px!important;min-width:92px!important;height:62px!important}
+}
+@media(prefers-reduced-motion:reduce){
+  .hm1168-brand-track{will-change:auto!important}
+}
