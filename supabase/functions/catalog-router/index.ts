@@ -21,6 +21,10 @@ type Json = Record<string, unknown>;
 type CatalogRoute = { id: string; slug: string; public_base_url: string | null; allowed_origins: string[] | null };
 type OrderItem = { product_name: string; quantity: number; line_total: number | string; item_note?: string | null };
 
+function clean(value: unknown, max = 180) {
+  return String(value ?? "").trim().slice(0, max);
+}
+
 function validSlug(value: unknown) {
   const slug = String(value ?? "").toLowerCase();
   return /^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(slug) ? slug : "";
@@ -157,7 +161,7 @@ async function enrichCreateOrderPayload(payload: Json, route: CatalogRoute) {
 async function enrichCatalogStock(payload: Json, route: CatalogRoute) {
   if (!Array.isArray(payload.products) || !payload.products.length) return;
   const { data, error } = await db.from("catalog_products")
-    .select("id,stock_tracking,stock_quantity,low_stock_threshold")
+    .select("id,stock_tracking,stock_quantity,low_stock_threshold,base_unit,allow_item_note")
     .eq("account_id", route.id)
     .is("archived_at", null);
   if (error || !Array.isArray(data)) return;
@@ -191,14 +195,23 @@ async function saveStock(req: Request, body: Json, route: CatalogRoute) {
   const tracking = body.stock_tracking === true;
   const quantity = Math.max(0, Math.min(100000000, Math.trunc(Number(body.stock_quantity || 0))));
   const threshold = Math.max(0, Math.min(100000000, Math.trunc(Number(body.low_stock_threshold ?? 5))));
+  const baseUnit = clean(body.base_unit, 40) || "unidad";
+  const allowItemNote = body.allow_item_note !== false;
   if (!Number.isFinite(quantity) || !Number.isFinite(threshold)) return response(req, { error: "invalid_stock" }, 400);
 
   const { data, error } = await db.from("catalog_products")
-    .update({ stock_tracking: tracking, stock_quantity: quantity, low_stock_threshold: threshold, updated_at: new Date().toISOString() })
+    .update({
+      stock_tracking: tracking,
+      stock_quantity: quantity,
+      low_stock_threshold: threshold,
+      base_unit: baseUnit,
+      allow_item_note: allowItemNote,
+      updated_at: new Date().toISOString()
+    })
     .eq("id", productId)
     .eq("account_id", route.id)
     .is("archived_at", null)
-    .select("id,stock_tracking,stock_quantity,low_stock_threshold,status")
+    .select("id,stock_tracking,stock_quantity,low_stock_threshold,base_unit,allow_item_note,status")
     .maybeSingle();
 
   if (error) throw error;
