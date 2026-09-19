@@ -19,6 +19,8 @@
     "verify:idempotency": "node scripts/verify-payment-idempotency.mjs",
     "verify:purchases": "node scripts/verify-purchase-transaction.mjs",
     "verify:inventory": "node scripts/verify-inventory-adjustment.mjs",
+    "verify:catalog-inventory": "node scripts/verify-catalog-inventory.mjs",
+    "verify:catalog-inventory-rules": "node scripts/verify-catalog-inventory-rules.mjs",
     "verify:payments": "node scripts/verify-payment-truthfulness.mjs",
     "verify:cashrecon": "node scripts/verify-cash-reconciliation.mjs",
     "verify:food": "node scripts/verify-food-service.mjs",
@@ -26,7 +28,7 @@
     "verify:golden": "node scripts/verify-golden-path.mjs",
     "verify:offline": "node scripts/verify-offline-durability.mjs",
     "verify:pilot": "node scripts/verify-pilot-readiness.mjs",
-    "verify:guards": "npm run verify:cloud && npm run verify:sri && npm run verify:product && npm run verify:sync && npm run verify:sales && npm run verify:reversals && npm run verify:finance && npm run verify:idempotency && npm run verify:purchases && npm run verify:inventory && npm run verify:payments && npm run verify:cashrecon && npm run verify:food && npm run verify:tables && npm run verify:golden && npm run verify:offline && npm run verify:pilot",
+    "verify:guards": "npm run verify:cloud && npm run verify:sri && npm run verify:product && npm run verify:sync && npm run verify:sales && npm run verify:reversals && npm run verify:finance && npm run verify:idempotency && npm run verify:purchases && npm run verify:inventory && npm run verify:catalog-inventory && npm run verify:catalog-inventory-rules && npm run verify:payments && npm run verify:cashrecon && npm run verify:food && npm run verify:tables && npm run verify:golden && npm run verify:offline && npm run verify:pilot",
     "verify": "npm run typecheck && npm run verify:guards"
   },
   "dependencies": {

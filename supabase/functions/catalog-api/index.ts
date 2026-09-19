@@ -148,33 +148,96 @@ async function actorAccount(actor: Actor, requestedSlug = "") {
 
 async function adminBootstrap(account: Json) {
   const accountId = String(account.id);
-  const [categoriesResult, productsResult, ordersResult, customersResult] = await Promise.all([
+  const [categoriesResult, productsResult, presentationsResult, ordersResult, customersResult] = await Promise.all([
     db.from("catalog_categories").select("*").eq("account_id", accountId).order("sort_order").order("name"),
     db.from("catalog_products").select("*").eq("account_id", accountId).order("sort_order").order("name"),
+    db.from("catalog_product_presentations").select("*").eq("account_id", accountId).order("sort_order").order("name"),
     db.from("catalog_orders").select("*,items:catalog_order_items(*)").eq("account_id", accountId).order("created_at", { ascending: false }).limit(250),
     db.from("catalog_customers").select("*").eq("account_id", accountId).order("last_order_at", { ascending: false }).limit(250)
   ]);
-  for (const result of [categoriesResult, productsResult, ordersResult, customersResult]) if (result.error) throw result.error;
+  for (const result of [categoriesResult, productsResult, presentationsResult, ordersResult, customersResult]) if (result.error) throw result.error;
   const products = (productsResult.data || []).map(product => ({ ...product, image_url: imageUrl(product.image_path, product.image_url) }));
-  return { account: adminAccount({ ...account, logo_url: imageUrl(account.logo_path, account.logo_url) }), categories: categoriesResult.data || [], products, orders: ordersResult.data || [], customers: customersResult.data || [] };
+  return { account: adminAccount({ ...account, logo_url: imageUrl(account.logo_path, account.logo_url) }), categories: categoriesResult.data || [], products, presentations: presentationsResult.data || [], orders: ordersResult.data || [], customers: customersResult.data || [] };
 }
 
 async function publicBootstrap(slug: string) {
   const account = await accountBySlug(slug);
   if (!account) throw Object.assign(new Error("account_not_found"), { status: 404 });
-  const [categoriesResult, productsResult] = await Promise.all([
+  const [categoriesResult, productsResult, presentationsResult] = await Promise.all([
     db.from("catalog_categories").select("id,name,icon,sort_order,visible").eq("account_id", account.id).eq("visible", true).order("sort_order").order("name"),
-    db.from("catalog_products").select("id,category_id,sku,name,brand,description,unit,price,compare_at_price,status,visible,featured,image_path,image_url,sort_order,updated_at").eq("account_id", account.id).eq("visible", true).is("archived_at", null).order("featured", { ascending: false }).order("sort_order").order("name")
+    db.from("catalog_products").select("id,category_id,sku,name,brand,description,unit,price,compare_at_price,status,visible,featured,image_path,image_url,sort_order,updated_at,stock_tracking,stock_quantity,low_stock_threshold,base_unit,allow_item_note").eq("account_id", account.id).eq("visible", true).is("archived_at", null).order("featured", { ascending: false }).order("sort_order").order("name"),
+    db.from("catalog_product_presentations").select("id,product_id,name,unit_label,units_per_presentation,price,compare_at_price,sort_order").eq("account_id", account.id).eq("visible", true).order("sort_order").order("name")
   ]);
   if (categoriesResult.error) throw categoriesResult.error;
   if (productsResult.error) throw productsResult.error;
+  if (presentationsResult.error) throw presentationsResult.error;
   const categoryMap = new Map((categoriesResult.data || []).map(category => [category.id, category.name]));
   const products = (productsResult.data || []).map(product => ({ ...product, category_name: categoryMap.get(product.category_id) || null, image_url: imageUrl(product.image_path, product.image_url) }));
-  return { account: publicAccount({ ...account, logo_url: imageUrl(account.logo_path, account.logo_url) }), categories: categoriesResult.data || [], products };
+  return { account: publicAccount({ ...account, logo_url: imageUrl(account.logo_path, account.logo_url) }), categories: categoriesResult.data || [], products, presentations: presentationsResult.data || [] };
 }
 
 async function logActivity(accountId: string, actor: Actor, action: string, entityType?: string, entityId?: string, metadata: Json = {}) {
   await db.from("catalog_activity_log").insert({ account_id: accountId, actor_type: actor.type, actor_id: actor.userId || actor.sessionId || null, action, entity_type: entityType || null, entity_id: entityId || null, metadata });
+}
+
+function validatePresentationsInput(rows: Json[]) {
+  if (rows.length > 40) throw Object.assign(new Error("invalid_presentations"), { status: 400 });
+  for (const row of rows) {
+    const name = String(row.name ?? "").trim();
+    const units = Number(row.units_per_presentation);
+    const price = Number(row.price);
+    if (!name || name.length > 80) throw Object.assign(new Error("invalid_presentations"), { status: 400 });
+    if (!Number.isFinite(units) || units < 1 || units > 100000) throw Object.assign(new Error("invalid_presentations"), { status: 400 });
+    if (!Number.isFinite(price) || price < 0) throw Object.assign(new Error("invalid_presentations"), { status: 400 });
+  }
+}
+
+// Presentations are fully replaced on every save: rows missing an id are new,
+// existing ids not present in the payload get deleted, everything else is
+// upserted by id. Exactly one row is forced to be the default presentation.
+async function savePresentations(accountId: string, productId: string, rows: Json[]) {
+  const { data: existing, error: existingError } = await db.from("catalog_product_presentations").select("id").eq("product_id", productId).eq("account_id", accountId);
+  if (existingError) throw existingError;
+  const existingIds = new Set((existing || []).map(row => String(row.id)));
+  const keepIds = new Set<string>();
+
+  const clean = rows.map((row, index) => ({
+    id: row.id && existingIds.has(String(row.id)) ? String(row.id) : undefined,
+    account_id: accountId,
+    product_id: productId,
+    name: cleanText(row.name, 80, false),
+    unit_label: cleanText(row.unit_label, 40, false) || "unidad",
+    units_per_presentation: Math.max(1, Math.trunc(Number(row.units_per_presentation || 1))),
+    price: Math.max(0, Number(row.price || 0)),
+    compare_at_price: row.compare_at_price == null ? null : Math.max(0, Number(row.compare_at_price)),
+    sku: cleanText(row.sku, 60),
+    visible: row.visible !== false,
+    is_default: false,
+    sort_order: index
+  }));
+  if (!clean.length) throw Object.assign(new Error("invalid_presentations"), { status: 400 });
+  const requestedDefault = rows.findIndex(row => row?.is_default === true);
+  clean[requestedDefault >= 0 ? requestedDefault : 0].is_default = true;
+  for (const row of clean) if (row.id) keepIds.add(row.id);
+
+  const toDelete = [...existingIds].filter(id => !keepIds.has(id));
+  const toUpdate = clean.filter(row => row.id);
+  const toInsert = clean.filter(row => !row.id).map(({ id: _id, ...rest }) => rest);
+  // Clear is_default first to avoid tripping the one-default-per-product unique
+  // index while the set is being replaced, then write, then delete stale rows.
+  await db.from("catalog_product_presentations").update({ is_default: false }).eq("product_id", productId).eq("account_id", accountId);
+  for (const row of toUpdate) {
+    const { error } = await db.from("catalog_product_presentations").update(row).eq("id", row.id).eq("product_id", productId).eq("account_id", accountId);
+    if (error) throw error;
+  }
+  if (toInsert.length) {
+    const { error } = await db.from("catalog_product_presentations").insert(toInsert);
+    if (error) throw error;
+  }
+  if (toDelete.length) {
+    const { error } = await db.from("catalog_product_presentations").delete().eq("product_id", productId).eq("account_id", accountId).in("id", toDelete);
+    if (error) throw error;
+  }
 }
 
 function whatsappUrl(phone: string, order: Json, items: Json[], customer: Json) {
@@ -266,6 +329,8 @@ async function handleJson(req: Request, body: Json) {
     const name = cleanText(input.name, 120, false);
     const price = Number(input.price);
     if (String(name).length < 2 || !Number.isFinite(price) || price < 0) throw Object.assign(new Error("invalid_product"), { status: 400 });
+    const presentationsInput = Array.isArray(body.presentations) ? body.presentations as Json[] : null;
+    if (presentationsInput) validatePresentationsInput(presentationsInput);
     const data = {
       account_id: accountId, category_id: input.category_id || null, sku: cleanText(input.sku, 60), name,
       brand: cleanText(input.brand, 80), description: cleanText(input.description, 500), unit: cleanText(input.unit, 100),
@@ -278,8 +343,10 @@ async function handleJson(req: Request, body: Json) {
     if (input.id) result = await db.from("catalog_products").update(data).eq("id", input.id).eq("account_id", accountId).select("id").single();
     else result = await db.from("catalog_products").insert(data).select("id").single();
     if (result.error) throw result.error;
-    await logActivity(accountId, actor, input.id ? "product.updated" : "product.created", "product", result.data.id);
-    return { id: result.data.id };
+    const productId = String(result.data.id);
+    if (presentationsInput) await savePresentations(accountId, productId, presentationsInput);
+    await logActivity(accountId, actor, input.id ? "product.updated" : "product.created", "product", productId);
+    return { id: productId };
   }
   if (action === "set_product_status") {
     const status = String(body.status || "");
@@ -317,7 +384,12 @@ async function handleJson(req: Request, body: Json) {
     const status = String(body.status || "");
     if (!orderStatusAllowed(status)) throw Object.assign(new Error("invalid_status"), { status: 400 });
     const { data, error } = await db.from("catalog_orders").update({ status }).eq("id", body.order_id).eq("account_id", accountId).select("id").single();
-    if (error) throw error;
+    if (error) {
+      const message = String((error as { message?: string }).message || "");
+      if (message.includes("insufficient_stock")) throw Object.assign(new Error(message), { status: 409 });
+      if (message.includes("invalid_status_transition")) throw Object.assign(new Error("invalid_status_transition"), { status: 409 });
+      throw error;
+    }
     await logActivity(accountId, actor, "order.status_updated", "order", data.id, { status });
     return { id: data.id, status };
   }
@@ -401,9 +473,9 @@ Deno.serve(async (req: Request) => {
   } catch (error) {
     const err = error as Error & { status?: number; details?: unknown; code?: string };
     const message = err.message || "request_failed";
-    const known = ["account_not_found", "order_not_found", "catalog_closed", "invalid_request", "minimum_order", "product_unavailable", "invalid_customer", "invalid_phone", "invalid_items", "invalid_quantity", "invalid_delivery", "invalid_pin", "too_many_attempts", "too_many_orders", "session_expired", "forbidden", "pin_must_be_4_digits", "invalid_product", "invalid_category", "invalid_status", "invalid_name", "invalid_color", "invalid_upload", "invalid_file", "unknown_action"];
+    const known = ["account_not_found", "order_not_found", "catalog_closed", "invalid_request", "minimum_order", "insufficient_stock", "product_unavailable", "invalid_customer", "invalid_phone", "invalid_items", "invalid_quantity", "invalid_delivery", "invalid_pin", "too_many_attempts", "too_many_orders", "session_expired", "forbidden", "pin_must_be_4_digits", "invalid_product", "invalid_presentations", "invalid_category", "invalid_status", "invalid_status_transition", "invalid_name", "invalid_color", "invalid_upload", "invalid_file", "unknown_action"];
     const code = known.find(item => message.includes(item)) || err.code || "request_failed";
-    const status = err.status || (code === "account_not_found" ? 404 : code === "session_expired" || code === "invalid_pin" ? 401 : code === "forbidden" ? 403 : code === "too_many_attempts" || code === "too_many_orders" ? 429 : code === "request_failed" ? 500 : 400);
+    const status = err.status || (code === "account_not_found" ? 404 : code === "session_expired" || code === "invalid_pin" ? 401 : code === "forbidden" ? 403 : code === "too_many_attempts" || code === "too_many_orders" ? 429 : code === "insufficient_stock" || code === "invalid_status_transition" ? 409 : code === "request_failed" ? 500 : 400);
     if (status >= 500) console.error("catalog-api", { code, message, details: err.details });
     return response(req, { error: code, message: status >= 500 ? "No pudimos procesar la solicitud." : code, details: err.details }, status);
   }

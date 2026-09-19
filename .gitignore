@@ -4,5 +4,8 @@ out
 .env*
 !.env.example
 .vercel
+supabase/.temp
 *.log
 .DS_Store
+tsconfig.tsbuildinfo
+package-lock.json
