@@ -114,13 +114,13 @@ export function CashClient(){
     const remaining=Number((credit.balance-applied).toFixed(2));
     const updatedCredit={...credit,balance:remaining,status:(remaining<=.001?"paid":"open") as "open"|"paid"};
     next.creditPayments.unshift(payment);
-    next.credits=next.fiadoCredits.map(c=>c.id===creditId?updatedCredit:c);
+    next.credits=next.credits.map(c=>c.id===creditId?updatedCredit:c);
 
     let cashMovement:CashMovementRecord|undefined;
     if(method==="cash"&&session){
       cashMovement={
         id:makeId("movement"),tenantId:workspace.tenantId,branchId:workspace.branchId,sessionId:session.id,type:"in",
-        amount:Number(applied.toFixed(2)),reason:creditPaymentCashMovementReason(payment.id,credit.description,credit.kind==="partial"?"partial":"fiado"),createdAt:now
+        amount:Number(applied.toFixed(2)),reason:creditPaymentCashMovementReason(payment.id,credit.description,"fiado"),createdAt:now
       };
       cashMovement.clientOperationId=cashMovement.id;
       next.cashMovements.unshift(cashMovement);
