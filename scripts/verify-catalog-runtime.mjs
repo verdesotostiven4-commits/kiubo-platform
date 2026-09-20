@@ -132,3 +132,7 @@ has(catalog,"if(configured.length)return[]","configured-but-hidden presentations
 has(migration,"where product_id=p_product_id and account_id=p_account_id and visible=true","presentation replacement must retain at least one visible option");
 has(migration,"raise exception 'product_unavailable'","checkout must reject a product whose configured presentations are all hidden");
 console.log("✓ Hidden presentations cannot be bypassed through the legacy unit fallback.");
+
+// Hakuna first-paint regression guard
+const legacyCatalog=text("products/catalogos/web/catalog-v10.16.4.js");
+assert.ok(legacyCatalog.includes("function releaseBootShell()")&&legacyCatalog.includes("if(!released)releaseBootShell()"),"catalog first paint must fail open instead of leaving the splash screen forever");
