@@ -9,9 +9,9 @@ function requireText(path,needles){const source=text(path);for(const needle of n
 requireText("lib/permissions.ts",["if(permission===\"control\"||permission===\"leads\")return platformAdmin","cashier:[\"dashboard\",\"pos\",\"cash\"","inventory:[\"dashboard\",\"inventory\",\"purchases\",\"catalog\",\"reports\"]","viewer:[\"dashboard\",\"reports\"]","if(path.startsWith(\"/orders\")||path.startsWith(\"/order-print\")||path.startsWith(\"/receipt\"))return\"pos\"","if(path.startsWith(\"/cash\"))return\"cash\""]);
 const permissions=text("lib/permissions.ts");
 for(const role of ["cashier","inventory","viewer"]){const match=permissions.match(new RegExp(`${role}:\\[([^\\]]*)\\]`));assert.ok(match,`Missing ${role} permission list`);assert.ok(!match[1].includes("\"upgrade\""),`${role} must not access plan settings`)}
-requireText("components/SessionEnforcer.tsx",["canAccess(user.role,permission,Boolean(user.platformAdmin))","session.role!==user.role","b.tenantId===tenantId&&b.active"]);
-requireText("components/Sidebar.tsx",["platformOnly:true","canAccess(user.role,item.permission,Boolean(user.platformAdmin))","href:\"/orders\"","businessTypes:[\"food_service\"]","href:\"/cash\"","label:\"Administración\""]);
-requireText("components/MobileNav.tsx",["platformOnly:true","canAccess(user.role,item.permission,Boolean(user.platformAdmin))","href:\"/orders\"","businessTypes:[\"food_service\"]","href:\"/cash\""]);
+requireText("components/SessionEnforcer.tsx",["effectivePlatformAdmin(user.platformAdmin)","canAccess(user.role,permission,platformAdmin)","session.role!==user.role","b.tenantId===tenantId&&b.active"]);
+requireText("components/Sidebar.tsx",["platformOnly:true","effectivePlatformAdmin(user?.platformAdmin)","canAccess(user.role,item.permission,platformAdmin)","href:\"/orders\"","businessTypes:[\"food_service\"]","href:\"/cash\"","label:\"Administración\""]);
+requireText("components/MobileNav.tsx",["platformOnly:true","effectivePlatformAdmin(user.platformAdmin)","canAccess(user.role,item.permission,platformAdmin)","href:\"/orders\"","businessTypes:[\"food_service\"]","href:\"/cash\""]);
 requireText("app/cash/page.tsx",["CashClient","Sidebar"]);
 requireText("components/CashClient.tsx",["enqueueCashTransaction","enqueueCreditPaymentTransaction","Caja y fiados, sin perder el control.","reconcileCashSession","CUADRADA"]);
 requireText("components/PosClient.tsx",['const paymentOptions:Payment[]=["cash","transfer","credit"]','if(payment==="mixed")']);
