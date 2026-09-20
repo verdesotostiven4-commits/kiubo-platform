@@ -35,5 +35,11 @@ for(const needle of [".checkout-total-card",".checkout-payment-zone","max-height
   assert.ok(v16.includes(needle),`POS v16 layout missing: ${needle}`);
 }
 assert.ok(text("app/layout.tsx").includes('import "./experience-v16.css";'),"POS v16 stylesheet must load last");
+const v17=text("app/experience-v17.css");
+for(const needle of [".category-toolbar-head",".category-order-toggle","grid-template-columns:minmax(0,1fr)!important"]){
+  assert.ok(v17.includes(needle),`POS v17 category tools missing: ${needle}`);
+}
+assert.ok(pos.includes("Ordenar categorías"),"category ordering must be presented as a secondary tool");
+assert.ok(text("app/layout.tsx").includes('import "./experience-v17.css";'),"POS v17 stylesheet must load last");
 
 console.log("✓ YUKI Ops V2 passed: non-destructive reset, payment-rich history, explainable cash, and single-scroll checkout V16 are wired.");

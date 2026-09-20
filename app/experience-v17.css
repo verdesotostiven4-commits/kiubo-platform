@@ -1,0 +1,55 @@
+/* KIUBO experience v17 — category controls stay out of the browsing strip. */
+.category-toolbar{
+  display:grid!important;
+  grid-template-columns:minmax(0,1fr)!important;
+  gap:5px!important;
+  margin-bottom:8px!important;
+}
+.category-toolbar-head{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:10px;
+  min-height:24px;
+  padding:0 2px;
+}
+.category-toolbar-head>span{
+  font-size:8px;
+  line-height:1;
+  font-weight:950;
+  letter-spacing:.13em;
+  color:#819087;
+}
+.category-toolbar .category-strip{
+  width:100%;
+  min-width:0;
+  margin:0!important;
+  padding-bottom:2px;
+}
+.category-toolbar .category-order-toggle{
+  flex:0 0 auto;
+  min-height:26px!important;
+  padding:5px 9px!important;
+  border:1px solid transparent!important;
+  background:transparent!important;
+  color:#718077!important;
+  border-radius:9px!important;
+  font-size:9px!important;
+  font-weight:900!important;
+  box-shadow:none!important;
+}
+.category-toolbar .category-order-toggle:hover{
+  border-color:#d9e4de!important;
+  background:#f7faf8!important;
+  color:#315545!important;
+}
+.category-toolbar .category-order-toggle.active{
+  border-color:#cfe0d7!important;
+  background:#eef7f2!important;
+  color:#1f6647!important;
+}
+@media(max-width:760px){
+  .category-toolbar-head>span{display:none}
+  .category-toolbar-head{justify-content:flex-end;min-height:22px}
+  .category-toolbar .category-order-toggle{font-size:8.5px!important}
+}
