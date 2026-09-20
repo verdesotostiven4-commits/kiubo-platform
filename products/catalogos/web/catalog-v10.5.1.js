@@ -7,15 +7,18 @@ const $=(s,r=document)=>r.querySelector(s),$$=(s,r=document)=>[...r.querySelecto
 const C=window.KIUBO_CATALOG_CONFIG||{};
 const slug=(new URLSearchParams(location.search).get('slug')||C.defaultSlug||'hakuna-matata').toLowerCase().replace(/[^a-z0-9-]/g,'');
 const historyKey=`kiubo-v10-orders:${slug}`;
-const notifySupported=()=>('Notification' in window);
+const notifySupported=()=>('Notification'in window);
+const pushSupported=()=>notifySupported()&&('serviceWorker'in navigator)&&('PushManager'in window);
+const isIOS=()=>/iPhone|iPad|iPod/i.test(navigator.userAgent);
+const isStandalone=()=>window.matchMedia?.('(display-mode: standalone)').matches===true||navigator.standalone===true;
 const notifyGranted=()=>notifySupported()&&Notification.permission==='granted';
 function orderHistory(){try{return JSON.parse(localStorage.getItem(historyKey)||'[]')}catch{return[]}}
 function showNotification(title,body,tag='hakuna-order'){if(!notifyGranted())return;try{new Notification(title,{body,tag,icon:C.brandLogoUrl||undefined,badge:C.brandLogoUrl||undefined})}catch{}}
 async function askNotifications(){if(!notifySupported())return'unsupported';try{return await Notification.requestPermission()}catch{return'denied'}}
-function notificationCopy(){if(!notifySupported())return['Avisos no disponibles','Tu navegador no admite notificaciones.'];if(Notification.permission==='granted')return['Avisos activados','Te avisaremos de cambios del pedido mientras Hakuna esté abierta.'];if(Notification.permission==='denied')return['Avisos bloqueados','Puedes habilitarlos desde los permisos del navegador.'];return['Recibe avisos de tu pedido','Activa notificaciones para enterarte cuando cambie su estado.']}
-function ensureCheckoutNotificationCoach(){const form=$('#checkoutForm');if(!form||$('.hm1051-notify-card',form))return;const review=$('#reviewOrder',form);if(!review)return;const [title,copy]=notificationCopy(),card=document.createElement('section');card.className='hm1051-notify-card';card.innerHTML=`<span>🔔</span><div><b>${title}</b><small>${copy}</small></div>${notifySupported()&&Notification.permission==='default'?'<button type="button" data-hm1051-notify>Activar</button>':''}`;review.insertAdjacentElement('beforebegin',card)}
+function notificationCopy(){if(isIOS()&&!isStandalone()&&!pushSupported())return['Recibe avisos en tu iPhone','En Safari: Compartir → Añadir a pantalla de inicio. Abre Hakuna desde el icono y activa los avisos.'];if(!pushSupported())return['Avisos no disponibles','Este navegador no admite notificaciones push.'];if(Notification.permission==='granted')return['Avisos activados','Te avisaremos cuando cambie tu pedido, incluso si cierras Hakuna.'];if(Notification.permission==='denied')return['Avisos bloqueados','Puedes habilitarlos desde los permisos del navegador.'];return['Recibe avisos de tu pedido','Activa los avisos para saber cuando lo confirmen, preparen, despachen o entreguen.']}
+function ensureCheckoutNotificationCoach(){const form=$('#checkoutForm');if(!form||$('.hm1051-notify-card',form))return;const review=$('#reviewOrder',form);if(!review)return;const [title,copy]=notificationCopy(),card=document.createElement('section');card.className='hm1051-notify-card';card.innerHTML=`<span>🔔</span><div><b>${title}</b><small>${copy}</small></div>${pushSupported()&&Notification.permission==='default'?'<button type="button" data-hm1051-notify>Activar avisos</button>':''}`;review.insertAdjacentElement('beforebegin',card)}
 function refreshCoach(){const card=$('.hm1051-notify-card');if(!card)return;card.remove();ensureCheckoutNotificationCoach()}
-document.addEventListener('click',async e=>{if(e.target.closest?.('[data-hm1051-notify]')){e.preventDefault();const p=await askNotifications();refreshCoach();if(p==='granted')showNotification('Hakuna Matata','Avisos activados. Te notificaremos cambios del pedido.','hakuna-enabled')}},true);
+document.addEventListener('click',async e=>{if(e.target.closest?.('[data-hm1051-notify]')){e.preventDefault();const p=await askNotifications();refreshCoach();if(p==='granted'){try{await window.HakunaPush?.subscribe?.()}catch{}showNotification('Hakuna Matata','Avisos activados. Te notificaremos cambios del pedido.','hakuna-enabled')}}},true);
 
 const upstream=window.fetch.bind(window);
 window.fetch=async(input,init={})=>{
