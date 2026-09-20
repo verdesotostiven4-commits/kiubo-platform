@@ -78,7 +78,8 @@ function platformOnlyIdentity(authUser:User){
   const internal=db.tenants.find(t=>t.plan==="Internal")??db.tenants[0];
   if(!internal)throw new Error("No existe el espacio interno de KIUBO");
   const branch=getPrimaryBranch(db,internal.id);
-  const previousUser=db.users.find(item=>item.id===authUser.id);\n  const user:UserRecord={id:authUser.id,tenantId:internal.id,name:String(authUser.user_metadata?.full_name||authUser.user_metadata?.name||authUser.email?.split("@")[0]||"Admin KIUBO"),email:String(authUser.email||""),role:"owner",active:true,pin:previousUser?.pin||"",platformAdmin:true,createdAt:String(authUser.created_at||new Date().toISOString())};
+  const previousUser=db.users.find(item=>item.id===authUser.id);
+  const user:UserRecord={id:authUser.id,tenantId:internal.id,name:String(authUser.user_metadata?.full_name||authUser.user_metadata?.name||authUser.email?.split("@")[0]||"Admin KIUBO"),email:String(authUser.email||""),role:"owner",active:true,pin:previousUser?.pin||"",platformAdmin:true,createdAt:String(authUser.created_at||new Date().toISOString())};
   upsertById(db.users,user);
   saveLocalDatabase(db,{trackChanges:false});
   const session:LocalSession={userId:user.id,tenantId:internal.id,activeTenantId:internal.id,activeBranchId:branch?.id,role:user.role,startedAt:new Date().toISOString()};
