@@ -85,8 +85,8 @@ requireText("supabase/functions/catalog-api/index.ts", [
 ]);
 const catalogApi = text("supabase/functions/catalog-api/index.ts");
 assert.ok(!/const\s+data\s*=\s*{\s*[^}]*price:\s*Number\(body\.items/.test(catalogApi), "catalog-api create_order must not read price from client items");
-const presentationsExposedCount = catalogApi.split("presentations: presentationsResult.data || []").length - 1;
-assert.ok(presentationsExposedCount >= 2, "catalog-api must expose real presentations in both publicBootstrap and adminBootstrap");
+const presentationsExposedCount = catalogApi.split("const presentations = (presentationsResult.data || []).map").length - 1;
+assert.ok(presentationsExposedCount >= 2, "catalog-api must expose mapped real presentations in both publicBootstrap and adminBootstrap");
 
 console.log("✓ supabase/functions/catalog-api/index.ts");
 console.log("✓ KIUBO Catalog Inventory guard passed: shared physical stock across presentations, server-authoritative units/price, atomic per-order reservation with stable product-row locking, idempotent order creation, and a fulfillment state machine that reserves once and never double-decrements.");
