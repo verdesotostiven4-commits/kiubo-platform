@@ -52,6 +52,8 @@ has(panel,"dailyNewOrders","provider home must surface new orders clearly");
 has(panel,"dailyInProcess","provider home must surface in-process orders clearly");
 has(panel,"dailyStock","provider home must surface inventory attention clearly");
 has(panelHtml,'id="dailyFocus"',"provider home focus block must be part of the canonical panel");
+assert.ok(!panel.split("\n").some(line=>line.startsWith("  $('[data-quick]').forEach")||line.startsWith("  $('[data-daily]').forEach")),"provider panel repeated controls must use the querySelectorAll helper");
+has(panelHtml,'/panel.js?v=10.17.3-panel1',"provider panel hotfix must cache-bust the canonical module");
 has(config,"version:'10.17.3'","config version must match hardened release");
 const index=read("products/catalogos/web/index.html");
 assert.ok(!index.includes("?v=10.9.1"),"index.html must not pin stale 10.9.1 asset query strings");
