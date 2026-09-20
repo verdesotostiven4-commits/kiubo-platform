@@ -1,6 +1,7 @@
 import { $, $$, api, uploadApi, money, escapeHTML, initials, productColor, slugFromLocation, toast, vibrate, debounce, phoneDigits, formatDate, config } from "./core.js";
 
 const isMaster = location.pathname === "/master" || new URLSearchParams(location.search).get("mode") === "master";
+document.documentElement.classList.toggle("provider-mode", !isMaster);
 const slug = slugFromLocation();
 const providerSessionKey = `kiubo-provider-session:${slug}`;
 const masterSessionKey = "kiubo-master-session";
@@ -229,14 +230,19 @@ function renderStats() {
   const stock = state.products.filter(product => !product.archived_at && ["low", "out"].includes(product.status)).length;
   const newOrders = state.orders.filter(order => order.status === "new").length;
   const openOrders = state.orders.filter(order => !["delivered", "cancelled"].includes(order.status));
+  const inProcess = state.orders.filter(order => ["confirmed", "preparing", "dispatched"].includes(order.status)).length;
   const openValue = openOrders.reduce((sum, order) => sum + Number(order.total || 0), 0);
   $("#statProducts").textContent = visible;
   $("#statStock").textContent = stock;
   $("#statNewOrders").textContent = newOrders;
   $("#statOpenValue").textContent = money(openValue);
+  if ($("#dailyNewOrders")) $("#dailyNewOrders").textContent = newOrders;
+  if ($("#dailyInProcess")) $("#dailyInProcess").textContent = inProcess;
+  if ($("#dailyStock")) $("#dailyStock").textContent = stock;
   $("#orderBadge").textContent = $("#mobileOrderBadge").textContent = newOrders;
   $("#orderBadge").hidden = $("#mobileOrderBadge").hidden = newOrders === 0;
-  $("#welcomeTitle").textContent = newOrders ? `Tienes ${newOrders} pedido${newOrders === 1 ? " nuevo" : "s nuevos"} por revisar.` : "Tu catálogo está listo para recibir pedidos.";
+  $("#welcomeTitle").textContent = newOrders ? `${newOrders} pedido${newOrders === 1 ? " necesita" : "s necesitan"} tu revisión.` : "Todo está al día.";
+  $("#welcomeCopy").textContent = newOrders ? "El stock ya está reservado. Abre el pedido, revisa los datos y confirma o cancela." : "Aquí verás primero lo que realmente necesita tu atención.";
 }
 
 function renderDashboard() {
@@ -258,6 +264,7 @@ function filteredProducts() {
     if (state.productFilter === "archived") return Boolean(product.archived_at);
     if (product.archived_at) return false;
     if (state.productFilter === "hidden") return !product.visible;
+    if (state.productFilter === "attention") return ["low", "out"].includes(product.status);
     if (state.productFilter !== "all" && product.status !== state.productFilter) return false;
     return true;
   }).filter(product => !query || [product.name, product.brand, product.sku, product.unit].some(value => String(value || "").toLowerCase().includes(query)));
@@ -518,7 +525,8 @@ function bindEvents() {
   $("#orderSearch").addEventListener("input", debounce(renderOrders, 120));
   $$('[data-order-filter]').forEach(button => button.onclick = () => { state.orderFilter = button.dataset.orderFilter; $$('[data-order-filter]').forEach(item => item.classList.toggle("active", item === button)); renderOrders(); });
   $("#customerSearch").addEventListener("input", debounce(renderCustomers, 120));
-  $$('[data-quick]').forEach(button => button.onclick = () => { const action = button.dataset.quick; if (action === "new-product") openProductModal(); else if (action === "stock") { state.productFilter = "out"; navigate("products"); renderProducts(); } else navigate(action); });
+  $('[data-quick]').forEach(button => button.onclick = () => { const action = button.dataset.quick; if (action === "new-product") openProductModal(); else if (action === "stock") { state.productFilter = "attention"; navigate("products"); renderProducts(); } else navigate(action); });
+  $('[data-daily]').forEach(button => button.onclick = () => { const action = button.dataset.daily; if (action === "stock") { state.productFilter = "attention"; navigate("products"); renderProducts(); } else { state.orderFilter = action === "new-orders" ? "new" : "open"; navigate("orders"); renderOrders(); } });
   $$('[data-settings]').forEach(button => button.onclick = () => { $$('[data-settings]').forEach(item => item.classList.toggle("active", item === button)); $$('[data-settings-panel]').forEach(panel => panel.classList.toggle("active", panel.dataset.settingsPanel === button.dataset.settings)); });
   $("#newCategoryBtn").onclick = () => openCategoryModal(); $("#saveCategoryBtn").onclick = saveCategory;
   $("#identityForm").onsubmit = saveIdentity; $("#catalogSettingsForm").onsubmit = saveCatalogSettings; $("#pinChangeForm").onsubmit = changePin; $("#revokeSessionsBtn").onclick = revokeSessions;
