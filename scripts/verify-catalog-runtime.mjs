@@ -52,13 +52,20 @@ has(panel,"dailyNewOrders","provider home must surface new orders clearly");
 has(panel,"dailyInProcess","provider home must surface in-process orders clearly");
 has(panel,"dailyStock","provider home must surface inventory attention clearly");
 has(panelHtml,'id="dailyFocus"',"provider home focus block must be part of the canonical panel");
+assert.ok(!panelHtml.includes("data-order-filter"),"provider orders must not expose the legacy four-way status filter");
+has(panel,"Pedidos que necesitan respuesta","provider orders must make confirm/cancel the primary workflow");
+has(panel,"Seguimiento opcional","advanced delivery progression must remain optional");
+const catalog1051=read("products/catalogos/web/catalog-v10.5.1.js");
+has(catalog1051,"hm1051-order-moment","customer app must surface a transient confirmed/cancelled status moment");
+has(sw,"BRAND_NOTIFICATION_ICON","background notifications must use the real Hakuna logo");
+has(sw,"view=orders&order=","provider notification clicks must open the matching order");
 assert.ok(!panel.split("\n").some(line=>line.startsWith("  $('[data-quick]').forEach")||line.startsWith("  $('[data-daily]').forEach")),"provider panel repeated controls must use the querySelectorAll helper");
-has(panelHtml,'/panel.js?v=10.17.3-panel1',"provider panel hotfix must cache-bust the canonical module");
-has(config,"version:'10.17.3'","config version must match hardened release");
+has(panelHtml,'/panel.js?v=10.18.0',"provider panel module must use the current release cache-bust");
+has(config,"version:'10.18.0'","config version must match hardened release");
 const index=read("products/catalogos/web/index.html");
 assert.ok(!index.includes("?v=10.9.1"),"index.html must not pin stale 10.9.1 asset query strings");
 const sw=read("products/catalogos/web/sw.js");
-has(sw,"kiubo-catalog-v10-17-3-20260920","service-worker cache must roll for hardened release");
+has(sw,"kiubo-catalog-v10-18-0-20260920","service-worker cache must roll for hardened release");
 
 console.log("✓ Hakuna catalog runtime guard passed.");
 
@@ -76,6 +83,8 @@ has(migration,"cost_total","presentation cost must be represented in the version
 
 for (const file of [
   "products/catalogos/web/catalog-v10.2.js",
+  "products/catalogos/web/catalog-v10.5.1.js",
+  "products/catalogos/web/panel-v10.15.js",
   "products/catalogos/web/panel-fast-save-v7.4.js",
   "products/catalogos/web/panel-v5.js",
   "products/catalogos/web/panel-v7.5.js",
@@ -97,7 +106,7 @@ for(const name of readdirSync(webDir).filter(name=>name.endsWith(".js"))){
 }
 for(const html of ["products/catalogos/web/panel.html","products/catalogos/web/pedido.html"]){
   const source=read(html);
-  assert.ok(source.includes("/config.js?v=10.17.3"),`${html} must cache-bust config.js`);
+  assert.ok(source.includes("/config.js?v=10.18.0"),`${html} must cache-bust config.js`);
 }
 const vercelConfig=read("products/catalogos/web/vercel.json");
 has(vercelConfig,'"source": "/config.js"',"Vercel config must disable stale config.js caching");
