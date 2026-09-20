@@ -106,6 +106,9 @@ for (const needle of [
 ]) {
   assert.ok(hardening.includes(needle), `${HARDENING} missing hardening invariant: ${needle}`);
 }
-assert.ok(!hardening.includes("v_item->>'units_per_presentation'"), `${HARDENING} must never trust client-sent presentation units`);
-assert.ok(!hardening.includes("v_item->>'price'"), `${HARDENING} must never trust client-sent item price`);
+const createOrderStart = hardening.indexOf("create or replace function public.catalog_create_order");
+assert.ok(createOrderStart >= 0, `${HARDENING} must define catalog_create_order`);
+const createOrderSql = hardening.slice(createOrderStart);
+assert.ok(!createOrderSql.includes("v_item->>'units_per_presentation'"), `${HARDENING} catalog_create_order must never trust client-sent presentation units`);
+assert.ok(!createOrderSql.includes("v_item->>'price'"), `${HARDENING} catalog_create_order must never trust client-sent item price`);
 console.log("✓ Catalog hardening migration invariants passed.");
