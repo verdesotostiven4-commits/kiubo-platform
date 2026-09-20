@@ -35,7 +35,8 @@ export function CashClient(){
 
   const ctx=getWorkspaceContext(db);
   const customers=db.customers.filter(c=>c.tenantId===ctx.tenantId);
-  const credits=db.credits.filter(c=>c.tenantId===ctx.tenantId&&c.branchId===ctx.branchId);\n  const fiadoCredits=credits.filter(c=>c.kind!=="partial");
+  const credits=db.credits.filter(c=>c.tenantId===ctx.tenantId&&c.branchId===ctx.branchId);
+  const fiadoCredits=credits.filter(c=>c.kind!=="partial");
   const openSession=getOpenCashSession(db,ctx.tenantId,ctx.branchId);
   const settings=getTenantSettings(db,ctx.tenantId);
   const persistCommand=(next:KiuboLocalDatabase)=>{saveLocalDatabase(next,{trackChanges:false});refresh()};
