@@ -20,7 +20,10 @@ has(catalog,"if(!presentation&&!legacy){delete state.cart[k]","stale real presen
 has(catalog,"function openLocationPicker(","checkout must expose a delivery map picker");
 has(catalog,"leaflet@1.9.4","map picker must pin its map dependency");
 has(catalog,"Escribe una referencia o selecciona la ubicación en el mapa","delivery must have a reference or a map pin");
-has(catalog,"v10-map-pin-host","map must use an actual draggable pin");
+has(catalog,"v10-map-centerpin","map must keep the delivery pin fixed in the visual center");
+has(catalog,"map.on('movestart',lift)","map pin must lift while the map is moving");
+has(catalog,"map.on('moveend',drop)","map pin must settle when the map stops");
+assert.ok(!catalog.includes("draggable:true"),"delivery point must come from map center, not dragging the pin");
 has(catalog,"basemaps.cartocdn.com","map must use the polished delivery tile layer");
 
 const api=read("supabase/functions/catalog-api/index.ts");
@@ -45,11 +48,11 @@ has(panel,"dailyNewOrders","provider home must surface new orders clearly");
 has(panel,"dailyInProcess","provider home must surface in-process orders clearly");
 has(panel,"dailyStock","provider home must surface inventory attention clearly");
 has(panelHtml,'id="dailyFocus"',"provider home focus block must be part of the canonical panel");
-has(config,"version:'10.17.0'","config version must match hardened release");
+has(config,"version:'10.17.1'","config version must match hardened release");
 const index=read("products/catalogos/web/index.html");
 assert.ok(!index.includes("?v=10.9.1"),"index.html must not pin stale 10.9.1 asset query strings");
 const sw=read("products/catalogos/web/sw.js");
-has(sw,"kiubo-catalog-v10-17-0-20260920","service-worker cache must roll for hardened release");
+has(sw,"kiubo-catalog-v10-17-1-20260920","service-worker cache must roll for hardened release");
 
 console.log("✓ Hakuna catalog runtime guard passed.");
 
@@ -88,7 +91,7 @@ for(const name of readdirSync(webDir).filter(name=>name.endsWith(".js"))){
 }
 for(const html of ["products/catalogos/web/panel.html","products/catalogos/web/pedido.html"]){
   const source=read(html);
-  assert.ok(source.includes("/config.js?v=10.17.0"),`${html} must cache-bust config.js`);
+  assert.ok(source.includes("/config.js?v=10.17.1"),`${html} must cache-bust config.js`);
 }
 const vercelConfig=read("products/catalogos/web/vercel.json");
 has(vercelConfig,'"source": "/config.js"',"Vercel config must disable stale config.js caching");
