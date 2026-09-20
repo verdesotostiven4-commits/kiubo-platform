@@ -19,7 +19,7 @@ has(catalog,"if(!product){delete state.cart[k]","stale cart products must be rem
 has(catalog,"if(!presentation&&!legacy){delete state.cart[k]","stale real presentation ids must be removed");
 
 const api=read("supabase/functions/catalog-api/index.ts");
-for(const needle of ["catalog_replace_presentations",'action === "save_presentations"','action === "save_payment_settings"','action === "save_product_image"','action === "save_presentation_image"','action === "save_presentation_settings"','action === "product_snapshot"',"presentation_name,item_note","payment_method"]) has(api,needle,`catalog-api missing runtime contract: ${needle}`);
+for(const needle of ["catalog_replace_presentations",'action === "save_presentations"','action === "save_payment_settings"','action === "save_product_image"','action === "save_presentation_image"','action === "save_presentation_settings"','action === "save_stock"','action === "product_snapshot"',"presentation_name,item_note","payment_method"]) has(api,needle,`catalog-api missing runtime contract: ${needle}`);
 
 const router=read("supabase/functions/catalog-router/index.ts");
 for(const needle of ["presentation_name?:","stock_initialized","presentation_name,item_note"]) has(router,needle,`catalog-router missing compatibility field: ${needle}`);
@@ -86,3 +86,9 @@ has(routerSource,'const CORE_URL = `${SUPABASE_URL}/functions/v1/catalog-api`',"
 has(routerSource,'"https://hakuna-matata-catalogo.vercel.app"',"catalog-router must allow the production Hakuna origin");
 has(routerSource,"hakuna-matata-catalogo-[a-z0-9-]+","catalog-router must allow Hakuna preview origins");
 console.log("✓ Hakuna uses the version-controlled catalog-router instead of catalog-v9.");
+
+
+assert.ok(!routerSource.includes('if (body.action === "save_stock")'),"catalog-router must not maintain a second stock-write implementation");
+assert.ok(!routerSource.includes("async function saveStock("),"catalog-router must remain a gateway, not a stock persistence service");
+has(api,'action === "save_stock"',"catalog-api must own authenticated inventory persistence");
+console.log("✓ Inventory writes have one canonical backend implementation.");

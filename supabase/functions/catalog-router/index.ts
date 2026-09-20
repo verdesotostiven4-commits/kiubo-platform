@@ -161,74 +161,7 @@ async function enrichCreateOrderPayload(payload: Json, route: CatalogRoute) {
   }
 }
 
-async function enrichCatalogStock(payload: Json, route: CatalogRoute) {
-  if (!Array.isArray(payload.products) || !payload.products.length) return;
-  const { data, error } = await db.from("catalog_products")
-    .select("id,stock_tracking,stock_initialized,stock_quantity,low_stock_threshold,base_unit,allow_item_note")
-    .eq("account_id", route.id)
-    .is("archived_at", null);
-  if (error || !Array.isArray(data)) return;
-
-  const stock = new Map(data.map(item => [item.id, item]));
-  payload.products = (payload.products as Json[]).map(product => {
-    const inventory = stock.get(String(product.id));
-    return inventory ? { ...product, ...inventory } : product;
-  });
-}
-
-async function authorizeRouteActor(req: Request, route: CatalogRoute) {
-  const upstream = await fetch(CORE_URL, {
-    method: "POST",
-    headers: forwardHeaders(req, "application/json"),
-    body: JSON.stringify({ action: "provider_bootstrap", slug: route.slug })
-  });
-  if (!upstream.ok) return false;
-  try {
-    const payload = await upstream.json() as Json;
-    return String((payload.account as Json | undefined)?.slug || "") === route.slug;
-  } catch { return false; }
-}
-
-async function saveStock(req: Request, body: Json, route: CatalogRoute) {
-  if (!(await authorizeRouteActor(req, route))) return response(req, { error: "session_expired" }, 401);
-
-  const productId = validUuid(body.product_id);
-  if (!productId) return response(req, { error: "invalid_product" }, 400);
-
-  const tracking = body.stock_tracking === true;
-  const quantity = Math.max(0, Math.min(100000000, Math.trunc(Number(body.stock_quantity || 0))));
-  const threshold = Math.max(0, Math.min(100000000, Math.trunc(Number(body.low_stock_threshold ?? 5))));
-  const baseUnit = clean(body.base_unit, 40) || "unidad";
-  const allowItemNote = body.allow_item_note !== false;
-  if (!Number.isFinite(quantity) || !Number.isFinite(threshold)) return response(req, { error: "invalid_stock" }, 400);
-
-  const update: Json = {
-    stock_tracking: tracking,
-    stock_quantity: quantity,
-    low_stock_threshold: threshold,
-    base_unit: baseUnit,
-    allow_item_note: allowItemNote,
-    updated_at: new Date().toISOString()
-  };
-  if ("stock_initialized" in body) update.stock_initialized = body.stock_initialized === true || tracking;
-  else if (tracking) update.stock_initialized = true;
-
-  const { data, error } = await db.from("catalog_products")
-    .update(update)
-    .eq("id", productId)
-    .eq("account_id", route.id)
-    .is("archived_at", null)
-    .select("id,stock_tracking,stock_initialized,stock_quantity,low_stock_threshold,base_unit,allow_item_note,status")
-    .maybeSingle();
-
-  if (error) throw error;
-  if (!data) return response(req, { error: "product_not_found" }, 404);
-  return response(req, { product: data }, 200);
-}
-
 async function forwardJson(req: Request, body: Json, route: CatalogRoute) {
-  if (body.action === "save_stock") return saveStock(req, body, route);
-
   const upstream = await fetch(CORE_URL, {
     method: "POST",
     headers: forwardHeaders(req, "application/json"),
@@ -241,7 +174,6 @@ async function forwardJson(req: Request, body: Json, route: CatalogRoute) {
   if (upstream.ok && payload && typeof payload === "object") {
     const json = payload as Json;
     if (body.action === "create_order") await enrichCreateOrderPayload(json, route);
-    if (body.action === "catalog_bootstrap") await enrichCatalogStock(json, route);
   }
 
   return response(req, payload, upstream.status, true);

@@ -397,6 +397,34 @@ async function handleJson(req: Request, body: Json) {
     if (!product) throw Object.assign(new Error("product_not_found"), { status: 404 });
     return { product: { ...product, image_url: imageUrl(product.image_path, product.image_url) }, presentations: await presentationSnapshot(accountId, productId) };
   }
+  if (action === "save_stock") {
+    const productId = String(body.product_id || "");
+    if (!/^[0-9a-f-]{36}$/i.test(productId)) throw Object.assign(new Error("invalid_product"), { status: 400 });
+    const tracking = body.stock_tracking === true;
+    const initialized = tracking || body.stock_initialized === true;
+    const quantity = Math.trunc(Number(body.stock_quantity ?? 0));
+    const threshold = Math.trunc(Number(body.low_stock_threshold ?? 5));
+    if (!Number.isFinite(quantity) || quantity < 0 || quantity > 100000000 || !Number.isFinite(threshold) || threshold < 0 || threshold > 100000000) {
+      throw Object.assign(new Error("invalid_stock"), { status: 400 });
+    }
+    const baseUnit = cleanText(body.base_unit, 40, false) || "unidad";
+    const allowItemNote = body.allow_item_note !== false;
+    const { data: product, error } = await db.from("catalog_products").update({
+      stock_tracking: tracking,
+      stock_initialized: initialized,
+      stock_quantity: quantity,
+      low_stock_threshold: threshold,
+      base_unit: baseUnit,
+      allow_item_note: allowItemNote,
+      updated_at: new Date().toISOString()
+    }).eq("id", productId).eq("account_id", accountId).is("archived_at", null)
+      .select("id,stock_tracking,stock_initialized,stock_quantity,low_stock_threshold,base_unit,allow_item_note,status")
+      .maybeSingle();
+    if (error) throw error;
+    if (!product) throw Object.assign(new Error("product_not_found"), { status: 404 });
+    await logActivity(accountId, actor, "product.stock_updated", "product", productId, { stock_tracking: tracking, stock_initialized: initialized });
+    return { product };
+  }
   if (action === "set_product_status") {
     const status = String(body.status || "");
     if (!["available", "low", "out"].includes(status)) throw Object.assign(new Error("invalid_status"), { status: 400 });
@@ -522,7 +550,7 @@ Deno.serve(async (req: Request) => {
   } catch (error) {
     const err = error as Error & { status?: number; details?: unknown; code?: string };
     const message = err.message || "request_failed";
-    const known = ["account_not_found", "order_not_found", "catalog_closed", "invalid_request", "minimum_order", "insufficient_stock", "product_unavailable", "invalid_customer", "invalid_phone", "invalid_items", "invalid_quantity", "invalid_delivery", "invalid_pin", "too_many_attempts", "too_many_orders", "session_expired", "forbidden", "pin_must_be_4_digits", "invalid_product", "product_not_found", "invalid_presentation", "invalid_presentations", "invalid_payment_settings", "invalid_category", "invalid_status", "invalid_status_transition", "invalid_name", "invalid_color", "invalid_upload", "invalid_file", "unknown_action"];
+    const known = ["account_not_found", "order_not_found", "catalog_closed", "invalid_request", "minimum_order", "insufficient_stock", "product_unavailable", "invalid_customer", "invalid_phone", "invalid_items", "invalid_quantity", "invalid_delivery", "invalid_pin", "too_many_attempts", "too_many_orders", "session_expired", "forbidden", "pin_must_be_4_digits", "invalid_product", "product_not_found", "invalid_presentation", "invalid_presentations", "invalid_payment_settings", "invalid_stock", "invalid_category", "invalid_status", "invalid_status_transition", "invalid_name", "invalid_color", "invalid_upload", "invalid_file", "unknown_action"];
     const code = known.find(item => message.includes(item)) || err.code || "request_failed";
     const status = err.status || (code === "account_not_found" ? 404 : code === "session_expired" || code === "invalid_pin" ? 401 : code === "forbidden" ? 403 : code === "too_many_attempts" || code === "too_many_orders" ? 429 : code === "insufficient_stock" || code === "invalid_status_transition" ? 409 : code === "request_failed" ? 500 : 400);
     if (status >= 500) console.error("catalog-api", { code, message, details: err.details });
