@@ -323,7 +323,7 @@ function bindOrderOpeners(root) {
   $$("[data-open-order]", root).forEach(button => button.onclick = () => openOrder(button.dataset.openOrder));
 }
 
-function renderCustomers() {function renderCustomers() {
+function renderCustomers() {
   const query = $("#customerSearch").value.trim().toLowerCase();
   const items = state.customers.filter(customer => !query || [customer.business, customer.name, customer.phone].some(value => String(value || "").toLowerCase().includes(query)));
   $("#customerList").innerHTML = items.length ? items.map(customer => `<article class="customer-card"><span class="customer-avatar">${escapeHTML(initials(customer.business || customer.name))}</span><h3>${escapeHTML(customer.business || customer.name)}</h3><p>${escapeHTML(customer.name || "Contacto")}${customer.phone ? ` · +${escapeHTML(customer.phone)}` : ""}</p><div class="customer-stats"><span><b>${Number(customer.order_count || 0)}</b><small>Pedidos</small></span><span><b>${money(customer.total_spent || 0)}</b><small>Valor total</small></span></div></article>`).join("") : `<div class="empty-admin" style="grid-column:1/-1"><svg class="icon"><use href="#i-users"/></svg><b>Aún no hay clientes</b><span>Se crearán automáticamente con cada pedido.</span></div>`;
@@ -478,7 +478,7 @@ async function updateOrderStatus(id, status, button = null) {
   }
 }
 
-async function saveIdentity(event) {async function saveIdentity(event) {
+async function saveIdentity(event) {
   event.preventDefault(); const name = $("#businessName").value.trim(); if (name.length < 2) return toast("Escribe el nombre comercial", "error");
   try { let logoPath = state.account.logo_path || "", logoUrl = state.account.logo_url || ""; const file = $("#logoFile").files[0]; if (file) { const uploaded = await uploadFile(file, "logo", logoPath); logoPath = uploaded.path; logoUrl = uploaded.public_url; } const settings = { name, tagline: $("#businessTagline").value.trim(), whatsapp: phoneDigits($("#businessWhatsapp").value), accent: $("#businessAccent").value, logo_path: logoPath || null, logo_url: logoUrl || null }; await callApi("save_account", { slug: state.account.slug, settings }); toast("Identidad actualizada", "success"); await refreshData(); }
   catch { toast("No se pudieron guardar los cambios", "error"); }
