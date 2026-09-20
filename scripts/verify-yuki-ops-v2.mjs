@@ -23,11 +23,17 @@ for(const needle of ["cashReconciliationEntries","Ver cómo se calcula el efecti
 }
 
 const pos=text("components/PosClientPro.tsx");
-for(const needle of ["Abono / fiado","se descuenta del total del pedido","checkout-payment-title"]){
+for(const needle of ["Abono / fiado","se descuenta del total del pedido","checkout-total-card","checkout-payment-zone","pos-cash-entry"]){
   assert.ok(pos.includes(needle),`POS partial payment UX missing: ${needle}`);
 }
 
 const orders=text("components/FoodOrdersClientPro.tsx");
 assert.ok(orders.includes("orderVisibleAfterHistoryReset"),"order history must honor the protected history cutoff");
 
-console.log("✓ YUKI Ops V2 passed: non-destructive reset, payment-rich history, explainable cash, and clearer partial-payment checkout are wired.");
+const v16=text("app/experience-v16.css");
+for(const needle of [".checkout-total-card",".checkout-payment-zone","max-height:none!important","overflow:visible!important"]){
+  assert.ok(v16.includes(needle),`POS v16 layout missing: ${needle}`);
+}
+assert.ok(text("app/layout.tsx").includes('import "./experience-v16.css";'),"POS v16 stylesheet must load last");
+
+console.log("✓ YUKI Ops V2 passed: non-destructive reset, payment-rich history, explainable cash, and single-scroll checkout V16 are wired.");
