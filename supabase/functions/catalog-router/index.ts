@@ -77,7 +77,7 @@ function routeAllowsOrigin(route: CatalogRoute, origin: string) {
   if (!origin) return true;
   if (platformOrigins.has(origin)) return true;
   if (/^http:\/\/localhost(?::\d+)?$/.test(origin)) return true;
-  if (/^https:\/\/hakuna-matata-catalogo-[a-z0-9-]+\.vercel\.app$/.test(origin)) return true;
+  if (/^https:\/\/(?:hakuna-matata-catalogo|kiubo-catalogos-master)-[a-z0-9-]+\.vercel\.app$/.test(origin)) return true;
 
   const allowed = new Set((route.allowed_origins || []).map(normalizedOrigin).filter(Boolean));
   const baseOrigin = normalizedOrigin(route.public_base_url || "");
