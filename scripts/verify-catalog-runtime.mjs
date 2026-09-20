@@ -1,6 +1,7 @@
 import { readFileSync, existsSync } from "node:fs";
 import { join } from "node:path";
 import assert from "node:assert/strict";
+import { execFileSync } from "node:child_process";
 
 const root=process.cwd();
 const read=path=>{const full=join(root,path);assert.ok(existsSync(full),`Missing ${path}`);return readFileSync(full,"utf8")};
@@ -45,3 +46,17 @@ assert.ok(!panel75.includes("stopImmediatePropagation();const j=job()"),"panel 7
 assert.ok(!panel75.includes("/functions/v1/catalog-v6"),"panel 7.5 must not depend on legacy catalog-v6");
 has(api,"payment_methods: account.payment_methods","public bootstrap must expose configured payment methods");
 has(migration,"cost_total","presentation cost must be represented in the versioned schema");
+
+
+for (const file of [
+  "products/catalogos/web/catalog-v10.2.js",
+  "products/catalogos/web/panel-fast-save-v7.4.js",
+  "products/catalogos/web/panel-v5.js",
+  "products/catalogos/web/panel-v7.5.js",
+  "products/catalogos/web/panel-v10.15.js",
+  "products/catalogos/web/config.js",
+  "products/catalogos/web/sw.js"
+]) {
+  execFileSync(process.execPath, ["--check", join(root, file)], { stdio: "pipe" });
+}
+console.log("✓ Active Hakuna JavaScript syntax checks passed.");
