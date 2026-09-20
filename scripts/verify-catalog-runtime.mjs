@@ -25,6 +25,10 @@ has(catalog,"map.on('movestart',lift)","map pin must lift while the map is movin
 has(catalog,"map.on('moveend',drop)","map pin must settle when the map stops");
 assert.ok(!catalog.includes("draggable:true"),"delivery point must come from map center, not dragging the pin");
 has(catalog,"basemaps.cartocdn.com","map must use the polished delivery tile layer");
+has(catalog,"navigator.geolocation.watchPosition","delivery map must keep a live device location while open");
+has(catalog,"v10-user-location-host","delivery map must render the customer's live blue location dot");
+has(catalog,"L.circle(userPoint","delivery map must render the geolocation accuracy halo");
+has(catalog,"Azul: tu ubicación","delivery map must explain the blue device marker separately from the delivery pin");
 
 const api=read("supabase/functions/catalog-api/index.ts");
 for(const needle of ["catalog_replace_presentations",'action === "save_presentations"','action === "save_payment_settings"','action === "save_product_image"','action === "save_presentation_image"','action === "save_presentation_settings"','action === "save_stock"','action === "product_snapshot"',"presentation_name,item_note","payment_method","delivery_lat,delivery_lng,delivery_location_label",'action: "notify_provider"','action: "notify_customer"',"EdgeRuntime.waitUntil"]) has(api,needle,`catalog-api missing runtime contract: ${needle}`);
@@ -48,11 +52,11 @@ has(panel,"dailyNewOrders","provider home must surface new orders clearly");
 has(panel,"dailyInProcess","provider home must surface in-process orders clearly");
 has(panel,"dailyStock","provider home must surface inventory attention clearly");
 has(panelHtml,'id="dailyFocus"',"provider home focus block must be part of the canonical panel");
-has(config,"version:'10.17.1'","config version must match hardened release");
+has(config,"version:'10.17.2'","config version must match hardened release");
 const index=read("products/catalogos/web/index.html");
 assert.ok(!index.includes("?v=10.9.1"),"index.html must not pin stale 10.9.1 asset query strings");
 const sw=read("products/catalogos/web/sw.js");
-has(sw,"kiubo-catalog-v10-17-1-20260920","service-worker cache must roll for hardened release");
+has(sw,"kiubo-catalog-v10-17-2-20260920","service-worker cache must roll for hardened release");
 
 console.log("✓ Hakuna catalog runtime guard passed.");
 
@@ -91,7 +95,7 @@ for(const name of readdirSync(webDir).filter(name=>name.endsWith(".js"))){
 }
 for(const html of ["products/catalogos/web/panel.html","products/catalogos/web/pedido.html"]){
   const source=read(html);
-  assert.ok(source.includes("/config.js?v=10.17.1"),`${html} must cache-bust config.js`);
+  assert.ok(source.includes("/config.js?v=10.17.2"),`${html} must cache-bust config.js`);
 }
 const vercelConfig=read("products/catalogos/web/vercel.json");
 has(vercelConfig,'"source": "/config.js"',"Vercel config must disable stale config.js caching");
