@@ -35,8 +35,8 @@ jobs:
 
       - name: Check catalog Edge Functions
         run: |
-          deno check supabase/functions/catalog-api/index.ts
-          deno check supabase/functions/catalog-router/index.ts
+          deno check --node-modules-dir=auto supabase/functions/catalog-api/index.ts
+          deno check --node-modules-dir=auto supabase/functions/catalog-router/index.ts
 
       - name: Run KIUBO regression checks
         run: npm run verify
