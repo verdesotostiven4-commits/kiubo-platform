@@ -134,5 +134,5 @@ has(migration,"raise exception 'product_unavailable'","checkout must reject a pr
 console.log("✓ Hidden presentations cannot be bypassed through the legacy unit fallback.");
 
 // Hakuna first-paint regression guard
-const legacyCatalog=text("products/catalogos/web/catalog-v10.16.4.js");
+const legacyCatalog=read("products/catalogos/web/catalog-v10.16.4.js");
 assert.ok(legacyCatalog.includes("function releaseBootShell()")&&legacyCatalog.includes("if(!released)releaseBootShell()"),"catalog first paint must fail open instead of leaving the splash screen forever");
