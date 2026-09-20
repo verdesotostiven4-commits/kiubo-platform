@@ -78,6 +78,8 @@ function publicAccount(account: Json) {
     minimum_order: account.minimum_order,
     is_open: account.is_open,
     show_prices: account.show_prices,
+    payment_methods: account.payment_methods,
+    payment_details: account.payment_details,
     updated_at: account.updated_at
   };
 }
@@ -191,6 +193,7 @@ function validatePresentationsInput(rows: Json[]) {
     if (!name || name.length > 80) throw Object.assign(new Error("invalid_presentations"), { status: 400 });
     if (!Number.isFinite(units) || units < 1 || units > 100000) throw Object.assign(new Error("invalid_presentations"), { status: 400 });
     if (!Number.isFinite(price) || price < 0) throw Object.assign(new Error("invalid_presentations"), { status: 400 });
+    if (row.cost_total != null && (!Number.isFinite(Number(row.cost_total)) || Number(row.cost_total) < 0)) throw Object.assign(new Error("invalid_presentations"), { status: 400 });
     if (row.promo_price != null && (!Number.isFinite(Number(row.promo_price)) || Number(row.promo_price) < 0)) throw Object.assign(new Error("invalid_presentations"), { status: 400 });
     if (row.promo_active === true && (row.promo_price == null || Number(row.promo_price) >= price)) throw Object.assign(new Error("invalid_presentations"), { status: 400 });
   }
@@ -324,6 +327,58 @@ async function handleJson(req: Request, body: Json) {
     const presentations = presentationsInput ? await savePresentations(accountId, productId, presentationsInput) : await presentationSnapshot(accountId, productId);
     await logActivity(accountId, actor, input.id ? "product.updated" : "product.created", "product", productId);
     return { id: productId, presentations };
+  }
+  if (action === "save_presentations") {
+    const productId = String(body.product_id || "");
+    const rows = Array.isArray(body.presentations) ? body.presentations as Json[] : [];
+    if (!/^[0-9a-f-]{36}$/i.test(productId)) throw Object.assign(new Error("invalid_product"), { status: 400 });
+    validatePresentationsInput(rows);
+    const presentations = await savePresentations(accountId, productId, rows);
+    await logActivity(accountId, actor, "presentation.saved", "product", productId, { count: presentations.length });
+    return { product_id: productId, presentations };
+  }
+  if (action === "save_payment_settings") {
+    const allowed = new Set(["cash", "transfer", "card", "credit", "other"]);
+    const methods = Array.isArray(body.payment_methods) ? [...new Set((body.payment_methods as unknown[]).map(String).filter(value => allowed.has(value)))] : [];
+    if (!methods.length) throw Object.assign(new Error("invalid_payment_settings"), { status: 400 });
+    const raw = (body.payment_details || {}) as Json;
+    const details = {
+      bank_name: cleanText(raw.bank_name, 80),
+      account_type: cleanText(raw.account_type, 40),
+      account_number: cleanText(raw.account_number, 60),
+      account_holder: cleanText(raw.account_holder, 100),
+      id_number: cleanText(raw.id_number, 30)
+    };
+    const { data: updated, error } = await db.from("catalog_accounts").update({ payment_methods: methods, payment_details: details, updated_at: new Date().toISOString() }).eq("id", accountId).select("*").single();
+    if (error) throw error;
+    await logActivity(accountId, actor, "account.payment_settings_updated", "account", accountId, { payment_methods: methods });
+    return { account: adminAccount(updated) };
+  }
+  if (action === "save_product_image") {
+    const productId = String(body.product_id || "");
+    if (!/^[0-9a-f-]{36}$/i.test(productId)) throw Object.assign(new Error("invalid_product"), { status: 400 });
+    const { data, error } = await db.from("catalog_products").update({
+      image_url: cleanText(body.image_url, 1000),
+      image_path: cleanText(body.image_path, 500),
+      updated_at: new Date().toISOString()
+    }).eq("id", productId).eq("account_id", accountId).is("archived_at", null).select("*").maybeSingle();
+    if (error) throw error;
+    if (!data) throw Object.assign(new Error("product_not_found"), { status: 404 });
+    await logActivity(accountId, actor, "product.image_updated", "product", productId);
+    return { product: { ...data, image_url: imageUrl(data.image_path, data.image_url) } };
+  }
+  if (action === "save_presentation_image") {
+    const presentationId = String(body.presentation_id || "");
+    if (!/^[0-9a-f-]{36}$/i.test(presentationId)) throw Object.assign(new Error("invalid_presentation"), { status: 400 });
+    const { data, error } = await db.from("catalog_product_presentations").update({
+      image_url: cleanText(body.image_url, 1000),
+      image_path: cleanText(body.image_path, 500),
+      updated_at: new Date().toISOString()
+    }).eq("id", presentationId).eq("account_id", accountId).select("*").maybeSingle();
+    if (error) throw error;
+    if (!data) throw Object.assign(new Error("invalid_presentation"), { status: 404 });
+    await logActivity(accountId, actor, "presentation.image_updated", "presentation", presentationId);
+    return { presentation: { ...data, image_url: imageUrl(data.image_path, data.image_url) } };
   }
   if (action === "save_presentation_settings") {
     const productId = String(body.product_id || "");
@@ -467,7 +522,7 @@ Deno.serve(async (req: Request) => {
   } catch (error) {
     const err = error as Error & { status?: number; details?: unknown; code?: string };
     const message = err.message || "request_failed";
-    const known = ["account_not_found", "order_not_found", "catalog_closed", "invalid_request", "minimum_order", "insufficient_stock", "product_unavailable", "invalid_customer", "invalid_phone", "invalid_items", "invalid_quantity", "invalid_delivery", "invalid_pin", "too_many_attempts", "too_many_orders", "session_expired", "forbidden", "pin_must_be_4_digits", "invalid_product", "product_not_found", "invalid_presentation", "invalid_presentations", "invalid_category", "invalid_status", "invalid_status_transition", "invalid_name", "invalid_color", "invalid_upload", "invalid_file", "unknown_action"];
+    const known = ["account_not_found", "order_not_found", "catalog_closed", "invalid_request", "minimum_order", "insufficient_stock", "product_unavailable", "invalid_customer", "invalid_phone", "invalid_items", "invalid_quantity", "invalid_delivery", "invalid_pin", "too_many_attempts", "too_many_orders", "session_expired", "forbidden", "pin_must_be_4_digits", "invalid_product", "product_not_found", "invalid_presentation", "invalid_presentations", "invalid_payment_settings", "invalid_category", "invalid_status", "invalid_status_transition", "invalid_name", "invalid_color", "invalid_upload", "invalid_file", "unknown_action"];
     const code = known.find(item => message.includes(item)) || err.code || "request_failed";
     const status = err.status || (code === "account_not_found" ? 404 : code === "session_expired" || code === "invalid_pin" ? 401 : code === "forbidden" ? 403 : code === "too_many_attempts" || code === "too_many_orders" ? 429 : code === "insufficient_stock" || code === "invalid_status_transition" ? 409 : code === "request_failed" ? 500 : 400);
     if (status >= 500) console.error("catalog-api", { code, message, details: err.details });

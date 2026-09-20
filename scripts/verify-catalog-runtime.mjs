@@ -18,7 +18,7 @@ has(catalog,"if(!product){delete state.cart[k]","stale cart products must be rem
 has(catalog,"if(!presentation&&!legacy){delete state.cart[k]","stale real presentation ids must be removed");
 
 const api=read("supabase/functions/catalog-api/index.ts");
-for(const needle of ["catalog_replace_presentations",'action === "save_presentation_settings"','action === "product_snapshot"',"presentation_name,item_note","payment_method"]) has(api,needle,`catalog-api missing runtime contract: ${needle}`);
+for(const needle of ["catalog_replace_presentations",'action === "save_presentations"','action === "save_payment_settings"','action === "save_product_image"','action === "save_presentation_image"','action === "save_presentation_settings"','action === "product_snapshot"',"presentation_name,item_note","payment_method"]) has(api,needle,`catalog-api missing runtime contract: ${needle}`);
 
 const router=read("supabase/functions/catalog-router/index.ts");
 for(const needle of ["presentation_name?:","stock_initialized","presentation_name,item_note"]) has(router,needle,`catalog-router missing compatibility field: ${needle}`);
@@ -34,3 +34,14 @@ const sw=read("products/catalogos/web/sw.js");
 has(sw,"kiubo-catalog-v10-16-12-20260920","service-worker cache must roll for hardened release");
 
 console.log("✓ Hakuna catalog runtime guard passed.");
+
+
+const fastSave=read("products/catalogos/web/panel-fast-save-v7.4.js");
+assert.ok(!fastSave.includes("/functions/v1/catalog-v6"),"active fast-save layer must not bypass the versioned API through legacy catalog-v6");
+assert.ok(!fastSave.includes("deferred:true"),"stock saves must not return fake success before persistence");
+
+const panel75=read("products/catalogos/web/panel-v7.5.js");
+assert.ok(!panel75.includes("stopImmediatePropagation();const j=job()"),"panel 7.5 must not hijack the canonical product-save click path");
+assert.ok(!panel75.includes("/functions/v1/catalog-v6"),"panel 7.5 must not depend on legacy catalog-v6");
+has(api,"payment_methods: account.payment_methods","public bootstrap must expose configured payment methods");
+has(migration,"cost_total","presentation cost must be represented in the versioned schema");

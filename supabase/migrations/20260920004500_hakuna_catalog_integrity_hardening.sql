@@ -11,7 +11,12 @@ set stock_initialized = true
 where stock_tracking = true
   and stock_initialized is distinct from true;
 
+alter table public.catalog_accounts
+  add column if not exists payment_methods text[] not null default array['cash','transfer']::text[],
+  add column if not exists payment_details jsonb not null default '{}'::jsonb;
+
 alter table public.catalog_product_presentations
+  add column if not exists cost_total numeric(12,2),
   add column if not exists image_path text,
   add column if not exists image_url text,
   add column if not exists promo_active boolean not null default false,
@@ -78,6 +83,7 @@ declare
   v_units integer;
   v_price numeric(12,2);
   v_compare numeric(12,2);
+  v_cost_total numeric(12,2);
   v_visible boolean;
   v_promo_active boolean;
   v_promo_price numeric(12,2);
@@ -115,6 +121,7 @@ begin
     v_units := (v_row->>'units_per_presentation')::integer;
     v_price := (v_row->>'price')::numeric;
     v_compare := case when nullif(v_row->>'compare_at_price','') is null then null else (v_row->>'compare_at_price')::numeric end;
+    v_cost_total := case when nullif(v_row->>'cost_total','') is null then null else (v_row->>'cost_total')::numeric end;
     v_visible := case when jsonb_typeof(v_row->'visible')='boolean' then (v_row->>'visible')::boolean else true end;
     v_promo_active := case when jsonb_typeof(v_row->'promo_active')='boolean' then (v_row->>'promo_active')::boolean else false end;
     v_promo_price := case when nullif(v_row->>'promo_price','') is null then null else (v_row->>'promo_price')::numeric end;
@@ -124,6 +131,7 @@ begin
        or v_units is null or v_units<1 or v_units>100000
        or v_price is null or v_price<0
        or (v_compare is not null and v_compare<0)
+       or (v_cost_total is not null and v_cost_total<0)
        or (v_promo_price is not null and v_promo_price<0)
        or (v_promo_active and (v_promo_price is null or v_promo_price>=v_price)) then
       raise exception 'invalid_presentations';
@@ -139,6 +147,7 @@ begin
           units_per_presentation=v_units,
           price=v_price,
           compare_at_price=v_compare,
+          cost_total=v_cost_total,
           sku=nullif(left(trim(coalesce(v_row->>'sku','')),60),''),
           visible=v_visible,
           promo_active=v_promo_active,
@@ -152,11 +161,11 @@ begin
     else
       insert into public.catalog_product_presentations(
         account_id,product_id,name,unit_label,units_per_presentation,price,
-        compare_at_price,sku,visible,promo_active,promo_price,promo_label,
+        compare_at_price,cost_total,sku,visible,promo_active,promo_price,promo_label,
         is_default,sort_order,image_path,image_url
       ) values(
         p_account_id,p_product_id,v_name,coalesce(nullif(v_unit_label,''),'unidad'),v_units,v_price,
-        v_compare,nullif(left(trim(coalesce(v_row->>'sku','')),60),''),v_visible,
+        v_compare,v_cost_total,nullif(left(trim(coalesce(v_row->>'sku','')),60),''),v_visible,
         v_promo_active,v_promo_price,v_promo_label,false,v_index-1,
         nullif(left(trim(coalesce(v_row->>'image_path','')),500),''),
         nullif(left(trim(coalesce(v_row->>'image_url','')),1000),'')
