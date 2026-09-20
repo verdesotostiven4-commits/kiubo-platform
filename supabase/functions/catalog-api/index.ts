@@ -22,6 +22,18 @@ const allowedOrigins = new Set([
 
 type Json = Record<string, unknown>;
 type Actor = { type: "provider" | "master"; accountId?: string; sessionId?: string; userId?: string };
+const NOTIFY_URL = `${SUPABASE_URL}/functions/v1/catalog-notify`;
+
+function queueNotification(payload: Json) {
+  const task = fetch(NOTIFY_URL, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Authorization: `Bearer ${SECRET_KEY}` },
+    body: JSON.stringify(payload)
+  }).then(async result => {
+    if (!result.ok) console.error("catalog-notify", { status: result.status, body: (await result.text()).slice(0, 300) });
+  }).catch(error => console.error("catalog-notify", { error: String(error) }));
+  EdgeRuntime.waitUntil(task);
+}
 
 function cors(req: Request) {
   const origin = req.headers.get("origin") || "";
@@ -282,6 +294,7 @@ async function handleJson(req: Request, body: Json) {
       if(locationError) console.error("catalog-api location persistence",{order_id:order.id,message:locationError.message});
       else {order.delivery_lat=Number(rawLat.toFixed(6));order.delivery_lng=Number(rawLng.toFixed(6));order.delivery_location_label=cleanText(customer.delivery_location_label,160)||"Ubicación seleccionada en el mapa";}
     }
+    if(order.duplicate!==true) queueNotification({ action: "notify_provider", slug, order_id: order.id });
     const { data: items } = await db.from("catalog_order_items").select("product_name,quantity,line_total,presentation_name,item_note").eq("order_id", order.id);
     return { order, whatsapp_url: whatsappUrl(String(order.whatsapp || ""), order, (items || []) as Json[], customer) };
   }
@@ -473,7 +486,13 @@ async function handleJson(req: Request, body: Json) {
   if (action === "update_order_status") {
     const status = String(body.status || "");
     if (!orderStatusAllowed(status)) throw Object.assign(new Error("invalid_status"), { status: 400 });
-    const { data, error } = await db.from("catalog_orders").update({ status }).eq("id", body.order_id).eq("account_id", accountId).select("id").single();
+    const orderId = String(body.order_id || "");
+    if (!validUuid(orderId)) throw Object.assign(new Error("invalid_request"), { status: 400 });
+    const { data: existing, error: existingError } = await db.from("catalog_orders").select("id,status").eq("id", orderId).eq("account_id", accountId).maybeSingle();
+    if (existingError) throw existingError;
+    if (!existing) throw Object.assign(new Error("order_not_found"), { status: 404 });
+    if (existing.status === status) return { id: existing.id, status };
+    const { data, error } = await db.from("catalog_orders").update({ status }).eq("id", orderId).eq("account_id", accountId).select("id").single();
     if (error) {
       const message = String((error as { message?: string }).message || "");
       if (message.includes("insufficient_stock")) throw Object.assign(new Error(message), { status: 409 });
@@ -481,6 +500,7 @@ async function handleJson(req: Request, body: Json) {
       throw error;
     }
     await logActivity(accountId, actor, "order.status_updated", "order", data.id, { status });
+    queueNotification({ action: "notify_customer", slug, order_id: data.id });
     return { id: data.id, status };
   }
   if (action === "save_account") {
