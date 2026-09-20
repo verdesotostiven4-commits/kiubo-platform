@@ -24,7 +24,7 @@ import { YUKI_PACKAGING_BARCODE } from "./YukiPilotCatalogBootstrap";
 type CartLine=TenantProduct&{qty:number;cartKey:string;optionLabel?:string};
 type Payment=SaleRecord["payment"];
 type PosDraft={cart:Array<{productId:string;qty:number;optionLabel?:string}>;query:string;payment:Payment;customerId:string;category:string;serviceMode:ServiceMode;tableLabel:string;customerName:string;phone:string;address:string;orderNotes:string;activeOrderId:string};
-const paymentLabel:Record<Payment,string>={cash:"Efectivo",transfer:"Transferencia",mixed:"Mixto",credit:"Fiado"};
+const paymentLabel:Record<Payment,string>={cash:"Efectivo",transfer:"Transferencia",mixed:"Mixto",partial:"Pago parcial",credit:"Fiado"};
 const paymentOptions:Payment[]=["cash","transfer","credit"];
 const CHECKOUT_KEY="kiubo.food.checkout.order.v1";
 const POS_DRAFT_PREFIX="kiubo.pos.draft.v3";
