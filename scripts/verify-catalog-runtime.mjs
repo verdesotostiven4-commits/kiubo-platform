@@ -39,13 +39,17 @@ for(const needle of ["delivery_lat","delivery_lng","delivery_location_label","ca
 for(const needle of ["catalog_replace_presentations","catalog_update_presentation_settings","Re-check now before validating stock","for share","invalid_presentation","invalid_quantity","allow_item_note","promo_active","payment_method"]) has(migration,needle,`hardening migration missing invariant: ${needle}`);
 
 const config=read("products/catalogos/web/config.js");
+const panel=read("products/catalogos/web/panel.js");
+const panelHtml=read("products/catalogos/web/panel.html");
+has(panel,"dailyNewOrders","provider home must surface new orders clearly");
+has(panel,"dailyInProcess","provider home must surface in-process orders clearly");
+has(panel,"dailyStock","provider home must surface inventory attention clearly");
+has(panelHtml,'id="dailyFocus"',"provider home focus block must be part of the canonical panel");
 has(config,"version:'10.17.0'","config version must match hardened release");
 const index=read("products/catalogos/web/index.html");
 assert.ok(!index.includes("?v=10.9.1"),"index.html must not pin stale 10.9.1 asset query strings");
 const sw=read("products/catalogos/web/sw.js");
 has(sw,"kiubo-catalog-v10-17-0-20260920","service-worker cache must roll for hardened release");
-has(config,"/panel-v10.17.js","provider home workflow must be loaded");
-has(config,"/panel-v10.17.css","provider home workflow styling must be loaded");
 
 console.log("✓ Hakuna catalog runtime guard passed.");
 
@@ -67,7 +71,6 @@ for (const file of [
   "products/catalogos/web/panel-v5.js",
   "products/catalogos/web/panel-v7.5.js",
   "products/catalogos/web/panel-v10.15.js",
-  "products/catalogos/web/panel-v10.17.js",
   "products/catalogos/web/panel.js",
   "products/catalogos/web/pedido.js",
   "products/catalogos/web/config.js",
