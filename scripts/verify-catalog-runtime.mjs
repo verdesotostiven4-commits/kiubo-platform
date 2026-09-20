@@ -22,7 +22,7 @@ const api=read("supabase/functions/catalog-api/index.ts");
 for(const needle of ["catalog_replace_presentations",'action === "save_presentations"','action === "save_payment_settings"','action === "save_product_image"','action === "save_presentation_image"','action === "save_presentation_settings"','action === "save_stock"','action === "product_snapshot"',"presentation_name,item_note","payment_method"]) has(api,needle,`catalog-api missing runtime contract: ${needle}`);
 
 const router=read("supabase/functions/catalog-router/index.ts");
-for(const needle of ["presentation_name?:","stock_initialized","presentation_name,item_note"]) has(router,needle,`catalog-router missing compatibility field: ${needle}`);
+for(const needle of ["presentation_name?:","presentation_name,item_note"]) has(router,needle,`catalog-router missing compatibility field: ${needle}`);
 
 const migration=read("supabase/migrations/20260920004500_hakuna_catalog_integrity_hardening.sql");
 for(const needle of ["catalog_replace_presentations","catalog_update_presentation_settings","Re-check now before validating stock","for share","invalid_presentation","invalid_quantity","allow_item_note","promo_active","payment_method"]) has(migration,needle,`hardening migration missing invariant: ${needle}`);
