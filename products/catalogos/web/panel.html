@@ -67,6 +67,14 @@
       <main class="admin-content">
         <section class="admin-view active" data-view="home">
           <div class="welcome-card"><div><span class="eyebrow"><span class="live-dot"></span>Todo funcionando</span><h2 id="welcomeTitle">Tu catálogo está listo para recibir pedidos.</h2><p id="welcomeCopy">Revisa lo nuevo, actualiza disponibilidad y mantén informados a tus clientes.</p></div><button class="button button--light" id="shareCatalogAdmin"><svg class="icon"><use href="#i-share"/></svg>Compartir catálogo</button></div>
+          <section class="daily-focus" id="dailyFocus">
+            <header><div><span class="section-kicker">AHORA MISMO</span><h3>¿Qué necesitas hacer?</h3></div><span class="daily-live"><i></i>Actualizado</span></header>
+            <div class="daily-actions">
+              <button data-daily="new-orders"><strong id="dailyNewOrders">0</strong><span><b>Pedidos por revisar</b><small>Abre, confirma o cancela</small></span><em>›</em></button>
+              <button data-daily="process"><strong id="dailyInProcess">0</strong><span><b>Pedidos en proceso</b><small>Preparando o despachando</small></span><em>›</em></button>
+              <button data-daily="stock"><strong id="dailyStock">0</strong><span><b>Inventario por revisar</b><small>Agotados o con pocas unidades</small></span><em>›</em></button>
+            </div>
+          </section>
           <div class="stats-grid">
             <article class="stat-card stat-card--accent"><span class="stat-icon"><svg class="icon"><use href="#i-receipt"/></svg></span><small>Pedidos nuevos</small><strong id="statNewOrders">0</strong><em id="statOrderTrend">Hoy</em></article>
             <article class="stat-card"><span class="stat-icon"><svg class="icon"><use href="#i-box"/></svg></span><small>Productos visibles</small><strong id="statProducts">0</strong><em>En el catálogo</em></article>
