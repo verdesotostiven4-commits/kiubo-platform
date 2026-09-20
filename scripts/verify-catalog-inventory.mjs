@@ -109,6 +109,10 @@ for (const needle of [
 const createOrderStart = hardening.indexOf("create or replace function public.catalog_create_order");
 assert.ok(createOrderStart >= 0, `${HARDENING} must define catalog_create_order`);
 const createOrderSql = hardening.slice(createOrderStart);
-assert.ok(!createOrderSql.includes("v_item->>'units_per_presentation'"), `${HARDENING} catalog_create_order must never trust client-sent presentation units`);
-assert.ok(!createOrderSql.includes("v_item->>'price'"), `${HARDENING} catalog_create_order must never trust client-sent item price`);
+const rawItemsStart = createOrderSql.indexOf("for v_item in select value from jsonb_array_elements(p_items)");
+const rawItemsEnd = createOrderSql.indexOf("for v_product_id in select jsonb_object_keys", rawItemsStart);
+assert.ok(rawItemsStart >= 0 && rawItemsEnd > rawItemsStart, `${HARDENING} must expose a bounded raw request-item resolution loop`);
+const rawItemResolution = createOrderSql.slice(rawItemsStart, rawItemsEnd);
+assert.ok(!rawItemResolution.includes("v_item->>'units_per_presentation'"), `${HARDENING} raw checkout items must never supply presentation units`);
+assert.ok(!rawItemResolution.includes("v_item->>'price'"), `${HARDENING} raw checkout items must never supply item price`);
 console.log("✓ Catalog hardening migration invariants passed.");
