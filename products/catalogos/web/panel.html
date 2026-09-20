@@ -71,7 +71,7 @@
             <header><div><span class="section-kicker">AHORA MISMO</span><h3>¿Qué necesitas hacer?</h3></div><span class="daily-live"><i></i>Actualizado</span></header>
             <div class="daily-actions">
               <button data-daily="new-orders"><strong id="dailyNewOrders">0</strong><span><b>Pedidos por revisar</b><small>Abre, confirma o cancela</small></span><em>›</em></button>
-              <button data-daily="process"><strong id="dailyInProcess">0</strong><span><b>Pedidos en proceso</b><small>Preparando o despachando</small></span><em>›</em></button>
+              <button data-daily="process"><strong id="dailyInProcess">0</strong><span><b>Pedidos respondidos</b><small>Confirmados, cancelados o con seguimiento</small></span><em>›</em></button>
               <button data-daily="stock"><strong id="dailyStock">0</strong><span><b>Inventario por revisar</b><small>Agotados o con pocas unidades</small></span><em>›</em></button>
             </div>
           </section>
@@ -95,7 +95,7 @@
         </section>
 
         <section class="admin-view" data-view="orders">
-          <div class="order-toolbar"><div class="segmented"><button class="active" data-order-filter="open">Activos</button><button data-order-filter="new">Nuevos</button><button data-order-filter="done">Finalizados</button><button data-order-filter="all">Todos</button></div><label class="admin-search compact"><svg class="icon"><use href="#i-search"/></svg><input id="orderSearch" type="search" placeholder="Pedido o cliente…"></label></div>
+          <div class="order-toolbar order-toolbar--simple"><div class="order-toolbar__intro"><span class="section-kicker">PEDIDOS</span><h2>Revisa y responde rápido</h2><p>Confirma o cancela. El seguimiento adicional es opcional.</p></div><label class="admin-search compact"><svg class="icon"><use href="#i-search"/></svg><input id="orderSearch" type="search" placeholder="Buscar pedido o cliente…"></label></div>
           <div class="orders-board" id="adminOrderList"></div>
         </section>
 
