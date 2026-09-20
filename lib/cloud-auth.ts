@@ -78,7 +78,7 @@ function platformOnlyIdentity(authUser:User){
   const internal=db.tenants.find(t=>t.plan==="Internal")??db.tenants[0];
   if(!internal)throw new Error("No existe el espacio interno de KIUBO");
   const branch=getPrimaryBranch(db,internal.id);
-  const user:UserRecord={id:authUser.id,tenantId:internal.id,name:String(authUser.user_metadata?.full_name||authUser.user_metadata?.name||authUser.email?.split("@")[0]||"Admin KIUBO"),email:String(authUser.email||""),role:"owner",active:true,pin:"",platformAdmin:true,createdAt:String(authUser.created_at||new Date().toISOString())};
+  const previousUser=db.users.find(item=>item.id===authUser.id);\n  const user:UserRecord={id:authUser.id,tenantId:internal.id,name:String(authUser.user_metadata?.full_name||authUser.user_metadata?.name||authUser.email?.split("@")[0]||"Admin KIUBO"),email:String(authUser.email||""),role:"owner",active:true,pin:previousUser?.pin||"",platformAdmin:true,createdAt:String(authUser.created_at||new Date().toISOString())};
   upsertById(db.users,user);
   saveLocalDatabase(db,{trackChanges:false});
   const session:LocalSession={userId:user.id,tenantId:internal.id,activeTenantId:internal.id,activeBranchId:branch?.id,role:user.role,startedAt:new Date().toISOString()};
@@ -125,9 +125,9 @@ export async function hydrateCloudIdentity(client:SupabaseClient,authUser:User){
   const tenant:TenantRecord={id:cloudTenant.id,name:cloudTenant.display_name,plan:planMap[String(subscription?.plan_code||"start")]||"Start",status:cloudTenant.status,users:1,branches:branchResult.data.length,expiresAt:String(subscription?.trial_ends_at||subscription?.current_period_ends_at||"Cloud"),catalog:["pro","custom","internal"].includes(String(subscription?.plan_code||"start")),invoice:false,createdAt:cloudTenant.created_at};
   const branches:BranchRecord[]=branchResult.data.map(branch=>({id:branch.id,tenantId:branch.tenant_id,name:branch.name,code:branch.code,active:branch.active,createdAt:branch.created_at}));
   const role=localRole(String(memberResult.data?.role||"owner"));
-  const user:UserRecord={id:authUser.id,tenantId,name:String(authUser.user_metadata?.full_name||authUser.user_metadata?.name||authUser.email?.split("@")[0]||"Usuario KIUBO"),email:String(authUser.email||""),role,active:true,pin:"",platformAdmin,createdAt:String(authUser.created_at||new Date().toISOString())};
+  const db=loadLocalDatabase(),previousSession=loadLocalSession(),previousUser=db.users.find(item=>item.id===authUser.id);
+  const user:UserRecord={id:authUser.id,tenantId,name:String(authUser.user_metadata?.full_name||authUser.user_metadata?.name||authUser.email?.split("@")[0]||"Usuario KIUBO"),email:String(authUser.email||""),role,active:true,pin:previousUser?.pin||"",platformAdmin,createdAt:String(authUser.created_at||new Date().toISOString())};
 
-  const db=loadLocalDatabase(),previousSession=loadLocalSession();
   const previousBranchIds=db.branches.filter(branch=>branch.tenantId===tenantId&&branch.active).map(branch=>branch.id);
   upsertById(db.tenants,tenant);
   for(const branch of branches)upsertById(db.branches,branch);

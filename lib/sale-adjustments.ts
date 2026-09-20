@@ -53,3 +53,13 @@ export function saleVisibleAfterHistoryReset(sale:{branchId:string;createdAt:str
   const cutoff=historyResetAtForBranch(settings,sale.branchId),created=Date.parse(sale.createdAt);
   return !cutoff||!Number.isFinite(created)||created>=cutoff;
 }
+
+export function orderVisibleAfterHistoryReset(order:{branchId:string;createdAt:string;updatedAt?:string},settings:unknown){
+  const cutoff=historyResetAtForBranch(settings,order.branchId),created=Date.parse(order.createdAt||order.updatedAt||"");
+  return !cutoff||!Number.isFinite(created)||created>=cutoff;
+}
+
+export function historyRecordVisibleAfterReset(record:{branchId:string;createdAt?:string;openedAt?:string},settings:unknown){
+  const cutoff=historyResetAtForBranch(settings,record.branchId),created=Date.parse(record.createdAt||record.openedAt||"");
+  return !cutoff||!Number.isFinite(created)||created>=cutoff;
+}
