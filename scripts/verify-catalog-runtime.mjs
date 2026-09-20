@@ -52,11 +52,11 @@ has(panel,"dailyNewOrders","provider home must surface new orders clearly");
 has(panel,"dailyInProcess","provider home must surface in-process orders clearly");
 has(panel,"dailyStock","provider home must surface inventory attention clearly");
 has(panelHtml,'id="dailyFocus"',"provider home focus block must be part of the canonical panel");
-has(config,"version:'10.17.2'","config version must match hardened release");
+has(config,"version:'10.17.3'","config version must match hardened release");
 const index=read("products/catalogos/web/index.html");
 assert.ok(!index.includes("?v=10.9.1"),"index.html must not pin stale 10.9.1 asset query strings");
 const sw=read("products/catalogos/web/sw.js");
-has(sw,"kiubo-catalog-v10-17-2-20260920","service-worker cache must roll for hardened release");
+has(sw,"kiubo-catalog-v10-17-3-20260920","service-worker cache must roll for hardened release");
 
 console.log("✓ Hakuna catalog runtime guard passed.");
 
