@@ -4,6 +4,7 @@ import { usePathname,useRouter } from "next/navigation";
 import { canAccess,type Permission } from "@/lib/permissions";
 import { hasFeature,type ProductFeature } from "@/lib/entitlements";
 import { getWorkspaceContext,loadLocalDatabase,type TenantRecord,type UserRecord } from "@/lib/local-store";
+import { effectivePlatformAdmin } from "@/lib/client-preview";
 
 type Entry={href:string;label:string;description:string;glyph:string;permission:Permission;feature?:ProductFeature;platformOnly?:boolean;keywords:string};
 const entries:Entry[]=[
@@ -29,7 +30,7 @@ export function CommandPalette(){
   useEffect(()=>{if(publicPath(path)){setUser(null);setTenant(undefined);return}const db=loadLocalDatabase(),ctx=getWorkspaceContext(db);setUser(ctx.user??null);setTenant(ctx.tenant)},[path]);
   useEffect(()=>{const onKey=(event:KeyboardEvent)=>{if((event.ctrlKey||event.metaKey)&&event.key.toLowerCase()==="k"){event.preventDefault();setOpen(value=>!value)}if(event.key==="Escape")setOpen(false)};window.addEventListener("keydown",onKey);return()=>window.removeEventListener("keydown",onKey)},[]);
   useEffect(()=>{if(open){setQuery("");setActive(0);window.setTimeout(()=>inputRef.current?.focus(),30)}},[open]);
-  const visible=useMemo(()=>{if(!user)return[];const base=entries.filter(item=>canAccess(user.role,item.permission,Boolean(user.platformAdmin))).filter(item=>!item.platformOnly||user.platformAdmin).filter(item=>user.platformAdmin||!item.feature||hasFeature(tenant,item.feature));const q=query.trim().toLowerCase();return q?base.filter(item=>`${item.label} ${item.description} ${item.keywords}`.toLowerCase().includes(q)):base},[query,tenant,user]);
+  const visible=useMemo(()=>{if(!user)return[];const platformAdmin=effectivePlatformAdmin(user.platformAdmin);const base=entries.filter(item=>canAccess(user.role,item.permission,platformAdmin)).filter(item=>!item.platformOnly||platformAdmin).filter(item=>platformAdmin||!item.feature||hasFeature(tenant,item.feature));const q=query.trim().toLowerCase();return q?base.filter(item=>`${item.label} ${item.description} ${item.keywords}`.toLowerCase().includes(q)):base},[query,tenant,user]);
   useEffect(()=>{if(active>=visible.length)setActive(Math.max(0,visible.length-1))},[active,visible.length]);
   if(!user||publicPath(path)||!open)return null;
   const go=(href:string)=>{setOpen(false);router.push(href)};

@@ -10,6 +10,7 @@ import { BusinessType,TenantRecord,UserRecord,getTenantSettings,getWorkspaceCont
 import { getAuthProvider } from "@/lib/auth-provider";
 import { Permission,canAccess } from "@/lib/permissions";
 import { ProductFeature,hasFeature } from "@/lib/entitlements";
+import { clearClientPreviewMode,effectivePlatformAdmin } from "@/lib/client-preview";
 
 type Group="platform"|"daily"|"management"|"account";
 type NavItem={href:string;label:string;glyph:string;group:Group;permission:Permission;platformOnly?:boolean;feature?:ProductFeature;businessTypes?:BusinessType[]};
@@ -37,13 +38,14 @@ export function Sidebar(){
   const router=useRouter(),pathname=usePathname(),platformPath=pathname.startsWith("/control")||pathname.startsWith("/leads");
   const[user,setUser]=useState<UserRecord|null>(null),[tenant,setTenant]=useState<TenantRecord|undefined>(),[businessType,setBusinessType]=useState<BusinessType>("general");
   useEffect(()=>{const db=loadLocalDatabase(),ctx=getWorkspaceContext(db);setUser(ctx.user??null);setTenant(ctx.tenant);setBusinessType(getTenantSettings(db,ctx.tenantId).businessType)},[pathname]);
-  const logout=async()=>{await getAuthProvider().signOut();router.replace("/login")};
+  const platformAdmin=effectivePlatformAdmin(user?.platformAdmin);
+  const logout=async()=>{clearClientPreviewMode();await getAuthProvider().signOut();router.replace("/login")};
   const visible=useMemo(()=>items
-    .filter(item=>!user||canAccess(user.role,item.permission,Boolean(user.platformAdmin)))
-    .filter(item=>!item.platformOnly||user?.platformAdmin)
+    .filter(item=>!user||canAccess(user.role,item.permission,platformAdmin))
+    .filter(item=>!item.platformOnly||platformAdmin)
     .filter(item=>!platformPath||item.group==="platform")
-    .filter(item=>user?.platformAdmin||!item.feature||hasFeature(tenant,item.feature))
-    .filter(item=>!item.businessTypes||item.businessTypes.includes(businessType)),[businessType,platformPath,tenant,user]);
+    .filter(item=>platformAdmin||!item.feature||hasFeature(tenant,item.feature))
+    .filter(item=>!item.businessTypes||item.businessTypes.includes(businessType)),[businessType,platformAdmin,platformPath,tenant,user]);
   const groups=(["platform","daily","management","account"] as Group[]).map(group=>({group,items:visible.filter(item=>item.group===group)})).filter(section=>section.items.length);
-  return <aside className="sidebar"><div className="sidebar-top"><BusinessBrandMark/></div>{!platformPath&&<WorkspaceSwitcher/>}<nav className="sidebar-nav" aria-label="Navegación principal">{groups.map(section=><div className="nav-group" key={section.group}><div className="nav-group-label">{groupLabel[section.group]}</div>{section.items.map(item=><Link key={item.href} href={item.href} className={`nav-item ${pathname===item.href?"active":""}`}><span className="nav-glyph" aria-hidden="true">{item.glyph}</span><span className="nav-label">{item.label}</span></Link>)}</div>)}</nav><div className="sidebar-bottom">{!platformPath&&<SyncStatus/>}{user&&<div className="sidebar-session"><div><strong>{user.name}</strong><span>{roleLabel[user.role]}{user.platformAdmin?" · KIUBO Admin":tenant?` · ${tenant.plan}`:""}</span></div><button onClick={()=>void logout()}>Salir</button></div>}<div className="sidebar-powered">{platformPath?<>Plataforma <KiuboWordmark/></>:<>Hecho con <KiuboWordmark/></>}</div></div></aside>
+  return <aside className="sidebar"><div className="sidebar-top"><BusinessBrandMark/></div>{!platformPath&&<WorkspaceSwitcher/>}<nav className="sidebar-nav" aria-label="Navegación principal">{groups.map(section=><div className="nav-group" key={section.group}><div className="nav-group-label">{groupLabel[section.group]}</div>{section.items.map(item=><Link key={item.href} href={item.href} className={`nav-item ${pathname===item.href?"active":""}`}><span className="nav-glyph" aria-hidden="true">{item.glyph}</span><span className="nav-label">{item.label}</span></Link>)}</div>)}</nav><div className="sidebar-bottom">{!platformPath&&<SyncStatus/>}{user&&<div className="sidebar-session"><div><strong>{user.name}</strong><span>{roleLabel[user.role]}{platformAdmin?" · KIUBO Admin":tenant?` · ${tenant.plan}`:""}</span></div><button onClick={()=>void logout()}>Salir</button></div>}<div className="sidebar-powered">{platformPath?<>Plataforma <KiuboWordmark/></>:<>Hecho con <KiuboWordmark/></>}</div></div></aside>
 }
