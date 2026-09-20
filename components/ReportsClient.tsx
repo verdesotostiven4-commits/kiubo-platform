@@ -5,7 +5,7 @@ import { SaleRecord,getWorkspaceContext,loadLocalDatabase,saveLocalDatabase } fr
 import { reconcileCashSession } from "@/lib/cash-reconciliation";
 import { reverseSaleLocally,saleLifecycle,type SaleWithLifecycle } from "@/lib/sale-reversal";
 
-const label:Record<SaleRecord["payment"],string>={cash:"Efectivo",transfer:"Transferencia",mixed:"Mixto",credit:"Fiado"};
+const label:Record<SaleRecord["payment"],string>={cash:"Efectivo",transfer:"Transferencia",mixed:"Mixto",partial:"Pago parcial",credit:"Fiado"};
 const money=(value:number)=>`$${value.toFixed(2)}`;
 const dateOnly=(iso:string)=>iso.slice(0,10);
 

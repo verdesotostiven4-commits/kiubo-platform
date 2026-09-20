@@ -23,7 +23,7 @@ for(const needle of ["cashReconciliationEntries","Ver cómo se calcula el efecti
 }
 
 const pos=text("components/PosClientPro.tsx");
-for(const needle of ["Abono / fiado","se descuenta del total del pedido","checkout-total-card","checkout-payment-zone","pos-cash-entry"]){
+for(const needle of ["Pago parcial","Fiado","partial-checkout","five-payment-grid","checkout-total-card","checkout-payment-zone"]){
   assert.ok(pos.includes(needle),`POS partial payment UX missing: ${needle}`);
 }
 
@@ -40,6 +40,11 @@ for(const needle of [".category-toolbar-head",".category-order-toggle","grid-tem
   assert.ok(v17.includes(needle),`POS v17 category tools missing: ${needle}`);
 }
 assert.ok(pos.includes("Ordenar categorías"),"category ordering must be presented as a secondary tool");
-assert.ok(text("app/layout.tsx").includes('import "./experience-v17.css";'),"POS v17 stylesheet must load last");
+assert.ok(text("app/layout.tsx").includes('import "./experience-v17.css";'),"POS v17 stylesheet must load after v16");
+const v18=text("app/experience-v18.css");
+for(const needle of [".five-payment-grid",".partial-checkout",".partial-summary"]){assert.ok(v18.includes(needle),`POS v18 payment separation missing: ${needle}`)}
+assert.ok(!pos.includes("Abono / fiado"),"Pago parcial and Fiado must never be merged into one POS option");
+assert.ok(pos.includes('paymentOptions:Payment[]=["cash","transfer","mixed","partial","credit"]'),"POS must expose separate Pago parcial and Fiado methods");
+assert.ok(text("app/layout.tsx").includes('import "./experience-v18.css";'),"POS v18 stylesheet must load last");
 
 console.log("✓ YUKI Ops V2 passed: non-destructive reset, payment-rich history, explainable cash, and single-scroll checkout V16 are wired.");

@@ -21,7 +21,7 @@ export function AdminPinManager(){
   const lastReset=ctx.branchId?settings.salesHistoryResetAtByBranch?.[ctx.branchId]:"";
   const openCash=Boolean(ctx.branchId&&getOpenCashSession(db,ctx.tenantId,ctx.branchId));
   const unresolvedOrders=db.orders.filter(order=>order.tenantId===ctx.tenantId&&order.branchId===ctx.branchId&&order.status!=="cancelled"&&order.paymentStatus!=="paid").length;
-  const openCredits=db.credits.filter(credit=>credit.tenantId===ctx.tenantId&&credit.branchId===ctx.branchId&&credit.status==="open"&&credit.balance>.001).length;
+  const openBalances=db.credits.filter(credit=>credit.tenantId===ctx.tenantId&&credit.branchId===ctx.branchId&&credit.status==="open"&&credit.balance>.001).length;
   const notify=(source:string)=>{refresh();window.dispatchEvent(new CustomEvent(KIUBO_DATA_REFRESHED,{detail:{source}}))};
 
   const savePin=(event:FormEvent<HTMLFormElement>)=>{
@@ -51,7 +51,7 @@ export function AdminPinManager(){
     const pending=next.orders.filter(order=>order.tenantId===workspace.tenantId&&order.branchId===workspace.branchId&&order.status!=="cancelled"&&order.paymentStatus!=="paid");
     const debts=next.credits.filter(credit=>credit.tenantId===workspace.tenantId&&credit.branchId===workspace.branchId&&credit.status==="open"&&credit.balance>.001);
     if(currentCash){setMessage("Cierra la caja antes de reiniciar el historial visible.");return}
-    if(pending.length||debts.length){setMessage(`Antes de reiniciar resuelve ${pending.length} pedido(s) pendiente(s) y ${debts.length} fiado(s) abierto(s). No ocultaremos obligaciones reales.`);return}
+    if(pending.length||debts.length){setMessage(`Antes de reiniciar resuelve ${pending.length} pedido(s) pendiente(s) y ${debts.length} saldo(s) pendiente(s). No ocultaremos obligaciones reales.`);return}
     const cutoff=new Date().toISOString(),current=getTenantSettings(next,workspace.tenantId),resets={...(current.salesHistoryResetAtByBranch||{}),[workspace.branchId]:cutoff};
     next.settings=next.settings.filter(item=>item.tenantId!==workspace.tenantId);
     next.settings.push({...current,salesHistoryResetAtByBranch:resets});
@@ -73,14 +73,14 @@ export function AdminPinManager(){
       <button className="protected-actions-toggle" type="button" onClick={()=>setProtectedOpen(value=>!value)}>{protectedOpen?"Ocultar acciones protegidas":"Acciones protegidas"}</button>
       {protectedOpen&&<div className="history-reset-box">
         <div><span>REINICIO COMERCIAL</span><strong>Empezar historial visible desde cero</strong><p>Oculta del Dashboard, Reportes e Historial de pedidos todo lo anterior a este momento. Los registros antiguos se conservan en Cloud para auditoría. No toca productos, fotos, stock, clientes, configuración ni compras.</p></div>
-        <div className="history-reset-status"><span>Caja</span><b>{openCash?"Abierta":"Cerrada"}</b><span>Pedidos pendientes</span><b>{unresolvedOrders}</b><span>Fiados abiertos</span><b>{openCredits}</b></div>
+        <div className="history-reset-status"><span>Caja</span><b>{openCash?"Abierta":"Cerrada"}</b><span>Pedidos pendientes</span><b>{unresolvedOrders}</b><span>Saldos abiertos</span><b>{openBalances}</b></div>
         {lastReset&&<small>Último reinicio visible: {new Date(lastReset).toLocaleString("es-EC")}</small>}
         <form className="history-reset-form" onSubmit={resetVisibleHistory}>
           <label>Código de autorización<input value={resetPin} onChange={e=>setResetPin(e.target.value)} type="password" inputMode="numeric" placeholder="Tu PIN" disabled={!configured} required/></label>
           <label>Confirmación<input value={resetPhrase} onChange={e=>setResetPhrase(e.target.value)} placeholder="Escribe REINICIAR" autoComplete="off" disabled={!configured} required/></label>
-          <button type="submit" disabled={!configured||openCash||unresolvedOrders>0||openCredits>0}>Reiniciar historial visible</button>
+          <button type="submit" disabled={!configured||openCash||unresolvedOrders>0||openBalances>0}>Reiniciar historial visible</button>
         </form>
-        {(openCash||unresolvedOrders>0||openCredits>0)&&<small className="history-reset-warning">Primero cierra caja y resuelve pedidos/fiados pendientes. Así nunca desaparece una obligación real.</small>}
+        {(openCash||unresolvedOrders>0||openBalances>0)&&<small className="history-reset-warning">Primero cierra caja y resuelve pedidos/saldos pendientes. Así nunca desaparece una obligación real.</small>}
       </div>}
     </div>
     {message&&<div className="admin-pin-status">{message}</div>}

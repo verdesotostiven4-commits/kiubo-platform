@@ -6,7 +6,7 @@ import type { SaleRecord } from "@/lib/local-store";
 import { parseOperationalItemName } from "@/lib/sale-adjustments";
 
 const money=(value:number)=>new Intl.NumberFormat("es-EC",{style:"currency",currency:"USD"}).format(value||0);
-const paymentLabel:Record<SaleRecord["payment"],string>={cash:"Efectivo",transfer:"Transferencia",mixed:"Mixto",credit:"Fiado"};
+const paymentLabel:Record<SaleRecord["payment"],string>={cash:"Efectivo",transfer:"Transferencia",mixed:"Mixto",partial:"Pago parcial",credit:"Fiado"};
 
 type ChartPoint={key:string;label:string;total:number;sales:SaleRecord[]};
 
