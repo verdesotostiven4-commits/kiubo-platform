@@ -22,4 +22,9 @@ for(const path of ["components/Sidebar.tsx","components/WorkspaceSwitcher.tsx","
 const operations=text("components/OperationsClient.tsx");
 assert.ok(operations.includes("u.tenantId===ctx.tenantId&&!u.platformAdmin"),"business user list must hide platform administrators");
 
-console.log("✓ Admin Client Preview V1 passed: platform-only chrome is hidden while tenant permissions, plan gates and live workspace data remain active.");
+const cloudAuth=text("lib/cloud-auth.ts");
+for(const needle of ["trialEndsAt<=Date.now()","Tu periodo de prueba terminó","Tu acceso a KIUBO está suspendido"]){
+  assert.ok(cloudAuth.includes(needle),`cloud license guard missing: ${needle}`);
+}
+
+console.log("✓ Admin Client Preview V1 passed: platform-only chrome is hidden, tenant permissions remain active, and expired/suspended client access is blocked clearly.");
