@@ -1,4 +1,4 @@
-import { readFileSync, existsSync } from "node:fs";
+import { readFileSync, existsSync, readdirSync } from "node:fs";
 import { join } from "node:path";
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
@@ -60,3 +60,18 @@ for (const file of [
   execFileSync(process.execPath, ["--check", join(root, file)], { stdio: "pipe" });
 }
 console.log("✓ Active Hakuna JavaScript syntax checks passed.");
+
+
+const webDir=join(root,"products/catalogos/web");
+for(const name of readdirSync(webDir).filter(name=>name.endsWith(".js"))){
+  const source=readFileSync(join(webDir,name),"utf8");
+  assert.ok(!source.includes("/functions/v1/catalog-v6"),`${name} must not call legacy catalog-v6 directly`);
+}
+for(const html of ["panel.html","pedido.html"]){
+  const source=read(html);
+  assert.ok(source.includes("/config.js?v=10.16.12"),`${html} must cache-bust config.js`);
+}
+const vercelConfig=read("products/catalogos/web/vercel.json");
+has(vercelConfig,'"source": "/config.js"',"Vercel config must disable stale config.js caching");
+has(vercelConfig,'"source": "/sw.js"',"Vercel config must disable stale service-worker caching");
+console.log("✓ Hakuna cache and legacy-endpoint guards passed.");
