@@ -270,7 +270,7 @@ async function handleJson(req: Request, body: Json) {
     const { data: allowed, error: rateError } = await db.rpc("catalog_check_order_rate", { p_slug: slug, p_rate_key: rateKey });
     if (rateError) throw rateError;
     if (!allowed) throw Object.assign(new Error("too_many_orders"), { status: 429 });
-    const customer = { ...((body.customer || {}) as Json), payment_method: body.payment_method || null };
+    const customer: Json = { ...((body.customer || {}) as Json), payment_method: body.payment_method || null };
     const { data, error } = await db.rpc("catalog_create_order", { p_slug: slug, p_idempotency_key: idempotency, p_customer: customer, p_items: body.items || [] });
     if (error) throw error;
     const order = data as Json;
