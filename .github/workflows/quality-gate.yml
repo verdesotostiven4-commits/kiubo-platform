@@ -37,6 +37,7 @@ jobs:
         run: |
           deno check --node-modules-dir=auto supabase/functions/catalog-api/index.ts
           deno check --node-modules-dir=auto supabase/functions/catalog-router/index.ts
+          deno check --node-modules-dir=auto supabase/functions/catalog-notify/index.ts
 
       - name: Run KIUBO regression checks
         run: npm run verify
