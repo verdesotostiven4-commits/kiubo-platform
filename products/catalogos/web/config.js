@@ -2,7 +2,7 @@
 window.KIUBO_CATALOG_CONFIG=Object.freeze({
   supabaseUrl:'https://hysrlckmnzlmscwwbibn.supabase.co',
   publishableKey:'sb_publishable_hnsAgTsI1c_wErMMwAYwMQ_crWdOBpT',
-  apiUrl:'https://hysrlckmnzlmscwwbibn.supabase.co/functions/v1/catalog-v9',
+  apiUrl:'https://hysrlckmnzlmscwwbibn.supabase.co/functions/v1/catalog-router',
   notifyUrl:'https://hysrlckmnzlmscwwbibn.supabase.co/functions/v1/catalog-notify',
   defaultSlug:'hakuna-matata',
   version:'10.16.12',

@@ -75,3 +75,14 @@ const vercelConfig=read("products/catalogos/web/vercel.json");
 has(vercelConfig,'"source": "/config.js"',"Vercel config must disable stale config.js caching");
 has(vercelConfig,'"source": "/sw.js"',"Vercel config must disable stale service-worker caching");
 console.log("✓ Hakuna cache and legacy-endpoint guards passed.");
+
+
+const configSource=read("products/catalogos/web/config.js");
+has(configSource,"/functions/v1/catalog-router","Hakuna clients must use the versioned catalog-router entrypoint");
+assert.ok(!configSource.includes("/functions/v1/catalog-v9"),"Hakuna must not depend on the unversioned remote catalog-v9 shim");
+
+const routerSource=read("supabase/functions/catalog-router/index.ts");
+has(routerSource,'const CORE_URL = `${SUPABASE_URL}/functions/v1/catalog-api`',"catalog-router must forward to versioned catalog-api");
+has(routerSource,'"https://hakuna-matata-catalogo.vercel.app"',"catalog-router must allow the production Hakuna origin");
+has(routerSource,"hakuna-matata-catalogo-[a-z0-9-]+","catalog-router must allow Hakuna preview origins");
+console.log("✓ Hakuna uses the version-controlled catalog-router instead of catalog-v9.");
