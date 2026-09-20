@@ -119,6 +119,9 @@ export async function hydrateCloudIdentity(client:SupabaseClient,authUser:User){
   if(!branchResult.data.length)throw new Error("Tu usuario no tiene una sucursal activa asignada en KIUBO");
 
   const cloudTenant=tenantResult.data,subscription=subscriptionResult.data;
+  const trialEndsAt=subscription?.trial_ends_at?Date.parse(String(subscription.trial_ends_at)):NaN;
+  if(!platformAdmin&&cloudTenant.status==="trial"&&subscription?.status==="trial"&&Number.isFinite(trialEndsAt)&&trialEndsAt<=Date.now())throw new Error("Tu periodo de prueba terminó. Contacta a KIUBO para activar tu cuenta.");
+  if(!platformAdmin&&(cloudTenant.status==="suspended"||subscription?.status==="suspended"))throw new Error("Tu acceso a KIUBO está suspendido. Contacta a KIUBO para reactivarlo.");
   const tenant:TenantRecord={id:cloudTenant.id,name:cloudTenant.display_name,plan:planMap[String(subscription?.plan_code||"start")]||"Start",status:cloudTenant.status,users:1,branches:branchResult.data.length,expiresAt:String(subscription?.trial_ends_at||subscription?.current_period_ends_at||"Cloud"),catalog:["pro","custom","internal"].includes(String(subscription?.plan_code||"start")),invoice:false,createdAt:cloudTenant.created_at};
   const branches:BranchRecord[]=branchResult.data.map(branch=>({id:branch.id,tenantId:branch.tenant_id,name:branch.name,code:branch.code,active:branch.active,createdAt:branch.created_at}));
   const role=localRole(String(memberResult.data?.role||"owner"));

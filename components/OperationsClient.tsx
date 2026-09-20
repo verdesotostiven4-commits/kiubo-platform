@@ -32,7 +32,7 @@ export function OperationsClient(){
   if(!db)return <div className="loading-card">Preparando operación…</div>;
 
   const ctx=getWorkspaceContext(db);
-  const users=db.users.filter(u=>u.tenantId===ctx.tenantId);
+  const users=db.users.filter(u=>u.tenantId===ctx.tenantId&&!u.platformAdmin);
   const customers=db.customers.filter(c=>c.tenantId===ctx.tenantId);
   const credits=db.credits.filter(c=>c.tenantId===ctx.tenantId&&c.branchId===ctx.branchId);
   const openSession=getOpenCashSession(db,ctx.tenantId,ctx.branchId);
@@ -59,14 +59,14 @@ export function OperationsClient(){
     if(!name||!email||!/^[0-9]{4}$/.test(pin)){setMessage("Completa usuario, correo y PIN de 4 dígitos");return}
     if(next.users.some(u=>u.email.toLowerCase()===email)){setMessage("Ese correo ya existe");return}
     next.users.unshift({id:makeId("user"),tenantId:workspace.tenantId,name,email,role:String(f.get("role")||"cashier") as UserRole,active:true,pin,platformAdmin:false,createdAt:new Date().toISOString()});
-    next.tenants=next.tenants.map(t=>t.id===workspace.tenantId?{...t,users:next.users.filter(u=>u.tenantId===workspace.tenantId&&u.active).length}:t);
+    next.tenants=next.tenants.map(t=>t.id===workspace.tenantId?{...t,users:next.users.filter(u=>u.tenantId===workspace.tenantId&&u.active&&!u.platformAdmin).length}:t);
     persistTracked(next);e.currentTarget.reset();setMessage("Usuario creado");
   };
 
   const toggleUser=(id:string)=>{
     const next=loadLocalDatabase(),workspace=getWorkspaceContext(next);
     next.users=next.users.map(u=>u.id===id?{...u,active:!u.active}:u);
-    next.tenants=next.tenants.map(t=>t.id===workspace.tenantId?{...t,users:next.users.filter(u=>u.tenantId===workspace.tenantId&&u.active).length}:t);
+    next.tenants=next.tenants.map(t=>t.id===workspace.tenantId?{...t,users:next.users.filter(u=>u.tenantId===workspace.tenantId&&u.active&&!u.platformAdmin).length}:t);
     persistTracked(next);
   };
 

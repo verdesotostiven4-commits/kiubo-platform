@@ -6,6 +6,7 @@ import { getSupabaseBrowserClient } from "@/lib/supabase-browser";
 import { getPrimaryBranch,loadLocalDatabase,loadLocalSession,saveLocalSession } from "@/lib/local-store";
 import { canAccess,homeForRole,permissionForPath } from "@/lib/permissions";
 import { hasFeature,routeFeature } from "@/lib/entitlements";
+import { effectivePlatformAdmin } from "@/lib/client-preview";
 
 const isPublicPath=(path:string)=>path==="/"||path.startsWith("/login")||path.startsWith("/set-password")||path.startsWith("/auth/")||path.startsWith("/precios")||path.startsWith("/demo")||path.startsWith("/como-funciona");
 
@@ -27,15 +28,15 @@ export function SessionEnforcer(){
       if(cancelled)return;
       const user=validation.user;
       if(!validation.ok||!user){await auth.signOut();router.replace("/login");return}
-      const db=loadLocalDatabase();
-      if((path.startsWith("/control")||path.startsWith("/leads"))&&!user.platformAdmin){router.replace(homeForRole(user.role));return}
+      const db=loadLocalDatabase(),platformAdmin=effectivePlatformAdmin(user.platformAdmin);
+      if((path.startsWith("/control")||path.startsWith("/leads"))&&!platformAdmin){router.replace(homeForRole(user.role));return}
       let tenantId=user.platformAdmin?(session.activeTenantId||user.tenantId):user.tenantId;
       if(!db.tenants.some(t=>t.id===tenantId&&t.plan!=="Internal"))tenantId=user.tenantId;
       const branch=db.branches.find(b=>b.id===session.activeBranchId&&b.tenantId===tenantId&&b.active)??getPrimaryBranch(db,tenantId);
       if(session.activeTenantId!==tenantId||session.activeBranchId!==branch?.id||session.role!==user.role){saveLocalSession({...session,tenantId:user.tenantId,activeTenantId:tenantId,activeBranchId:branch?.id,role:user.role})}
-      if(!canAccess(user.role,permission,Boolean(user.platformAdmin))){router.replace(homeForRole(user.role));return}
+      if(!canAccess(user.role,permission,platformAdmin)){router.replace(homeForRole(user.role));return}
       const feature=routeFeature(path),tenant=db.tenants.find(t=>t.id===tenantId);
-      if(feature&&!user.platformAdmin&&!hasFeature(tenant,feature)){router.replace(`/upgrade?feature=${feature}`)}
+      if(feature&&!platformAdmin&&!hasFeature(tenant,feature)){router.replace(`/upgrade?feature=${feature}`)}
     };
 
     void enforce();
