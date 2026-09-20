@@ -2,6 +2,15 @@ import type { CashSessionRecord, KiuboLocalDatabase } from "./local-store";
 import { isMixedPaymentCashMovement } from "./mixed-payment";
 import { isCreditPaymentCashMovement } from "./order-payments";
 
+export type CashReconciliationEntry={
+  id:string;
+  at:string;
+  label:string;
+  detail?:string;
+  amount:number;
+  kind:"opening"|"sale"|"mixed"|"credit"|"manual-in"|"out";
+};
+
 export type CashReconciliation={
   sessionId:string;
   opening:number;
@@ -45,4 +54,19 @@ export function reconcileCashSession(db:KiuboLocalDatabase,session:CashSessionRe
     counted,
     difference:counted===undefined?undefined:cents(counted-expected),
   };
+}
+
+export function cashReconciliationEntries(db:KiuboLocalDatabase,session:CashSessionRecord):CashReconciliationEntry[]{
+  const opened=timestamp(session.openedAt)??0,closed=timestamp(session.closedAt)??Number.POSITIVE_INFINITY;
+  const entries:CashReconciliationEntry[]=[{id:`opening:${session.id}`,at:session.openedAt,label:"Fondo inicial",amount:cents(session.openingAmount),kind:"opening"}];
+  for(const sale of db.sales.filter(s=>s.tenantId===session.tenantId&&s.branchId===session.branchId&&s.payment==="cash").filter(s=>{const at=timestamp(s.createdAt)??0;return at>=opened&&at<=closed})){
+    const order=sale.orderId?db.orders.find(item=>item.id===sale.orderId):undefined;
+    entries.push({id:sale.id,at:sale.createdAt,label:order?`Venta #${String(order.number).padStart(4,"0")}`:"Venta en efectivo",detail:sale.items.slice(0,3).map(item=>`${item.qty}× ${item.name}`).join(" · "),amount:cents(sale.total),kind:"sale"});
+  }
+  for(const movement of db.cashMovements.filter(m=>m.tenantId===session.tenantId&&m.branchId===session.branchId&&m.sessionId===session.id)){
+    const kind=movement.type==="out"?"out":isMixedPaymentCashMovement(movement)?"mixed":isCreditPaymentCashMovement(movement.reason)?"credit":"manual-in";
+    const label=kind==="mixed"?"Parte en efectivo de pago mixto":kind==="credit"?"Abono recibido en efectivo":kind==="out"?"Egreso":movement.reason||"Ingreso";
+    entries.push({id:movement.id,at:movement.createdAt,label,detail:movement.reason,amount:cents(movement.type==="out"?-movement.amount:movement.amount),kind});
+  }
+  return entries.sort((a,b)=>Date.parse(a.at)-Date.parse(b.at));
 }

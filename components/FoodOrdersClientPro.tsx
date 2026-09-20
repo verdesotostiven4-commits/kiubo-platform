@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { CashMovementRecord,CreditPaymentRecord,FoodOrderRecord,FoodOrderStatus,getOpenCashSession,getTenantSettings,getWorkspaceContext,loadLocalDatabase,makeId,saveLocalDatabase } from "@/lib/local-store";
 import { enqueueCreditPaymentTransaction } from "@/lib/finance-transaction";
 import { creditPaymentCashMovementReason,orderPaymentSummary } from "@/lib/order-payments";
+import { orderVisibleAfterHistoryReset } from "@/lib/sale-adjustments";
 import { KIUBO_DATA_REFRESHED } from "./RealtimeSyncRuntime";
 import styles from "./FoodOrdersClient.module.css";
 import paymentStyles from "./FoodOrderPayments.module.css";
@@ -46,7 +47,7 @@ export function FoodOrdersClientPro(){
   const filteredOrders=filter==="all"?orders:orders.filter(order=>order.serviceMode===filter);
   const pendingOrders=filteredOrders.filter(order=>order.paymentStatus!=="paid"&&order.status!=="delivered");
   const kitchenOrders=filteredOrders.filter(order=>order.status!=="delivered");
-  const historyOrders=filteredOrders.filter(order=>order.status==="delivered"||(simpleFlow&&order.paymentStatus==="paid"));
+  const historyOrders=filteredOrders.filter(order=>(order.status==="delivered"||(simpleFlow&&order.paymentStatus==="paid"))&&orderVisibleAfterHistoryReset(order,settings));
   const visibleActive=activeView==="pending"?pendingOrders:kitchenOrders;
   const grouped=new Map(activeMeta.map(meta=>[meta.key,visibleActive.filter(order=>order.status===meta.key)]));
   const paidInKitchen=kitchenOrders.filter(order=>order.paymentStatus==="paid").length;
