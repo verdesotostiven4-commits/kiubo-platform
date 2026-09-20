@@ -6,6 +6,7 @@ import {
   type CashSessionRecord,
   type CreditPaymentRecord,
   type CreditRecord,
+  type FoodOrderRecord,
   type KiuboLocalDatabase,
 } from "./local-store";
 
@@ -18,6 +19,8 @@ export type CreditPaymentTransactionPayload = {
   payment:CreditPaymentRecord;
   creditSnapshot:CreditRecord;
   cashMovement?:CashMovementRecord;
+  orderBefore?:FoodOrderRecord;
+  orderAfter?:FoodOrderRecord;
 };
 
 function enqueueCommand(
@@ -105,6 +108,6 @@ export function enqueueCreditPaymentTransaction(db:KiuboLocalDatabase,payload:Cr
     branchId:payload.payment.branchId,
     payload,
     auditAction:"credit.payment_queued",
-    metadata:{creditId:payload.payment.creditId,amount:payload.payment.amount,method:payload.payment.method},
+    metadata:{creditId:payload.payment.creditId,amount:payload.payment.amount,method:payload.payment.method,orderId:payload.orderAfter?.id},
   });
 }

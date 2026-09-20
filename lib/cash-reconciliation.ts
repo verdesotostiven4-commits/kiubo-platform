@@ -1,11 +1,13 @@
 import type { CashSessionRecord, KiuboLocalDatabase } from "./local-store";
 import { isMixedPaymentCashMovement } from "./mixed-payment";
+import { isCreditPaymentCashMovement } from "./order-payments";
 
 export type CashReconciliation={
   sessionId:string;
   opening:number;
   cashSales:number;
   mixedCashSales:number;
+  creditCollections:number;
   manualIncome:number;
   cashOut:number;
   expected:number;
@@ -25,16 +27,18 @@ export function reconcileCashSession(db:KiuboLocalDatabase,session:CashSessionRe
     .reduce((sum,sale)=>sum+sale.total,0);
   const movements=db.cashMovements.filter(m=>m.tenantId===session.tenantId&&m.branchId===session.branchId&&m.sessionId===session.id);
   const mixedCashSales=movements.filter(isMixedPaymentCashMovement).reduce((sum,m)=>sum+m.amount,0);
-  const manualIncome=movements.filter(m=>m.type==="in"&&!isMixedPaymentCashMovement(m)).reduce((sum,m)=>sum+m.amount,0);
+  const creditCollections=movements.filter(m=>m.type==="in"&&isCreditPaymentCashMovement(m.reason)).reduce((sum,m)=>sum+m.amount,0);
+  const manualIncome=movements.filter(m=>m.type==="in"&&!isMixedPaymentCashMovement(m)&&!isCreditPaymentCashMovement(m.reason)).reduce((sum,m)=>sum+m.amount,0);
   const cashOut=movements.filter(m=>m.type==="out").reduce((sum,m)=>sum+m.amount,0);
   const cashSales=cents(pureCashSales+mixedCashSales);
-  const expected=cents(session.openingAmount+cashSales+manualIncome-cashOut);
+  const expected=cents(session.openingAmount+cashSales+creditCollections+manualIncome-cashOut);
   const counted=typeof session.closingAmount==="number"&&Number.isFinite(session.closingAmount)?cents(session.closingAmount):undefined;
   return{
     sessionId:session.id,
     opening:cents(session.openingAmount),
     cashSales,
     mixedCashSales:cents(mixedCashSales),
+    creditCollections:cents(creditCollections),
     manualIncome:cents(manualIncome),
     cashOut:cents(cashOut),
     expected,

@@ -6,7 +6,7 @@ export type UserRole = "owner"|"admin"|"cashier"|"inventory"|"viewer";
 export type BusinessType = "general"|"retail"|"food_service"|"services";
 export type ServiceMode = "counter"|"table"|"takeaway"|"delivery";
 export type FoodOrderStatus = "new"|"preparing"|"ready"|"delivered"|"cancelled";
-export type FoodOrderPaymentStatus = "unpaid"|"paid";
+export type FoodOrderPaymentStatus = "unpaid"|"partial"|"paid";
 export type PurchasePaymentMethod = "cash"|"transfer"|"card"|"other";
 export type PurchasePaymentStatus = "pending"|"partial"|"paid";
 export type PurchaseStatus = "received"|"cancelled";
@@ -146,7 +146,7 @@ function normalizeSettings(item:TenantSettings):TenantSettings{
 }
 function normalizeOrder(order:FoodOrderRecord,branchOf:(tenantId:string)=>string):FoodOrderRecord{
   const status:FoodOrderStatus=order.status==="preparing"||order.status==="ready"||order.status==="delivered"||order.status==="cancelled"?order.status:"new";
-  const paymentStatus:FoodOrderPaymentStatus=order.paymentStatus==="paid"?"paid":"unpaid";
+  const paymentStatus:FoodOrderPaymentStatus=order.paymentStatus==="paid"?"paid":order.paymentStatus==="partial"?"partial":"unpaid";
   const serviceMode:ServiceMode=order.serviceMode==="table"||order.serviceMode==="takeaway"||order.serviceMode==="delivery"?order.serviceMode:"counter";
   return{
     ...order,

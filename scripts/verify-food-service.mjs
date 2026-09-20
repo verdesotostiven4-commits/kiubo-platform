@@ -44,7 +44,7 @@ requireText("lib/sync-engine.ts",[
 requireText("lib/command-recovery.ts",[
   "orderBefore?:FoodOrderRecord",
   "orderAfter?:FoodOrderRecord",
-  'current.paymentStatus==="paid"',
+  "current.paymentStatus===p.orderAfter.paymentStatus",
   "p.orderBefore",
   "removeById(db.orders,p.orderAfter.id)"
 ]);

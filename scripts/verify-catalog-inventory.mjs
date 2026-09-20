@@ -6,7 +6,7 @@ const root = process.cwd();
 function text(path) {
   const full = join(root, path);
   assert.ok(existsSync(full), `Missing ${path}`);
-  return readFileSync(full, "utf8");
+  return readFileSync(full, "utf8").replace(/\r\n/g, "\n");
 }
 function requireText(path, needles) {
   const source = text(path);

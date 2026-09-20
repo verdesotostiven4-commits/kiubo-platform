@@ -4,7 +4,7 @@ import type {SyncQueueRecord} from "./sync-types";
 type SalePayload={sale?:SaleRecord;stockMovements?:StockMovementRecord[];credit?:CreditRecord;orderBefore?:FoodOrderRecord;orderAfter?:FoodOrderRecord;cashMovement?:CashMovementRecord};
 type SaleReversalPayload={saleBefore?:SaleRecord;saleAfter?:SaleRecord;productBeforeSnapshots?:TenantProduct[];productAfterSnapshots?:TenantProduct[];stockMovements?:StockMovementRecord[];cashMovement?:CashMovementRecord};
 type CashPayload=|{kind:"open"|"close";session?:CashSessionRecord}|{kind:"movement";movement?:CashMovementRecord};
-type CreditPayload={payment?:CreditPaymentRecord;creditSnapshot?:CreditRecord;cashMovement?:CashMovementRecord};
+type CreditPayload={payment?:CreditPaymentRecord;creditSnapshot?:CreditRecord;cashMovement?:CashMovementRecord;orderBefore?:FoodOrderRecord;orderAfter?:FoodOrderRecord};
 type PurchasePayload={purchase?:PurchaseRecord;productBeforeSnapshots?:TenantProduct[];productSnapshots?:TenantProduct[];stockMovements?:StockMovementRecord[];initialPayment?:SupplierPaymentRecord;initialCashMovement?:CashMovementRecord};
 type SupplierPaymentPayload={payment?:SupplierPaymentRecord;purchaseBefore?:PurchaseRecord;purchaseAfter?:PurchaseRecord;cashMovement?:CashMovementRecord};
 type AdjustmentPayload={productBefore?:TenantProduct;productAfter?:TenantProduct;movement?:StockMovementRecord};
@@ -28,7 +28,7 @@ export function recoverRejectedCommand(db:KiuboLocalDatabase,item:SyncQueueRecor
     if(p.orderAfter){
       const current=db.orders.find(order=>order.id===p.orderAfter?.id&&order.tenantId===item.tenantId);
       if(p.orderBefore){
-        if(current&&current.paymentStatus==="paid"&&current.saleId===p.sale?.id){db.orders=db.orders.map(order=>order.id===p.orderAfter?.id?p.orderBefore!:order);changed=true}else needsCanonicalPull=true;
+        if(current&&current.paymentStatus===p.orderAfter.paymentStatus&&current.saleId===p.sale?.id){db.orders=db.orders.map(order=>order.id===p.orderAfter?.id?p.orderBefore!:order);changed=true}else needsCanonicalPull=true;
       }else{
         const orderRemoval=removeById(db.orders,p.orderAfter.id);db.orders=orderRemoval.items;changed||=orderRemoval.changed;
       }
@@ -45,11 +45,12 @@ export function recoverRejectedCommand(db:KiuboLocalDatabase,item:SyncQueueRecor
     const p=item.payload as CashPayload;
     if(p.kind==="open"){const r=removeById(db.cashSessions,p.session?.id);db.cashSessions=r.items;changed||=r.changed}
     else if(p.kind==="movement"){const r=removeById(db.cashMovements,p.movement?.id);db.cashMovements=r.items;changed||=r.changed}
-    else if(p.kind==="close"&&p.session?.id){const current=db.cashSessions.find(x=>x.id===p.session?.id);if(current&&current.status==="closed"){current.status="open";delete current.closingAmount;delete current.closedAt;changed=true}else needsCanonicalPull=true}
+    else if(p.kind==="close"&&p.session?.id){const current=db.cashSessions.find(x=>x.id===p.session?.id);if(error.toLowerCase().includes("cash session not found")){const r=removeById(db.cashSessions,p.session.id);db.cashSessions=r.items;changed||=r.changed}else if(current&&current.status==="closed"){current.status="open";delete current.closingAmount;delete current.closedAt;changed=true}else needsCanonicalPull=true}
   }
   if(item.entityType==="creditPaymentTransactions"&&item.payload&&typeof item.payload==="object"){
     const p=item.payload as CreditPayload,pr=removeById(db.creditPayments,p.payment?.id);db.creditPayments=pr.items;changed||=pr.changed;const mr=removeById(db.cashMovements,p.cashMovement?.id);db.cashMovements=mr.items;changed||=mr.changed;
     if(p.payment&&p.creditSnapshot){const current=db.credits.find(x=>x.id===p.creditSnapshot?.id);if(current&&eq(current.balance,p.creditSnapshot.balance)){current.balance=Math.min(current.originalAmount,Number((p.creditSnapshot.balance+p.payment.amount).toFixed(2)));current.status="open";changed=true}else needsCanonicalPull=true}
+    if(p.orderBefore&&p.orderAfter){const current=db.orders.find(order=>order.id===p.orderAfter?.id&&order.tenantId===item.tenantId);if(current&&current.paymentStatus===p.orderAfter.paymentStatus){db.orders=db.orders.map(order=>order.id===p.orderAfter?.id?p.orderBefore!:order);changed=true}else needsCanonicalPull=true}
   }
   if(item.entityType==="purchaseTransactions"&&item.payload&&typeof item.payload==="object"){
     const p=item.payload as PurchasePayload,pu=removeById(db.purchases,p.purchase?.id);db.purchases=pu.items;changed||=pu.changed;const sp=removeById(db.supplierPayments,p.initialPayment?.id);db.supplierPayments=sp.items;changed||=sp.changed;const cm=removeById(db.cashMovements,p.initialCashMovement?.id);db.cashMovements=cm.items;changed||=cm.changed;

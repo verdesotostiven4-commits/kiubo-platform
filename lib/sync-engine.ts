@@ -71,9 +71,9 @@ async function runSyncCycleCore():Promise<SyncCycleResult>{
   for(const item of pending){
     const result=byId.get(item.operationId);
     if(result?.ok){
-      if((item.entityType==="saleTransactions"||item.entityType==="saleReversalTransactions")&&item.payload&&typeof item.payload==="object"){
+      if((item.entityType==="saleTransactions"||item.entityType==="saleReversalTransactions"||item.entityType==="creditPaymentTransactions")&&item.payload&&typeof item.payload==="object"){
         const payload=item.payload as {orderAfter?:FoodOrderRecord;cashMovement?:CashMovementRecord;saleBefore?:{payment?:string}};
-        const order=item.entityType==="saleTransactions"?payload.orderAfter:undefined;
+        const order=item.entityType==="saleTransactions"||item.entityType==="creditPaymentTransactions"?payload.orderAfter:undefined;
         const cashMovement=item.entityType==="saleTransactions"?payload.cashMovement:payload.saleBefore?.payment==="mixed"?payload.cashMovement:undefined;
         if(order){completedOrders.push({operationId:item.operationId,order});followupOperations.add(item.operationId)}
         if(cashMovement){completedCash.push({operationId:item.operationId,movement:cashMovement});followupOperations.add(item.operationId)}
