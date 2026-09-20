@@ -90,3 +90,22 @@ assert.ok(presentationsExposedCount >= 2, "catalog-api must expose real presenta
 
 console.log("✓ supabase/functions/catalog-api/index.ts");
 console.log("✓ KIUBO Catalog Inventory guard passed: shared physical stock across presentations, server-authoritative units/price, atomic per-order reservation with stable product-row locking, idempotent order creation, and a fulfillment state machine that reserves once and never double-decrements.");
+
+
+const HARDENING = "supabase/migrations/20260920004500_hakuna_catalog_integrity_hardening.sql";
+const hardening = text(HARDENING);
+for (const needle of [
+  "catalog_replace_presentations",
+  "for update",
+  "Re-check now before validating stock",
+  "for share",
+  "invalid_presentation",
+  "v_product.allow_item_note",
+  "v_presentation.promo_active",
+  "inventory_committed,payment_method"
+]) {
+  assert.ok(hardening.includes(needle), `${HARDENING} missing hardening invariant: ${needle}`);
+}
+assert.ok(!hardening.includes("v_item->>'units_per_presentation'"), `${HARDENING} must never trust client-sent presentation units`);
+assert.ok(!hardening.includes("v_item->>'price'"), `${HARDENING} must never trust client-sent item price`);
+console.log("✓ Catalog hardening migration invariants passed.");
