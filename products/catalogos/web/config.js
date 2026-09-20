@@ -21,13 +21,13 @@ window.KIUBO_CATALOG_CONFIG=Object.freeze({
     if(logo)document.querySelectorAll('img[src="/assets/brand-mark.svg"]').forEach(img=>{img.src=logo;img.style.objectFit='contain';img.style.background='#fff'});
     [
       '/panel-v5.css','/panel-v6.css','/panel-v7.css','/panel-v7.1.css','/panel-v7.2.1.css','/panel-v7.5.css','/panel-v7.6.css','/panel-v7.7.css',
-      '/panel-v10-stability.css','/panel-v10.4.2.css','/panel-v10.5.css','/panel-v10.5.1.css','/panel-v10.6.css','/panel-v10.9.css','/panel-v10.10.css','/panel-v10.11.css','/panel-v10.14.css','/panel-v10.15.css','/panel-v10.16.2.css','/panel-v10.17.css'
+      '/panel-v10-stability.css','/panel-v10.4.2.css','/panel-v10.5.css','/panel-v10.5.1.css','/panel-v10.6.css','/panel-v10.9.css','/panel-v10.10.css','/panel-v10.11.css','/panel-v10.14.css','/panel-v10.15.css','/panel-v10.16.2.css'
     ].forEach(addStyle);
     addManifest('/panel.webmanifest');
     const scripts=[
       '/panel-fast-save-v7.4.js','/panel-v6.js','/panel-v5.js','/panel-extras-v5.js','/panel-orders-v6.js','/panel-v7.js','/panel-v7.5.js','/panel-v7.5.1.js',
       '/panel-v7.6.js','/panel-v7.7.js',
-      '/panel-v10-stability.js','/panel-v10.5.1.js','/panel-v10.6.js','/panel-v10.9.js','/panel-v10.10.js','/panel-v10.11-core.js','/panel-v10.11-ui.js','/panel-v10.14.js','/panel-v10.15.js','/panel-v10.16.2.js','/push-v10.7.js','/panel-v10.17.js'
+      '/panel-v10-stability.js','/panel-v10.5.1.js','/panel-v10.6.js','/panel-v10.9.js','/panel-v10.10.js','/panel-v10.11-core.js','/panel-v10.11-ui.js','/panel-v10.14.js','/panel-v10.15.js','/panel-v10.16.2.js','/push-v10.7.js'
     ];
     document.write(scripts.map(src=>`<script src="${src}?v=${v}"><\/script>`).join(''));
   }else if(/^\/pedido/.test(path)){
