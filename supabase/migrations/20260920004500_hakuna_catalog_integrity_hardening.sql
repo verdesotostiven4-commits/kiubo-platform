@@ -121,8 +121,8 @@ begin
     v_promo_label := nullif(left(trim(coalesce(v_row->>'promo_label','Oferta')),40),'');
 
     if char_length(v_name)<1 or char_length(v_name)>80
-       or v_units<1 or v_units>100000
-       or v_price<0
+       or v_units is null or v_units<1 or v_units>100000
+       or v_price is null or v_price<0
        or (v_compare is not null and v_compare<0)
        or (v_promo_price is not null and v_promo_price<0)
        or (v_promo_active and (v_promo_price is null or v_promo_price>=v_price)) then
@@ -322,6 +322,14 @@ begin
   if v_delivery not in ('delivery','pickup') then raise exception 'invalid_delivery'; end if;
   if v_payment_method is not null and v_payment_method not in ('cash','transfer','card','credit','other') then raise exception 'invalid_request'; end if;
   if jsonb_typeof(p_items)<>'array' or jsonb_array_length(p_items)<1 or jsonb_array_length(p_items)>80 then raise exception 'invalid_items'; end if;
+  if exists (
+    select 1 from jsonb_array_elements(p_items) value
+    where coalesce(value->>'product_id','') !~* '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'
+  ) then raise exception 'invalid_items'; end if;
+  if exists (
+    select 1 from jsonb_array_elements(p_items) value
+    where coalesce(value->>'quantity','') !~ '^[0-9]+$'
+  ) then raise exception 'invalid_quantity'; end if;
 
   select array_agg(distinct (value->>'product_id')::uuid order by (value->>'product_id')::uuid)
   into v_product_ids

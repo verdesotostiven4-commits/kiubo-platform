@@ -25,10 +25,10 @@
   }
   function readStock(){return {stock_tracking:Boolean($('#v5StockTracking')?.checked),stock_quantity:Math.max(0,Math.trunc(Number($('#v5StockQuantity')?.value||0))),low_stock_threshold:Math.max(0,Math.trunc(Number($('#v5LowThreshold')?.value||5))),base_unit:$('#v5BaseUnit')?.value.trim()||'unidad',allow_item_note:$('#v5AllowNote')?.checked!==false}}
   window.fetch=async(input,init={})=>{
-    const url=typeof input==='string'?input:input?.url||'';let body=url===config.apiUrl?parse(init):null;let nextInit=init;let pendingStock=null;
-    if(body?.action==='save_product'&&$('#productModal')&&!$('#productModal').hidden){const ps=readPresentationRows();pendingStock=readStock();body={...body,presentations:ps};nextInit={...init,body:JSON.stringify(body)}}
+    const url=typeof input==='string'?input:input?.url||'';let body=url===config.apiUrl?parse(init):null;let nextInit=init;
+    if(body?.action==='save_product'&&$('#productModal')&&!$('#productModal').hidden){const ps=readPresentationRows();body={...body,presentations:ps};nextInit={...init,body:JSON.stringify(body)}}
     const res=await nativeFetch(input,nextInit);
-    if(url===config.apiUrl&&body){try{const payload=await res.clone().json();if(res.ok&&['provider_bootstrap','master_bootstrap'].includes(body.action)){notifyNewOrders(payload.orders||[]);state.products=payload.products||[];state.presentations=payload.presentations||[];state.orders=payload.orders||[];requestAnimationFrame(()=>{decorateProducts();ensureTools()})}if(res.ok&&body.action==='save_product'&&payload.id&&pendingStock){const headers=new Headers(nextInit.headers||{});headers.set('Content-Type','application/json');const stockRes=await nativeFetch(config.apiUrl,{method:'POST',headers,body:JSON.stringify({action:'save_stock',slug,product_id:payload.id,...pendingStock})});if(!stockRes.ok)miniToast('Producto guardado','Revisa el stock: no pudo actualizarse.')}}catch{}}
+    if(url===config.apiUrl&&body){try{const payload=await res.clone().json();if(res.ok&&['provider_bootstrap','master_bootstrap'].includes(body.action)){notifyNewOrders(payload.orders||[]);state.products=payload.products||[];state.presentations=payload.presentations||[];state.orders=payload.orders||[];requestAnimationFrame(()=>{decorateProducts();ensureTools()})}}catch{}}
     return res;
   };
   function ensureEditor(){
