@@ -9,7 +9,7 @@ import { KIUBO_DATA_REFRESHED } from "./RealtimeSyncRuntime";
 import styles from "./OperationalSalesInsights.module.css";
 
 const money=(value:number)=>new Intl.NumberFormat("es-EC",{style:"currency",currency:"USD"}).format(value||0);
-const paymentLabel:Record<SaleRecord["payment"],string>={cash:"Efectivo",transfer:"Transferencia",mixed:"Mixto",credit:"Fiado"};
+const paymentLabel:Record<SaleRecord["payment"],string>={cash:"Efectivo",transfer:"Transferencia",mixed:"Mixto",partial:"Pago parcial",credit:"Fiado"};
 const localDate=(value:Date)=>`${value.getFullYear()}-${String(value.getMonth()+1).padStart(2,"0")}-${String(value.getDate()).padStart(2,"0")}`;
 const saleDay=(iso:string)=>localDate(new Date(iso));
 const currentMonth=()=>localDate(new Date()).slice(0,7);
