@@ -186,6 +186,13 @@ begin
   where product_id=p_product_id and account_id=p_account_id
     and not (id=any(v_seen));
 
+  if not exists (
+    select 1 from public.catalog_product_presentations
+    where product_id=p_product_id and account_id=p_account_id and visible=true
+  ) then
+    raise exception 'invalid_presentations';
+  end if;
+
   update public.catalog_product_presentations
   set is_default=true
   where id=coalesce(v_default_id,v_first_id)
@@ -394,7 +401,15 @@ begin
       order by is_default desc,sort_order,id
       limit 1
       for share;
-      if not found then v_presentation := null; end if;
+      if not found then
+        if exists (
+          select 1 from public.catalog_product_presentations
+          where product_id=v_product_id and account_id=v_account.id
+        ) then
+          raise exception 'product_unavailable';
+        end if;
+        v_presentation := null;
+      end if;
     end if;
 
     v_units_per := coalesce(v_presentation.units_per_presentation,1);
