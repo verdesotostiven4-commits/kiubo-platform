@@ -51,6 +51,10 @@ function validSlug(value: unknown) {
   return /^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(slug) ? slug : "";
 }
 
+function validUuid(value: unknown) {
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(String(value ?? ""));
+}
+
 function hex(buffer: ArrayBuffer) {
   return [...new Uint8Array(buffer)].map(byte => byte.toString(16).padStart(2, "0")).join("");
 }
@@ -246,7 +250,7 @@ async function handleJson(req: Request, body: Json) {
   if (action === "catalog_bootstrap") return publicBootstrap(slug);
   if (action === "order_status") {
     const token = String(body.public_token || "");
-    if (!/^[0-9a-f-]{36}$/i.test(token)) throw Object.assign(new Error("invalid_request"), { status: 400 });
+    if (!validUuid(token)) throw Object.assign(new Error("invalid_request"), { status: 400 });
     const { data: order, error } = await db.from("catalog_orders").select("id,account_id,order_number,total,status,created_at,updated_at,delivery_method,delivery_address,payment_method").eq("public_token", token).maybeSingle();
     if (error) throw error;
     if (!order) throw Object.assign(new Error("order_not_found"), { status: 404 });
@@ -259,7 +263,7 @@ async function handleJson(req: Request, body: Json) {
   }
   if (action === "create_order") {
     const idempotency = String(body.idempotency_key || "");
-    if (!/^[0-9a-f-]{36}$/i.test(idempotency)) throw Object.assign(new Error("invalid_request"), { status: 400 });
+    if (!validUuid(idempotency)) throw Object.assign(new Error("invalid_request"), { status: 400 });
     const ip = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
     const rateKey = await sha256(`${slug}|${ip}`);
     const { data: allowed, error: rateError } = await db.rpc("catalog_check_order_rate", { p_slug: slug, p_rate_key: rateKey });
@@ -331,7 +335,7 @@ async function handleJson(req: Request, body: Json) {
   if (action === "save_presentations") {
     const productId = String(body.product_id || "");
     const rows = Array.isArray(body.presentations) ? body.presentations as Json[] : [];
-    if (!/^[0-9a-f-]{36}$/i.test(productId)) throw Object.assign(new Error("invalid_product"), { status: 400 });
+    if (!validUuid(productId)) throw Object.assign(new Error("invalid_product"), { status: 400 });
     validatePresentationsInput(rows);
     const presentations = await savePresentations(accountId, productId, rows);
     await logActivity(accountId, actor, "presentation.saved", "product", productId, { count: presentations.length });
@@ -356,7 +360,7 @@ async function handleJson(req: Request, body: Json) {
   }
   if (action === "save_product_image") {
     const productId = String(body.product_id || "");
-    if (!/^[0-9a-f-]{36}$/i.test(productId)) throw Object.assign(new Error("invalid_product"), { status: 400 });
+    if (!validUuid(productId)) throw Object.assign(new Error("invalid_product"), { status: 400 });
     const { data, error } = await db.from("catalog_products").update({
       image_url: cleanText(body.image_url, 1000),
       image_path: cleanText(body.image_path, 500),
@@ -369,7 +373,7 @@ async function handleJson(req: Request, body: Json) {
   }
   if (action === "save_presentation_image") {
     const presentationId = String(body.presentation_id || "");
-    if (!/^[0-9a-f-]{36}$/i.test(presentationId)) throw Object.assign(new Error("invalid_presentation"), { status: 400 });
+    if (!validUuid(presentationId)) throw Object.assign(new Error("invalid_presentation"), { status: 400 });
     const { data, error } = await db.from("catalog_product_presentations").update({
       image_url: cleanText(body.image_url, 1000),
       image_path: cleanText(body.image_path, 500),
@@ -382,7 +386,7 @@ async function handleJson(req: Request, body: Json) {
   }
   if (action === "save_presentation_settings") {
     const productId = String(body.product_id || "");
-    if (!/^[0-9a-f-]{36}$/i.test(productId) || !Array.isArray(body.settings)) throw Object.assign(new Error("invalid_presentations"), { status: 400 });
+    if (!validUuid(productId) || !Array.isArray(body.settings)) throw Object.assign(new Error("invalid_presentations"), { status: 400 });
     const { data, error } = await db.rpc("catalog_update_presentation_settings", { p_account_id: accountId, p_product_id: productId, p_settings: body.settings as Json[] });
     if (error) throw error;
     const presentations = (Array.isArray(data) ? data as Json[] : []).map(row => ({ ...row, image_url: imageUrl(row.image_path, row.image_url) }));
@@ -391,7 +395,7 @@ async function handleJson(req: Request, body: Json) {
   }
   if (action === "product_snapshot") {
     const productId = String(body.product_id || "");
-    if (!/^[0-9a-f-]{36}$/i.test(productId)) throw Object.assign(new Error("invalid_product"), { status: 400 });
+    if (!validUuid(productId)) throw Object.assign(new Error("invalid_product"), { status: 400 });
     const { data: product, error } = await db.from("catalog_products").select("*").eq("id", productId).eq("account_id", accountId).is("archived_at", null).maybeSingle();
     if (error) throw error;
     if (!product) throw Object.assign(new Error("product_not_found"), { status: 404 });
@@ -399,7 +403,7 @@ async function handleJson(req: Request, body: Json) {
   }
   if (action === "save_stock") {
     const productId = String(body.product_id || "");
-    if (!/^[0-9a-f-]{36}$/i.test(productId)) throw Object.assign(new Error("invalid_product"), { status: 400 });
+    if (!validUuid(productId)) throw Object.assign(new Error("invalid_product"), { status: 400 });
     const tracking = body.stock_tracking === true;
     const initialized = tracking || body.stock_initialized === true;
     const quantity = Math.trunc(Number(body.stock_quantity ?? 0));

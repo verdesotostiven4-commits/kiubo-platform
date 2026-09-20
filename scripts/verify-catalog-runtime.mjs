@@ -92,3 +92,9 @@ assert.ok(!routerSource.includes('if (body.action === "save_stock")'),"catalog-r
 assert.ok(!routerSource.includes("async function saveStock("),"catalog-router must remain a gateway, not a stock persistence service");
 has(api,'action === "save_stock"',"catalog-api must own authenticated inventory persistence");
 console.log("✓ Inventory writes have one canonical backend implementation.");
+
+
+has(api,"function validUuid(","catalog-api must use strict UUID validation before database casts");
+assert.ok(!api.includes("/^[0-9a-f-]{36}$/i"),"catalog-api must not use permissive pseudo-UUID validation");
+has(migration,"^[1-9][0-9]{0,2}$","checkout quantity syntax must be bounded to 1..999 before integer casts");
+console.log("✓ Request UUID and quantity validation is bounded before database casts.");

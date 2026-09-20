@@ -337,7 +337,7 @@ begin
   ) then raise exception 'invalid_items'; end if;
   if exists (
     select 1 from jsonb_array_elements(p_items) value
-    where coalesce(value->>'quantity','') !~ '^[0-9]+$'
+    where coalesce(value->>'quantity','') !~ '^[1-9][0-9]{0,2}$'
   ) then raise exception 'invalid_quantity'; end if;
 
   select array_agg(distinct (value->>'product_id')::uuid order by (value->>'product_id')::uuid)
