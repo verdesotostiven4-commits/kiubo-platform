@@ -67,7 +67,7 @@ for(const name of readdirSync(webDir).filter(name=>name.endsWith(".js"))){
   const source=readFileSync(join(webDir,name),"utf8");
   assert.ok(!source.includes("/functions/v1/catalog-v6"),`${name} must not call legacy catalog-v6 directly`);
 }
-for(const html of ["panel.html","pedido.html"]){
+for(const html of ["products/catalogos/web/panel.html","products/catalogos/web/pedido.html"]){
   const source=read(html);
   assert.ok(source.includes("/config.js?v=10.16.12"),`${html} must cache-bust config.js`);
 }
