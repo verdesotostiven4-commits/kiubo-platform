@@ -19,7 +19,7 @@ const platformOrigins = new Set([
 
 type Json = Record<string, unknown>;
 type CatalogRoute = { id: string; slug: string; public_base_url: string | null; allowed_origins: string[] | null };
-type OrderItem = { product_name: string; quantity: number; line_total: number | string; item_note?: string | null };
+type OrderItem = { product_name: string; quantity: number; line_total: number | string; presentation_name?: string | null; item_note?: string | null };
 
 function clean(value: unknown, max = 180) {
   return String(value ?? "").trim().slice(0, max);
@@ -133,7 +133,8 @@ function addItemNotesToWhatsapp(value: unknown, items: OrderItem[]) {
 
     const itemLines = items.flatMap(item => {
       const note = String(item.item_note || "").replace(/\s+/g, " ").trim().slice(0, 180);
-      const line = `${Number(item.quantity)}× ${String(item.product_name || "Producto")} — $${Number(item.line_total || 0).toFixed(2)}`;
+      const presentation = String(item.presentation_name || "").trim();
+      const line = `${Number(item.quantity)}× ${String(item.product_name || "Producto")}${presentation ? ` · ${presentation}` : ""} — $${Number(item.line_total || 0).toFixed(2)}`;
       return note ? [line, `   ↳ ${note}`] : [line];
     });
 
@@ -150,7 +151,7 @@ async function enrichCreateOrderPayload(payload: Json, route: CatalogRoute) {
   if (!/^[0-9a-f-]{36}$/i.test(orderId)) return;
 
   const { data, error } = await db.from("catalog_order_items")
-    .select("product_name,quantity,line_total,item_note,created_at")
+    .select("product_name,quantity,line_total,presentation_name,item_note,created_at")
     .eq("order_id", orderId)
     .order("created_at");
   if (!error && Array.isArray(data)) {
@@ -161,7 +162,7 @@ async function enrichCreateOrderPayload(payload: Json, route: CatalogRoute) {
 async function enrichCatalogStock(payload: Json, route: CatalogRoute) {
   if (!Array.isArray(payload.products) || !payload.products.length) return;
   const { data, error } = await db.from("catalog_products")
-    .select("id,stock_tracking,stock_quantity,low_stock_threshold,base_unit,allow_item_note")
+    .select("id,stock_tracking,stock_initialized,stock_quantity,low_stock_threshold,base_unit,allow_item_note")
     .eq("account_id", route.id)
     .is("archived_at", null);
   if (error || !Array.isArray(data)) return;
@@ -199,19 +200,23 @@ async function saveStock(req: Request, body: Json, route: CatalogRoute) {
   const allowItemNote = body.allow_item_note !== false;
   if (!Number.isFinite(quantity) || !Number.isFinite(threshold)) return response(req, { error: "invalid_stock" }, 400);
 
+  const update: Json = {
+    stock_tracking: tracking,
+    stock_quantity: quantity,
+    low_stock_threshold: threshold,
+    base_unit: baseUnit,
+    allow_item_note: allowItemNote,
+    updated_at: new Date().toISOString()
+  };
+  if ("stock_initialized" in body) update.stock_initialized = body.stock_initialized === true || tracking;
+  else if (tracking) update.stock_initialized = true;
+
   const { data, error } = await db.from("catalog_products")
-    .update({
-      stock_tracking: tracking,
-      stock_quantity: quantity,
-      low_stock_threshold: threshold,
-      base_unit: baseUnit,
-      allow_item_note: allowItemNote,
-      updated_at: new Date().toISOString()
-    })
+    .update(update)
     .eq("id", productId)
     .eq("account_id", route.id)
     .is("archived_at", null)
-    .select("id,stock_tracking,stock_quantity,low_stock_threshold,base_unit,allow_item_note,status")
+    .select("id,stock_tracking,stock_initialized,stock_quantity,low_stock_threshold,base_unit,allow_item_note,status")
     .maybeSingle();
 
   if (error) throw error;
