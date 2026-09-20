@@ -99,5 +99,9 @@
         }
       ]
     }
-  ]
+  ],
+  "framework": null,
+  "buildCommand": "",
+  "installCommand": "",
+  "outputDirectory": "."
 }
