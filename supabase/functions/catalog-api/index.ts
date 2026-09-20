@@ -232,7 +232,8 @@ function whatsappUrl(phone: string, order: Json, items: Json[], customer: Json) 
     "*Productos:*",
     ...productLines, "",
     `*Total estimado:* $${Number(order.total).toFixed(2)}`,
-    customer.delivery_method === "pickup" ? "*Entrega:* Retiro acordado" : `*Entrega:* ${customer.delivery_address || "Por coordinar"}`,
+    customer.delivery_method === "pickup" ? "*Entrega:* Retiro acordado" : `*Entrega:* ${customer.delivery_address || (customer.delivery_lat != null && customer.delivery_lng != null ? "Ubicación marcada en el mapa" : "Por coordinar")}`,
+    customer.delivery_method !== "pickup" && Number.isFinite(Number(customer.delivery_lat)) && Number.isFinite(Number(customer.delivery_lng)) ? `*Ubicación:* https://www.google.com/maps/search/?api=1&query=${Number(customer.delivery_lat)},${Number(customer.delivery_lng)}` : "",
     customer.notes ? `*Observaciones:* ${customer.notes}` : "", "",
     `Seguimiento: https://hakuna-matata-catalogo.vercel.app/pedido?ref=${order.public_token}`
   ].filter(Boolean);
@@ -251,7 +252,7 @@ async function handleJson(req: Request, body: Json) {
   if (action === "order_status") {
     const token = String(body.public_token || "");
     if (!validUuid(token)) throw Object.assign(new Error("invalid_request"), { status: 400 });
-    const { data: order, error } = await db.from("catalog_orders").select("id,account_id,order_number,total,status,created_at,updated_at,delivery_method,delivery_address,payment_method").eq("public_token", token).maybeSingle();
+    const { data: order, error } = await db.from("catalog_orders").select("id,account_id,order_number,total,status,created_at,updated_at,delivery_method,delivery_address,delivery_lat,delivery_lng,delivery_location_label,payment_method").eq("public_token", token).maybeSingle();
     if (error) throw error;
     if (!order) throw Object.assign(new Error("order_not_found"), { status: 404 });
     const { data: items, error: itemsError } = await db.from("catalog_order_items").select("product_name,quantity,line_total,presentation_name,item_note").eq("order_id", order.id).order("created_at");
@@ -273,6 +274,14 @@ async function handleJson(req: Request, body: Json) {
     const { data, error } = await db.rpc("catalog_create_order", { p_slug: slug, p_idempotency_key: idempotency, p_customer: customer, p_items: body.items || [] });
     if (error) throw error;
     const order = data as Json;
+    const rawLat=Number(customer.delivery_lat),rawLng=Number(customer.delivery_lng);
+    const hasLocation=customer.delivery_method!=="pickup"&&Number.isFinite(rawLat)&&Number.isFinite(rawLng)&&rawLat>=-90&&rawLat<=90&&rawLng>=-180&&rawLng<=180;
+    if(customer.delivery_method!=="pickup"&&(customer.delivery_lat!=null||customer.delivery_lng!=null)&&!hasLocation) throw Object.assign(new Error("invalid_location"),{status:400});
+    if(hasLocation){
+      const { error: locationError }=await db.from("catalog_orders").update({delivery_lat:Number(rawLat.toFixed(6)),delivery_lng:Number(rawLng.toFixed(6)),delivery_location_label:cleanText(customer.delivery_location_label,160)||"Ubicación seleccionada en el mapa"}).eq("id",order.id);
+      if(locationError) console.error("catalog-api location persistence",{order_id:order.id,message:locationError.message});
+      else {order.delivery_lat=Number(rawLat.toFixed(6));order.delivery_lng=Number(rawLng.toFixed(6));order.delivery_location_label=cleanText(customer.delivery_location_label,160)||"Ubicación seleccionada en el mapa";}
+    }
     const { data: items } = await db.from("catalog_order_items").select("product_name,quantity,line_total,presentation_name,item_note").eq("order_id", order.id);
     return { order, whatsapp_url: whatsappUrl(String(order.whatsapp || ""), order, (items || []) as Json[], customer) };
   }
@@ -554,7 +563,7 @@ Deno.serve(async (req: Request) => {
   } catch (error) {
     const err = error as Error & { status?: number; details?: unknown; code?: string };
     const message = err.message || "request_failed";
-    const known = ["account_not_found", "order_not_found", "catalog_closed", "invalid_request", "minimum_order", "insufficient_stock", "product_unavailable", "invalid_customer", "invalid_phone", "invalid_items", "invalid_quantity", "invalid_delivery", "invalid_pin", "too_many_attempts", "too_many_orders", "session_expired", "forbidden", "pin_must_be_4_digits", "invalid_product", "product_not_found", "invalid_presentation", "invalid_presentations", "invalid_payment_settings", "invalid_stock", "invalid_category", "invalid_status", "invalid_status_transition", "invalid_name", "invalid_color", "invalid_upload", "invalid_file", "unknown_action"];
+    const known = ["account_not_found", "order_not_found", "catalog_closed", "invalid_request", "minimum_order", "insufficient_stock", "product_unavailable", "invalid_customer", "invalid_phone", "invalid_items", "invalid_quantity", "invalid_delivery", "invalid_location", "invalid_pin", "too_many_attempts", "too_many_orders", "session_expired", "forbidden", "pin_must_be_4_digits", "invalid_product", "product_not_found", "invalid_presentation", "invalid_presentations", "invalid_payment_settings", "invalid_stock", "invalid_category", "invalid_status", "invalid_status_transition", "invalid_name", "invalid_color", "invalid_upload", "invalid_file", "unknown_action"];
     const code = known.find(item => message.includes(item)) || err.code || "request_failed";
     const status = err.status || (code === "account_not_found" ? 404 : code === "session_expired" || code === "invalid_pin" ? 401 : code === "forbidden" ? 403 : code === "too_many_attempts" || code === "too_many_orders" ? 429 : code === "insufficient_stock" || code === "invalid_status_transition" ? 409 : code === "request_failed" ? 500 : 400);
     if (status >= 500) console.error("catalog-api", { code, message, details: err.details });
