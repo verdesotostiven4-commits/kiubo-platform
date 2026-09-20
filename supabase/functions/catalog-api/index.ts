@@ -1,6 +1,8 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "npm:@supabase/supabase-js@2.112.4";
 
+declare const EdgeRuntime: { waitUntil(promise: Promise<unknown>): void };
+
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL") ?? "";
 const legacySecret = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
 const legacyAnon = Deno.env.get("SUPABASE_ANON_KEY") ?? "";
