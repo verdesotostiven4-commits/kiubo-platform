@@ -56,6 +56,7 @@ assert.ok(!panelHtml.includes("data-order-filter"),"provider orders must not exp
 has(panel,"Pedidos que necesitan respuesta","provider orders must make confirm/cancel the primary workflow");
 has(panel,"Seguimiento opcional","advanced delivery progression must remain optional");
 const catalog1051=read("products/catalogos/web/catalog-v10.5.1.js");
+const sw=read("products/catalogos/web/sw.js");
 has(catalog1051,"hm1051-order-moment","customer app must surface a transient confirmed/cancelled status moment");
 has(sw,"BRAND_NOTIFICATION_ICON","background notifications must use the real Hakuna logo");
 has(sw,"view=orders&order=","provider notification clicks must open the matching order");
@@ -64,7 +65,6 @@ has(panelHtml,'/panel.js?v=10.18.0',"provider panel module must use the current 
 has(config,"version:'10.18.0'","config version must match hardened release");
 const index=read("products/catalogos/web/index.html");
 assert.ok(!index.includes("?v=10.9.1"),"index.html must not pin stale 10.9.1 asset query strings");
-const sw=read("products/catalogos/web/sw.js");
 has(sw,"kiubo-catalog-v10-18-0-20260920","service-worker cache must roll for hardened release");
 
 console.log("✓ Hakuna catalog runtime guard passed.");
