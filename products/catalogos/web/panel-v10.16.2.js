@@ -98,7 +98,8 @@ function ensurePack(){
 }
 function setDefaultForMode(){
   const rs=rows(),u=rs.find(r=>roleOf(r)==='unit'),p=rs.find(r=>roleOf(r)==='pack');
-  const wanted=modeIntent==='unit'?u:modeIntent==='pack'?p:(p||u);
+  const current=rs.find(r=>field(r,'[data-p-default]')?.checked&&field(r,'[data-hm-visible]')?.checked!==false);
+  const wanted=modeIntent==='unit'?u:modeIntent==='pack'?p:(current||p||u);
   const radio=wanted&&field(wanted,'[data-p-default]');
   if(radio&&!radio.checked)radio.checked=true;
 }

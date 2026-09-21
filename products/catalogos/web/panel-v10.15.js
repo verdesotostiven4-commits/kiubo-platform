@@ -32,8 +32,12 @@ function decorateProductRows(){
 function scheduleUi(){if(uiRaf)return;uiRaf=requestAnimationFrame(()=>{uiRaf=0;syncInventoryUi();decorateProductRows()})}
 async function saveInventoryState(productId){
   const s=ensureInventory(),old=$('#v5StockTracking'),q=$('#v5StockQuantity'),low=$('#v5LowThreshold'),base=$('#v5BaseUnit');if(!productId||!old||!q)return true;
+  const isNew=!s.productId;
+  if(!isNew&&!s.dirty){s.productId=productId;return true}
   const body={action:'save_stock',slug:slug(),product_id:productId,stock_tracking:s.initialized?s.tracking:false,stock_initialized:s.initialized,stock_quantity:Math.max(0,Math.trunc(Number(q.value||0))),low_stock_threshold:Math.max(0,Math.trunc(Number(low?.value||5))),base_unit:base?.value?.trim()||'unidad',allow_item_note:$('#v5AllowNote')?.checked!==false};
-  const r=await baseFetch(C.apiUrl,{method:'POST',headers:apiHeaders(),body:JSON.stringify(body)}),p=await r.json().catch(()=>({}));if(!r.ok)return false;if(p.product){products.set(String(productId),{...(products.get(String(productId))||{}),...p.product});s.initialized=p.product.stock_initialized===true;s.tracking=p.product.stock_tracking===true;s.dirty=false}return Boolean(p.product&&Boolean(p.product.stock_initialized)===Boolean(body.stock_initialized)&&Boolean(p.product.stock_tracking)===Boolean(body.stock_tracking))
+  const r=await baseFetch(C.apiUrl,{method:'POST',headers:apiHeaders(),body:JSON.stringify(body)}),p=await r.json().catch(()=>({}));if(!r.ok)return false;
+  if(p.product){products.set(String(productId),{...(products.get(String(productId))||{}),...p.product});s.productId=productId;s.initialized=p.product.stock_initialized===true;s.tracking=p.product.stock_tracking===true;s.dirty=false}
+  return Boolean(p.product&&Boolean(p.product.stock_initialized)===Boolean(body.stock_initialized)&&Boolean(p.product.stock_tracking)===Boolean(body.stock_tracking))
 }
 window.fetch=async(input,init={})=>{
   const url=typeof input==='string'?input:input?.url||'',body=url===C.apiUrl?parse(init):null,isSave=body?.action==='save_product'&&$('#productModal')&&!$('#productModal').hidden;
@@ -43,8 +47,8 @@ window.fetch=async(input,init={})=>{
   return res;
 };
 document.addEventListener('click',e=>{const edit=e.target.closest?.('[data-edit-product]');if(edit){setActive(edit.dataset.editProduct||'');return}if(e.target.closest?.('#newProductBtn,#mobileCreateBtn,[data-quick="new-product"]'))setActive('')},true);
-document.addEventListener('change',e=>{const t=e.target;if(t?.matches?.('#hm114Track input')){const s=ensureInventory();s.initialized=true;s.tracking=t.checked;s.dirty=true;const old=$('#v5StockTracking');if(old){old.checked=s.tracking;old.dispatchEvent(new Event('change',{bubbles:true}))}scheduleUi()}if(t?.matches?.('[data-hm-promo]')){const row=t.closest('.v5-presentation-row');syncPromoLocal(row);setTimeout(()=>{syncPromoLocal(row);scheduleUi()},0)}},true);
-document.addEventListener('input',e=>{const t=e.target;if(t?.matches?.('#hm111Packs,#hm111Loose,#v5StockQuantity')){const s=ensureInventory();s.initialized=true;s.tracking=true;s.dirty=true;const old=$('#v5StockTracking');if(old){old.checked=true;old.dispatchEvent(new Event('change',{bubbles:true}))}scheduleUi()}if(t?.matches?.('[data-hm-promo-price],[data-hm-promo-label]'))syncPromoLocal(t.closest('.v5-presentation-row'))},true);
+document.addEventListener('change',e=>{const t=e.target;if(t?.matches?.('#v5AllowNote,#v5LowThreshold,#v5BaseUnit'))ensureInventory().dirty=true;if(t?.matches?.('#hm114Track input')){const s=ensureInventory();s.initialized=true;s.tracking=t.checked;s.dirty=true;const old=$('#v5StockTracking');if(old){old.checked=s.tracking;old.dispatchEvent(new Event('change',{bubbles:true}))}scheduleUi()}if(t?.matches?.('[data-hm-promo]')){const row=t.closest('.v5-presentation-row');syncPromoLocal(row);setTimeout(()=>{syncPromoLocal(row);scheduleUi()},0)}},true);
+document.addEventListener('input',e=>{const t=e.target;if(t?.matches?.('#v5LowThreshold,#v5BaseUnit'))ensureInventory().dirty=true;if(t?.matches?.('#hm111Packs,#hm111Loose,#v5StockQuantity')){const s=ensureInventory();s.initialized=true;s.tracking=true;s.dirty=true;const old=$('#v5StockTracking');if(old){old.checked=true;old.dispatchEvent(new Event('change',{bubbles:true}))}scheduleUi()}if(t?.matches?.('[data-hm-promo-price],[data-hm-promo-label]'))syncPromoLocal(t.closest('.v5-presentation-row'))},true);
 window.addEventListener('hm111:presentations',()=>setTimeout(scheduleUi,0));
 new MutationObserver(scheduleUi).observe(document.documentElement,{childList:true,subtree:true});
 const start=()=>{scheduleUi();document.documentElement.dataset.hmPanelInventory='10.15.0'};
