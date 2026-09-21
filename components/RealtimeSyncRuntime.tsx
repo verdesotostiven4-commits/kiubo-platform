@@ -14,21 +14,23 @@ export function RealtimeSyncRuntime(){
     if(!client)return;
     const db=loadLocalDatabase(),ctx=getWorkspaceContext(db);
     if(!ctx.tenant||ctx.tenant.plan==="Internal"||!UUID_RE.test(ctx.tenantId))return;
-    let timer:number|undefined,disposed=false,busy=false;
+    let timer:number|undefined,disposed=false,busy=false,continueSync=false;
     const sync=()=>{
       if(disposed||busy)return;
       if(timer)window.clearTimeout(timer);
       timer=window.setTimeout(()=>{
         busy=true;
         void runSyncCycle().then(result=>{
+          continueSync=Boolean(result.hasMore);
           if(!disposed&&(result.pulled>0||result.pushed>0))window.dispatchEvent(new CustomEvent(KIUBO_DATA_REFRESHED,{detail:result}));
-        }).finally(()=>{busy=false});
+        }).finally(()=>{busy=false;if(!disposed&&continueSync){continueSync=false;sync()}});
       },350);
     };
     const channel=client.channel(`kiubo-live-${ctx.tenantId.slice(0,8)}`)
       .on("postgres_changes",{event:"*",schema:"public",table:"sync_entities",filter:`tenant_id=eq.${ctx.tenantId}`},sync)
       .subscribe();
     const online=()=>sync();
+    sync();
     window.addEventListener("online",online);
     return()=>{
       disposed=true;
