@@ -5,8 +5,8 @@ import { getSyncSummary,getWorkspaceContext,loadLocalDatabase,saveLocalDatabase,
 import { queueFoodOrder } from "./order-sync";
 import type { SyncEntity,SyncPullResult,SyncPushResult,SyncQueueRecord } from "./sync-types";
 
-export type SyncCycleResult={ok:boolean;mode:"local"|"supabase";pushed:number;failed:number;pulled:number;message:string};
-const UUID_RE=/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+export type SyncCycleResult={ok:boolean;mode:"local"|"supabase";pushed:number;failed:number;pulled:number;message:string;hasMore?:boolean};
+const UUID_RE=/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i,REVISION_CURSOR_RE=/^\d+$/;
 const SYNCABLE_ENTITIES=new Set<SyncQueueRecord["entityType"]>(["tenantProducts","customers","sales","orders","saleTransactions","cashSessions","cashMovements","cashTransactions","credits","creditPayments","creditPaymentTransactions","settings","branding","suppliers","purchases","supplierPayments","stockMovements","purchaseTransactions","supplierPaymentTransactions","inventoryAdjustmentTransactions","saleReversalTransactions"]);
 const MAX_PULL_PAGES=4;
 const STALE_SYNCING_MS=60_000;
@@ -39,7 +39,7 @@ async function pullAvailable(provider:KiuboDataProvider,startCursor?:string):Pro
   return{cursor,hasMore,changes};
 }
 function persistPulled(provider:KiuboDataProvider,db:ReturnType<typeof loadLocalDatabase>,pulled:SyncPullResult){if(pulled.changes.length){applyPulled(db,pulled.changes);db.syncCursor=pulled.cursor??db.syncCursor;saveLocalDatabase(db,{trackChanges:false})}provider.commitCursor(pulled.cursor)}
-async function repairTenantIsolation(provider:KiuboDataProvider,db:ReturnType<typeof loadLocalDatabase>,tenantId:string){if(tenantIsolationRepairDone(tenantId))return null;const canonical=await pullAvailable(provider,"0");persistPulled(provider,db,canonical);if(!canonical.hasMore)markTenantIsolationRepairDone(tenantId);return canonical}
+async function repairTenantIsolation(provider:KiuboDataProvider,db:ReturnType<typeof loadLocalDatabase>,tenantId:string){if(tenantIsolationRepairDone(tenantId))return null;const resumeCursor=db.syncCursor&&REVISION_CURSOR_RE.test(db.syncCursor)?db.syncCursor:"0";const canonical=await pullAvailable(provider,resumeCursor);persistPulled(provider,db,canonical);if(!canonical.hasMore)markTenantIsolationRepairDone(tenantId);return canonical}
 function isActiveQueueItem(item:SyncQueueRecord,tenantId:string){return item.tenantId===tenantId&&SYNCABLE_ENTITIES.has(item.entityType)}
 function retryDelayMs(attempts:number){const exponent=Math.max(0,Math.min(6,attempts));return Math.min(300_000,5_000*Math.pow(2,exponent))}
 function retryDue(item:SyncQueueRecord,now=Date.now()){if(item.status!=="failed")return true;const updated=Date.parse(item.updatedAt);if(!Number.isFinite(updated))return true;return now-updated>=retryDelayMs(item.attempts)}
@@ -55,8 +55,8 @@ async function runSyncCycleCore():Promise<SyncCycleResult>{
   recoverExpiredSyncing(db,activeTenantId);
   const now=Date.now(),activeQueue=db.syncQueue.filter(item=>isActiveQueueItem(item,activeTenantId)),waitingRetry=activeQueue.filter(item=>item.status==="failed"&&!retryDue(item,now)),pending=activeQueue.filter(item=>item.status==="pending"||(item.status==="failed"&&retryDue(item,now))).slice(0,100);
   if(!pending.length){
-    if(!waitingRetry.length&&!tenantIsolationRepairDone(activeTenantId)){try{const repaired=await repairTenantIsolation(provider,db,activeTenantId);if(repaired)return{ok:!repaired.hasMore,mode:provider.mode,pushed:0,failed:0,pulled:repaired.changes.length,message:repaired.hasMore?"KIUBO sigue verificando el negocio en Cloud":"Datos del negocio verificados y aislados correctamente"}}catch{}}
-    const pulled=await pullAvailable(provider);persistPulled(provider,db,pulled);return{ok:waitingRetry.length===0,mode:provider.mode,pushed:0,failed:waitingRetry.length,pulled:pulled.changes.length,message:waitingRetry.length?`Hay ${waitingRetry.length} cambio${waitingRetry.length===1?"":"s"} protegido${waitingRetry.length===1?"":"s"}; KIUBO reintentará automáticamente`:pulled.hasMore?"KIUBO sigue poniéndose al día":pulled.changes.length?"Datos cloud actualizados":"Todo sincronizado"};
+    if(!waitingRetry.length&&!tenantIsolationRepairDone(activeTenantId)){try{const repaired=await repairTenantIsolation(provider,db,activeTenantId);if(repaired)return{ok:!repaired.hasMore,mode:provider.mode,pushed:0,failed:0,pulled:repaired.changes.length,hasMore:Boolean(repaired.hasMore),message:repaired.hasMore?"KIUBO sigue verificando el negocio en Cloud":"Datos del negocio verificados y aislados correctamente"}}catch{}}
+    const pulled=await pullAvailable(provider);persistPulled(provider,db,pulled);return{ok:waitingRetry.length===0&&!pulled.hasMore,mode:provider.mode,pushed:0,failed:waitingRetry.length,pulled:pulled.changes.length,hasMore:Boolean(pulled.hasMore),message:waitingRetry.length?`Hay ${waitingRetry.length} cambio${waitingRetry.length===1?"":"s"} protegido${waitingRetry.length===1?"":"s"}; KIUBO reintentará automáticamente`:pulled.hasMore?"KIUBO sigue poniéndose al día":pulled.changes.length?"Datos cloud actualizados":"Todo sincronizado"};
   }
 
   for(const item of pending)updateSyncOperation(item.operationId,"syncing");
@@ -102,8 +102,8 @@ async function runSyncCycleCore():Promise<SyncCycleResult>{
     catch(error){const message=error instanceof Error?error.message:"No se pudo confirmar el estado cloud";return{ok:false,mode:provider.mode,pushed,failed:0,pulled:0,message:`KIUBO recuperó ${recovered} operación${recovered===1?"":"es"}; falta confirmar la nube: ${message}`}}
   }
   if(unresolved)return{ok:false,mode:provider.mode,pushed,failed,pulled:0,message:failed?"Quedaron cambios protegidos; KIUBO volverá a intentarlo":"Cambios locales enviados"};
-  if(!tenantIsolationRepairDone(activeTenantId)){try{const repaired=await repairTenantIsolation(provider,afterPush,activeTenantId);if(repaired)return{ok:failed===0&&!repaired.hasMore,mode:provider.mode,pushed,failed,pulled:repaired.changes.length,message:repaired.hasMore?"Cambios enviados; KIUBO sigue verificando el negocio":"Cambios enviados y datos del negocio verificados"}}catch{}}
-  const pulled=await pullAvailable(provider);persistPulled(provider,afterPush,pulled);return{ok:true,mode:provider.mode,pushed,failed,pulled:pulled.changes.length,message:pulled.hasMore?"Cambios enviados; KIUBO sigue poniéndose al día":"Sincronización completada"};
+  if(!tenantIsolationRepairDone(activeTenantId)){try{const repaired=await repairTenantIsolation(provider,afterPush,activeTenantId);if(repaired)return{ok:failed===0&&!repaired.hasMore,mode:provider.mode,pushed,failed,pulled:repaired.changes.length,hasMore:Boolean(repaired.hasMore),message:repaired.hasMore?"Cambios enviados; KIUBO sigue verificando el negocio":"Cambios enviados y datos del negocio verificados"}}catch{}}
+  const pulled=await pullAvailable(provider);persistPulled(provider,afterPush,pulled);return{ok:failed===0&&!pulled.hasMore,mode:provider.mode,pushed,failed,pulled:pulled.changes.length,hasMore:Boolean(pulled.hasMore),message:pulled.hasMore?"Cambios enviados; KIUBO sigue poniéndose al día":"Sincronización completada"};
 }
 
 export async function runSyncCycle():Promise<SyncCycleResult>{const provider=getDataProvider();if(typeof navigator!=="undefined"&&"locks" in navigator){const locks=navigator.locks;const result=await locks.request("kiubo-cloud-sync",{ifAvailable:true},async lock=>lock?runSyncCycleCore():null);if(result)return result;return{ok:true,mode:provider.mode,pushed:0,failed:0,pulled:0,message:"Otra pestaña de KIUBO ya está sincronizando"}}return runSyncCycleCore()}
