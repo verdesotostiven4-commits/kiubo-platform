@@ -11,3 +11,27 @@ html.hm105-boot .v10-app,html.hm105-ready .v10-app,html .v10-app{opacity:1!impor
 #hm109BootFallback.hm109-boot-error i{display:none}
 @keyframes hm109load{from{transform:translateX(-110%)}to{transform:translateX(330%)}}
 @media(prefers-reduced-motion:reduce){#hm109BootFallback i:after{animation:none;width:100%}}
+
+/* Product detail media: presentation photos are authored 1:1. Keep the full square visible on mobile/tablet. */
+@media(max-width:900px){
+  .v102-detail .v10-detail-media{
+    width:100%!important;
+    aspect-ratio:1/1!important;
+    min-height:0!important;
+    height:auto!important;
+    padding:14px 18px 10px!important;
+    overflow:hidden!important;
+    background:#fff!important;
+    display:grid!important;
+    place-items:center!important;
+  }
+  .v102-detail .v10-detail-media>img{
+    display:block!important;
+    width:100%!important;
+    height:100%!important;
+    max-width:100%!important;
+    max-height:100%!important;
+    object-fit:contain!important;
+    object-position:center center!important;
+  }
+}
