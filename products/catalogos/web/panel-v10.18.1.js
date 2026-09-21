@@ -1,4 +1,4 @@
-/* Hakuna Panel 10.18.1 — compact product editor + explicit catalog cover. */
+/* Hakuna Panel 10.18.2 — compact product editor + explicit catalog cover. */
 (()=>{
 'use strict';
 if(window.__hm1181Panel)return;window.__hm1181Panel=true;
@@ -150,6 +150,6 @@ window.addEventListener('hm111:presentations',()=>setTimeout(schedule,20));
 window.addEventListener('hm108:photo-saved',()=>setTimeout(schedule,50));
 const m=modal();if(m)new MutationObserver(()=>schedule()).observe(m,{childList:true,subtree:true,attributes:true,attributeFilter:['hidden','class']});
 const list=$('#adminProductList');if(list)new MutationObserver(()=>schedule()).observe(list,{childList:true,subtree:true});
-const start=()=>{schedule();document.documentElement.dataset.hmProductEditor='10.18.1'};
+const start=()=>{schedule();document.documentElement.dataset.hmProductEditor='10.18.2'};
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start,{once:true});else start();
 })();

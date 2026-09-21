@@ -399,8 +399,16 @@ async function saveProduct() {
     const file = $("#productImage").files[0];
     if (file) { const uploaded = await uploadFile(file, "product", imagePath); imagePath = uploaded.path; imageUrl = uploaded.public_url; }
     const product = { id: state.editingProduct?.id || null, name, category_id: $("#productCategory").value || null, brand: $("#productBrand").value.trim() || null, price, compare_at_price: $("#productComparePrice").value ? Number($("#productComparePrice").value) : null, unit: $("#productUnit").value.trim() || null, sku: $("#productSku").value.trim() || null, description: $("#productDescription").value.trim() || null, status: $("#productStatus").value, sort_order: Number($("#productSort").value || 0), visible: $("#productVisible").checked, featured: $("#productFeatured").checked, image_path: imagePath || null, image_url: imageUrl || null };
-    await callApi("save_product", { slug: state.account.slug, product });
-    closeModals(); toast("Producto guardado", "success"); await refreshData();
+    const saved = await callApi("save_product", { slug: state.account.slug, product });
+    const id = saved?.id || product.id;
+    if (id) {
+      const index = state.products.findIndex(item => String(item.id) === String(id));
+      const next = { ...(index >= 0 ? state.products[index] : {}), ...product, id };
+      if (index >= 0) state.products[index] = next; else state.products.unshift(next);
+      renderProducts(); renderStats(); renderDashboard();
+    }
+    closeModals(); toast("Producto guardado", "success");
+    refreshData({ silent: true });
   } catch (error) { toast(error.message === "file_too_large" ? "La imagen supera 5 MB" : "No pudimos guardar el producto", "error"); }
   finally { state.busy = false; $("#saveProductBtn").disabled = false; $("#saveProductBtn").textContent = "Guardar producto"; }
 }
