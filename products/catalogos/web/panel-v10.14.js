@@ -45,10 +45,10 @@ function armCategory(id=''){
 }
 
 function ensureModeDefault(mode){
-  const u=unitRow(),p=packRow();let wanted=null;
+  const u=unitRow(),p=packRow(),current=rows().find(r=>rowVisible(r)&&$('[data-p-default]',r)?.checked);let wanted=null;
   if(mode==='unit')wanted=u;
   else if(mode==='pack')wanted=p;
-  else wanted=p||u; // wholesale: when both exist, show the pack first.
+  else wanted=current||p||u;
   if(!wanted)return;
   const radio=$('[data-p-default]',wanted);if(radio&&!radio.checked)radio.checked=true;
 }
@@ -142,25 +142,7 @@ function decorateGeneral(){
 }
 function schedule(){if(raf)return;raf=requestAnimationFrame(()=>{raf=0;installCategoryGuard();decorateGeneral()})}
 
-/* Strong save verification for the fields that confused the operator most. */
-function parseBody(init){try{return typeof init?.body==='string'?JSON.parse(init.body):null}catch{return null}}
-function norm(v){return String(v??'').trim()}
-window.fetch=async(input,init={})=>{
-  const url=typeof input==='string'?input:input?.url||'',body=url===C.apiUrl?parseBody(init):null;
-  const isSave=body?.action==='save_product'&&modalOpen();
-  const expected=isSave?{id:body.product?.id||null,name:norm(body.product?.name),category_id:norm(body.product?.category_id),brand:norm(body.product?.brand),sku:norm(body.product?.sku),visible:body.product?.visible!==false,featured:body.product?.featured===true,stock_tracking:Boolean($('#v5StockTracking')?.checked),stock_quantity:Math.max(0,Math.trunc(Number($('#v5StockQuantity')?.value||0)))}:null;
-  const res=await baseFetch(input,init);
-  if(!expected||!res.ok)return res;
-  try{
-    const saved=await res.clone().json().catch(()=>({})),id=String(saved.id||expected.id||'');if(!id)return res;
-    const headers=new Headers(init.headers||{});headers.set('Content-Type','application/json');
-    const vr=await baseFetch(C.apiUrl,{method:'POST',headers,body:JSON.stringify({action:'provider_bootstrap',slug:slug()})});if(!vr.ok)return res;
-    const snap=await vr.json(),p=(snap.products||[]).find(x=>String(x.id)===id);if(!p)return res;
-    const ok=norm(p.name)===expected.name&&norm(p.category_id)===expected.category_id&&norm(p.brand)===expected.brand&&norm(p.sku)===expected.sku&&Boolean(p.visible)===expected.visible&&Boolean(p.featured)===expected.featured&&Boolean(p.stock_tracking)===expected.stock_tracking&&Number(p.stock_quantity||0)===expected.stock_quantity;
-    if(!ok){toast('Algo no quedó guardado. El formulario sigue abierto para revisarlo.','error');return new Response(JSON.stringify({error:'save_verification_failed'}),{status:409,headers:{'Content-Type':'application/json'}})}
-  }catch{}
-  return res;
-};
+/* save_product verification is handled from the direct response by panel-v10.11-core. */
 
 /* Keep UI simple after the legacy layers do their internal work. */
 document.addEventListener('click',e=>{
