@@ -12,6 +12,17 @@ has(catalog,"function presentationPrice(","catalog must use server-fed promo met
 has(catalog,"function cartItemAllowsNote(","cart note permission must be resolved from live product data");
 has(catalog,"function reconcileCart(","cached carts must reconcile against live bootstrap");
 has(catalog,"if(selected&&canAdd(product,selected,1))","default presentation must not bypass stock");
+has(catalog,"presentationId=''","product detail must support opening one concrete presentation");
+has(catalog,"Esta promoción aplica solo a esta presentación","offer detail must explain presentation scope");
+has(catalog,"open.dataset.openPresentation||''","offer trigger must pass its presentation into product detail");
+const catalog111=read("products/catalogos/web/catalog-v10.11.js");
+has(catalog111,"data-open-presentation","offer cards must target their exact promoted presentation");
+assert.ok(!catalog111.includes("const chosen=new Map()"),"offers must not collapse multiple promoted presentations into one product card");
+has(catalog111,"String(d.id)===String(o.row.id)","normal product cards must only show promo styling when their default presentation is actually promoted");
+const catalog1169css=read("products/catalogos/web/catalog-v10.16.9.css");
+has(catalog1169css,"Hakuna 10.18.3 — final product-detail media contract.","latest catalog layer must own the final product-detail image contract");
+has(catalog1169css,"aspect-ratio:1/1!important","mobile product detail media must remain square");
+has(catalog1169css,"object-fit:contain!important","product detail images must never be cropped");
 has(catalog,"requestedUnits=selectedUnits()","detail submit must re-check combined stock");
 has(catalog,"item_note:cartItemAllowsNote(x)?","checkout must enforce note permission");
 has(catalog,"function cartStockIssue(","cart must block known stock shortages before checkout");
@@ -61,12 +72,12 @@ has(catalog1051,"hm1051-order-moment","customer app must surface a transient con
 has(sw,"BRAND_NOTIFICATION_ICON","background notifications must use the real Hakuna logo");
 has(sw,"view=orders&order=","provider notification clicks must open the matching order");
 assert.ok(!panel.split("\n").some(line=>line.startsWith("  $('[data-quick]').forEach")||line.startsWith("  $('[data-daily]').forEach")),"provider panel repeated controls must use the querySelectorAll helper");
-has(panelHtml,'/panel.js?v=10.18.2',"provider panel module must use the current release cache-bust");
+has(panelHtml,'/panel.js?v=10.18.3',"provider panel module must use the current release cache-bust");
 const panel111=read("products/catalogos/web/panel-v10.11-core.js");
 const panel114=read("products/catalogos/web/panel-v10.14.js");
 const panel115=read("products/catalogos/web/panel-v10.15.js");
 const panel1162=read("products/catalogos/web/panel-v10.16.2.js");
-const panel1181=read("products/catalogos/web/panel-v10.18.2.js");
+const panel1181=read("products/catalogos/web/panel-v10.18.3.js");
 has(panel1181,"PORTADA DEL CATÁLOGO","product editor must expose an explicit catalog-cover selector");
 has(panel1181,"Foto general de respaldo","product editor must distinguish fallback photo from presentation photos");
 has(panel1181,"Más datos del producto","optional SKU and description must be collapsible");
@@ -76,18 +87,18 @@ assert.ok(!panel111.includes("save_presentation_settings"),"product save verific
 assert.ok(!panel114.includes("save_verification_failed"),"simple editor must not run an extra bootstrap save verification");
 has(panel115,"if(!isNew&&!s.dirty)","unchanged inventory must not add an extra save_stock round-trip");
 has(panel1162,"current||p||u","explicit catalog-cover selection must survive unit+pack mode synchronization");
-has(config,"/panel-v10.18.2.js","current panel editor layer must be loaded");
-has(sw,"/panel-v10.18.2.js","service worker shell must include the current panel editor layer");
+has(config,"/panel-v10.18.3.js","current panel editor layer must be loaded");
+has(sw,"/panel-v10.18.3.js","service worker shell must include the current panel editor layer");
 const panel109=read("products/catalogos/web/panel-v10.9.js");
 assert.ok(!panel109.includes("provider_bootstrap"),"general photo selection must not fetch bootstrap data before save");
 assert.ok(!panel109.includes("syncGeneralFromServer"),"opening the product editor must not refetch the already-loaded product photo");
 has(panel109,"Lista para guardar con el producto.","general photo selection must remain local until the canonical product save");
 has(panel109,"verifyPersisted(item,data)","presentation-photo autosave must verify from the direct API response");
 has(panel,'refreshData({ silent: true });',"product save must refresh silently after closing instead of blocking the editor");
-has(config,"version:'10.18.2'","config version must match hardened release");
+has(config,"version:'10.18.3'","config version must match hardened release");
 const index=read("products/catalogos/web/index.html");
 assert.ok(!index.includes("?v=10.9.1"),"index.html must not pin stale 10.9.1 asset query strings");
-has(sw,"kiubo-catalog-v10-18-2-20260921","service-worker cache must roll for hardened release");
+has(sw,"kiubo-catalog-v10-18-3-20260922","service-worker cache must roll for hardened release");
 
 console.log("✓ Hakuna catalog runtime guard passed.");
 
@@ -110,7 +121,7 @@ for (const file of [
   "products/catalogos/web/panel-v10.14.js",
   "products/catalogos/web/panel-v10.15.js",
   "products/catalogos/web/panel-v10.16.2.js",
-  "products/catalogos/web/panel-v10.18.2.js",
+  "products/catalogos/web/panel-v10.18.3.js",
   "products/catalogos/web/panel-fast-save-v7.4.js",
   "products/catalogos/web/panel-v5.js",
   "products/catalogos/web/panel-v7.5.js",
@@ -132,7 +143,7 @@ for(const name of readdirSync(webDir).filter(name=>name.endsWith(".js"))){
 }
 for(const html of ["products/catalogos/web/panel.html","products/catalogos/web/pedido.html"]){
   const source=read(html);
-  assert.ok(source.includes("/config.js?v=10.18.2"),`${html} must cache-bust config.js`);
+  assert.ok(source.includes("/config.js?v=10.18.3"),`${html} must cache-bust config.js`);
 }
 const vercelConfig=read("products/catalogos/web/vercel.json");
 has(vercelConfig,'"source": "/config.js"',"Vercel config must disable stale config.js caching");
