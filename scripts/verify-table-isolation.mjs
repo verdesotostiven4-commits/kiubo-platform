@@ -13,6 +13,8 @@ const checks=[
   [pos.includes("findOpenServiceOrder"),"takeaway keeps an independent open order"],
   [pos.includes("findOpenDeliveryOrder"),"delivery slots resolve independent open orders"],
   [pos.includes("persistCurrentContext")&&pos.includes("loadTableOrder(label,loadLocalDatabase())"),"switching tables persists the previous context before loading the next one"],
+  [pos.includes("cancelOpenSlotOrders")&&pos.includes("cancelled.length"),"clearing a table cancels every duplicated open order in that slot in one action"],
+  [pos.includes('clearContextLabel=activeServiceMode==="table"&&tableLabel?"Liberar mesa"'),"table cleanup is presented explicitly as Liberar mesa"],
   [pos.includes("selectDelivery")&&pos.includes("loadDeliveryOrder(label,loadLocalDatabase())"),"switching delivery slots persists and loads the correct context"],
   [pos.includes("Mesa, Para llevar y Domicilio conservan pedidos independientes"),"POS explains isolated service behavior"],
   [!pos.includes("Pedido vacío · En vivo"),"table cards no longer show noisy En vivo label"],
