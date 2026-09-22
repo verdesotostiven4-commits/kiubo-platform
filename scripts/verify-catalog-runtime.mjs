@@ -29,6 +29,7 @@ has(catalog,"function cartStockIssue(","cart must block known stock shortages be
 has(catalog,"if(!product){delete state.cart[k]","stale cart products must be removed after bootstrap");
 has(catalog,"if(!presentation&&!legacy){delete state.cart[k]","stale real presentation ids must be removed");
 has(catalog,"function openLocationPicker(","checkout must expose a delivery map picker");
+has(catalog,"kiubo-hakuna-history-reset:20260922","clean-start release must clear stale local order history once per device");
 has(catalog,"leaflet@1.9.4","map picker must pin its map dependency");
 has(catalog,"Escribe una referencia o selecciona la ubicación en el mapa","delivery must have a reference or a map pin");
 has(catalog,"v10-map-centerpin","map must keep the delivery pin fixed in the visual center");

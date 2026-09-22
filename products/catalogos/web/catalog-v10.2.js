@@ -14,6 +14,15 @@ const icon=n=>icons[n]||'';
 function normalizeLocation(value){const lat=Number(value?.lat),lng=Number(value?.lng);if(!Number.isFinite(lat)||!Number.isFinite(lng)||lat<-90||lat>90||lng<-180||lng>180)return null;return{lat:Number(lat.toFixed(6)),lng:Number(lng.toFixed(6)),label:String(value?.label||'Ubicación seleccionada en el mapa').slice(0,160)}}
 const state={account:null,categories:[],products:[],presentations:[],popularIds:[],cart:read(LS.cart,{}),favorites:new Set(read(LS.fav,[])),history:read(LS.history,[]),view:'home',category:'all',brand:'',query:'',checkoutStep:0,delivery:'delivery',paymentMethod:'cash',location:normalizeLocation(read(LS.customer,{}).location),sheetOpen:false};
 const rendered={home:false,catalog:false,favorites:false,orders:false,cart:false};
+const HISTORY_RESET_KEY=`kiubo-hakuna-history-reset:20260922`;
+if(slug==='hakuna-matata'&&!read(HISTORY_RESET_KEY,false)){
+  write(LS.history,[]);
+  write(`kiubo-v7-orders:${slug}`,[]);
+  write(`kiubo-v10-order-moments:${slug}`,{});
+  write(HISTORY_RESET_KEY,true);
+  state.history=[];
+}
+
 let searchTimer=0,carouselToken=0,leafletPromise=null;
 
 function b64d(s){try{const v=String(s||''),raw=atob(v.replace(/-/g,'+').replace(/_/g,'/')+'==='.slice((v.length+3)%4)),bytes=Uint8Array.from(raw,c=>c.charCodeAt(0));return JSON.parse(new TextDecoder().decode(bytes))}catch{return{}}}
