@@ -6,6 +6,7 @@ import { getAuthProvider } from "@/lib/auth-provider";
 import { homeForRole } from "@/lib/permissions";
 import { getSupabaseBrowserClient } from "@/lib/supabase-browser";
 import { explainAuthEmailError,getAuthEmailCooldownSeconds,startAuthEmailCooldown } from "@/lib/auth-email";
+import { clearClientPreviewMode } from "@/lib/client-preview";
 
 const KIUBO_SET_PASSWORD_URL="https://kiubo-platform.vercel.app/set-password";
 
@@ -28,7 +29,7 @@ export function LoginClient(){
   },[cloud,email]);
 
   const submit=async(e:FormEvent<HTMLFormElement>)=>{
-    e.preventDefault();setBusy(true);setError("");setMessage("");
+    e.preventDefault();setBusy(true);setError("");setMessage("");clearClientPreviewMode();
     const f=new FormData(e.currentTarget),loginEmail=String(f.get("email")||"").trim();
     const result=await getAuthProvider().signIn(cloud?{email:loginEmail,password:String(f.get("password")||"")}:{email:loginEmail,pin:String(f.get("pin")||"")});
     setBusy(false);
