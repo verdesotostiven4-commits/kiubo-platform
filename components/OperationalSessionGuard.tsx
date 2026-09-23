@@ -57,6 +57,13 @@ export function OperationalSessionGuard(){
     return()=>{cancelled=true;window.clearInterval(timer);document.removeEventListener("visibilitychange",onVisible)};
   },[path,verify]);
 
+  useEffect(()=>{
+    if(!conflict)return;
+    const block=(event:KeyboardEvent)=>{event.preventDefault();event.stopImmediatePropagation()};
+    window.addEventListener("keydown",block,true);
+    return()=>window.removeEventListener("keydown",block,true);
+  },[conflict]);
+
   const takeOver=async()=>{
     if(!tenantId||!deviceId||busy)return;
     setBusy(true);
