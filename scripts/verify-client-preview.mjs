@@ -17,7 +17,7 @@ for(const needle of ["clientPreviewUrl(tenantId,branch?.id)","Ver como cliente",
 assert.ok(!control.includes("switchWorkspace(tenantId"),"Ver como cliente must not mutate the shared admin workspace.");
 
 const store=text("lib/local-store.ts");
-for(const needle of ["getClientPreviewWorkspace","setClientPreviewWorkspace","user.platformAdmin&&isClientPreviewMode()"]){
+for(const needle of ["localClientPreviewWorkspace","setLocalClientPreviewWorkspace","user.platformAdmin&&localClientPreviewWorkspace()"]){
   assert.ok(store.includes(needle),`local workspace isolation missing: ${needle}`);
 }
 
