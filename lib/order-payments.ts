@@ -12,19 +12,23 @@ export type OrderPaymentSummary={
   transfer:number;
   label:string;
   kind?:"fiado"|"partial";
+  detailPending?:boolean;
 };
 
 function outstandingSummary(db:KiuboLocalDatabase,sale:SaleRecord):OrderPaymentSummary{
   const credit=db.credits.find(item=>item.saleId===sale.id);
   const payments=credit?db.creditPayments.filter(item=>item.creditId===credit.id):[];
-  const cash=cents(payments.filter(item=>item.method==="cash").reduce((sum,item)=>sum+item.amount,0));
-  const transfer=cents(payments.filter(item=>item.method==="transfer").reduce((sum,item)=>sum+item.amount,0));
-  const paid=cents(Math.min(sale.total,cash+transfer));
-  const balance=cents(Math.max(0,credit?.balance??sale.total-paid));
+  const recordedCash=cents(payments.filter(item=>item.method==="cash").reduce((sum,item)=>sum+item.amount,0));
+  const recordedTransfer=cents(payments.filter(item=>item.method==="transfer").reduce((sum,item)=>sum+item.amount,0));
+  const recordedPaid=cents(Math.min(sale.total,recordedCash+recordedTransfer));
+  const balance=cents(Math.max(0,Math.min(sale.total,credit?.balance??sale.total-recordedPaid)));
+  const paid=cents(Math.max(0,sale.total-balance));
+  const detailPending=Math.abs(recordedPaid-paid)>.011;
+  const cash=detailPending?0:recordedCash,transfer=detailPending?0:recordedTransfer;
   const kind: "fiado"|"partial" = credit?.kind??(sale.payment==="partial"?"partial":"fiado");
   const base=kind==="partial"?"Pago parcial":"Fiado";
-  const label=cash>0&&transfer>0?`${base} · efectivo + transferencia`:cash>0?`${base} · efectivo`:transfer>0?`${base} · transferencia`:base;
-  return{sale,paid,balance,cash,transfer,label,kind};
+  const label=detailPending?`${base} · actualizando detalle`:cash>0&&transfer>0?`${base} · efectivo + transferencia`:cash>0?`${base} · efectivo`:transfer>0?`${base} · transferencia`:base;
+  return{sale,paid,balance,cash,transfer,label,kind,detailPending};
 }
 
 export function salePaymentSummary(db:KiuboLocalDatabase,sale:SaleRecord):OrderPaymentSummary{

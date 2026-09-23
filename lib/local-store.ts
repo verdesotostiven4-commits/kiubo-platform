@@ -43,6 +43,24 @@ export type KiuboLocalDatabase = {
 const STORAGE_KEY="kiubo.foundation.v2";
 const SESSION_KEY="kiubo.local.session.v1";
 const DEVICE_KEY="kiubo.local.device.v1";
+const CLIENT_PREVIEW_KEY="kiubo.admin.client-preview.v1";
+const CLIENT_PREVIEW_WORKSPACE_KEY="kiubo.admin.client-preview.workspace.v1";
+
+function localClientPreviewWorkspace(){
+  if(typeof window==="undefined"||window.sessionStorage.getItem(CLIENT_PREVIEW_KEY)!=="1")return null;
+  try{
+    const raw=window.sessionStorage.getItem(CLIENT_PREVIEW_WORKSPACE_KEY);
+    if(!raw)return null;
+    const parsed=JSON.parse(raw) as {tenantId?:string;branchId?:string};
+    const tenantId=String(parsed.tenantId||"").trim(),branchId=String(parsed.branchId||"").trim();
+    return tenantId?{tenantId,branchId:branchId||undefined}:null;
+  }catch{return null}
+}
+function setLocalClientPreviewWorkspace(tenantId:string,branchId?:string){
+  if(typeof window==="undefined")return;
+  window.sessionStorage.setItem(CLIENT_PREVIEW_KEY,"1");
+  window.sessionStorage.setItem(CLIENT_PREVIEW_WORKSPACE_KEY,JSON.stringify({tenantId,branchId:branchId||undefined}));
+}
 export const PILOT_TENANT_ID="tenant-pilot-001";
 export const PILOT_BRANCH_ID="branch-pilot-main";
 const epoch=new Date(0).toISOString();
@@ -251,10 +269,11 @@ export function getPrimaryBranch(db:KiuboLocalDatabase,tenantId:string){return d
 export function getWorkspaceContext(db:KiuboLocalDatabase){
   const session=loadLocalSession();
   const user=session?db.users.find(u=>u.id===session.userId&&u.active):undefined;
-  let tenantId=user?.platformAdmin?(session?.activeTenantId||user.tenantId):(user?.tenantId||session?.tenantId||PILOT_TENANT_ID);
+  const preview=user?.platformAdmin?localClientPreviewWorkspace():null;
+  let tenantId=user?.platformAdmin?(preview?.tenantId||session?.activeTenantId||user.tenantId):(user?.tenantId||session?.tenantId||PILOT_TENANT_ID);
   if(!db.tenants.some(t=>t.id===tenantId&&t.plan!=="Internal"))tenantId=user?.tenantId&&db.tenants.some(t=>t.id===user.tenantId)?user.tenantId:PILOT_TENANT_ID;
   const branches=db.branches.filter(b=>b.tenantId===tenantId&&b.active);
-  let branchId=session?.activeBranchId||branches[0]?.id||"";
+  let branchId=preview?.tenantId===tenantId&&preview.branchId?preview.branchId:(session?.activeBranchId||branches[0]?.id||"");
   if(!branches.some(b=>b.id===branchId))branchId=branches[0]?.id||"";
   return{session,user,tenantId,branchId,tenant:db.tenants.find(t=>t.id===tenantId),branch:db.branches.find(b=>b.id===branchId),branches};
 }
@@ -263,6 +282,7 @@ export function switchWorkspace(tenantId:string,branchId?:string){
   const db=loadLocalDatabase();const user=db.users.find(u=>u.id===session.userId&&u.active);if(!user)return;
   const allowedTenant=user.platformAdmin?tenantId:user.tenantId;
   const branch=db.branches.find(b=>b.tenantId===allowedTenant&&b.id===branchId&&b.active)??getPrimaryBranch(db,allowedTenant);
+  if(user.platformAdmin&&localClientPreviewWorkspace()){setLocalClientPreviewWorkspace(allowedTenant,branch?.id||"");return}
   saveLocalSession({...session,activeTenantId:allowedTenant,activeBranchId:branch?.id||""});
 }
 export function getTenant(db:KiuboLocalDatabase,tenantId?:string){const id=tenantId??getWorkspaceContext(db).tenantId;return db.tenants.find(t=>t.id===id)}

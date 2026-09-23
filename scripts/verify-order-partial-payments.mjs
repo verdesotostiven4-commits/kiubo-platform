@@ -20,7 +20,7 @@ assert.ok(pos.includes('payment!=="partial"||(Boolean(partialAmount.trim())'),"p
 assert.ok(!pos.includes('payment==="partial"&&!customerId'),"partial payment must not require a customer");
 
 const payments=text("lib/order-payments.ts");
-for(const needle of ['sale.payment==="credit"||sale.payment==="partial"','kind==="partial"?"Pago parcial":"Fiado"',"Pago parcial ·"]){
+for(const needle of ['sale.payment==="credit"||sale.payment==="partial"','kind==="partial"?"Pago parcial":"Fiado"',"Pago parcial ·","sale.total-balance","detailPending","actualizando detalle"]){
   assert.ok(payments.includes(needle),`payment summary missing partial distinction: ${needle}`);
 }
 
