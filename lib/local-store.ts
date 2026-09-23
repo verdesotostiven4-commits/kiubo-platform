@@ -1,4 +1,5 @@
 import type { AuditLogRecord, SyncEntity, SyncQueueRecord, SyncStatus } from "./sync-types";
+import { getClientPreviewWorkspace,isClientPreviewMode,setClientPreviewWorkspace } from "./client-preview";
 
 export type Plan = "Start" | "Pro" | "Custom" | "Internal";
 export type TenantStatus = "trial" | "active" | "grace" | "suspended";
@@ -251,10 +252,11 @@ export function getPrimaryBranch(db:KiuboLocalDatabase,tenantId:string){return d
 export function getWorkspaceContext(db:KiuboLocalDatabase){
   const session=loadLocalSession();
   const user=session?db.users.find(u=>u.id===session.userId&&u.active):undefined;
-  let tenantId=user?.platformAdmin?(session?.activeTenantId||user.tenantId):(user?.tenantId||session?.tenantId||PILOT_TENANT_ID);
+  const preview=user?.platformAdmin?getClientPreviewWorkspace():null;
+  let tenantId=user?.platformAdmin?(preview?.tenantId||session?.activeTenantId||user.tenantId):(user?.tenantId||session?.tenantId||PILOT_TENANT_ID);
   if(!db.tenants.some(t=>t.id===tenantId&&t.plan!=="Internal"))tenantId=user?.tenantId&&db.tenants.some(t=>t.id===user.tenantId)?user.tenantId:PILOT_TENANT_ID;
   const branches=db.branches.filter(b=>b.tenantId===tenantId&&b.active);
-  let branchId=session?.activeBranchId||branches[0]?.id||"";
+  let branchId=preview?.tenantId===tenantId&&preview.branchId?preview.branchId:(session?.activeBranchId||branches[0]?.id||"");
   if(!branches.some(b=>b.id===branchId))branchId=branches[0]?.id||"";
   return{session,user,tenantId,branchId,tenant:db.tenants.find(t=>t.id===tenantId),branch:db.branches.find(b=>b.id===branchId),branches};
 }
@@ -263,6 +265,7 @@ export function switchWorkspace(tenantId:string,branchId?:string){
   const db=loadLocalDatabase();const user=db.users.find(u=>u.id===session.userId&&u.active);if(!user)return;
   const allowedTenant=user.platformAdmin?tenantId:user.tenantId;
   const branch=db.branches.find(b=>b.tenantId===allowedTenant&&b.id===branchId&&b.active)??getPrimaryBranch(db,allowedTenant);
+  if(user.platformAdmin&&isClientPreviewMode()){setClientPreviewWorkspace(allowedTenant,branch?.id||"");return}
   saveLocalSession({...session,activeTenantId:allowedTenant,activeBranchId:branch?.id||""});
 }
 export function getTenant(db:KiuboLocalDatabase,tenantId?:string){const id=tenantId??getWorkspaceContext(db).tenantId;return db.tenants.find(t=>t.id===id)}
