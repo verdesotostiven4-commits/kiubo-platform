@@ -14,7 +14,7 @@ function requestedWorkspace():ClientPreviewWorkspace|null{
 }
 
 function persistRequestedPreview(){
-  if(typeof window==="undefined")return null;
+  if(typeof window==="undefined")return{requested:false,workspace:null as ClientPreviewWorkspace|null};
   const requested=new URLSearchParams(window.location.search).get("preview")==="client";
   const workspace=requestedWorkspace();
   if(requested)window.sessionStorage.setItem(CLIENT_PREVIEW_KEY,"1");
