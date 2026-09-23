@@ -1,9 +1,10 @@
 "use client";
 import { FormEvent,useEffect,useMemo,useState } from "react";
-import { KiuboLocalDatabase,TenantRecord,TenantStatus,getWorkspaceContext,loadLocalDatabase,makeId,saveLocalDatabase,switchWorkspace } from "@/lib/local-store";
+import { KiuboLocalDatabase,TenantRecord,TenantStatus,getWorkspaceContext,loadLocalDatabase,makeId,saveLocalDatabase } from "@/lib/local-store";
 import { CommercialPlan,hasFeature } from "@/lib/entitlements";
 import { loadLeads,onboardingProgress,type LeadRecord } from "@/lib/sales-crm";
 import { addCloudBranch,hydrateCloudControl,isCloudControlMode,provisionCloudTenant,setCloudTenantFeature,setCloudTenantPlan,setCloudTenantStatus } from "@/lib/cloud-control";
+import { clearClientPreviewMode,clientPreviewUrl } from "@/lib/client-preview";
 
 const statusLabel:Record<TenantStatus,string>={active:"Activo",trial:"Trial",grace:"Gracia",suspended:"Suspendido"};
 const STANDARD_TRIAL_DAYS=14;
@@ -15,7 +16,7 @@ export function ControlClient(){
   const cloud=isCloudControlMode();
   const[db,setDb]=useState<KiuboLocalDatabase|null>(null),[leads,setLeads]=useState<LeadRecord[]>([]),[showForm,setShowForm]=useState(false),[message,setMessage]=useState(cloud?"Conectando KIUBO Control con la nube…":"Administración maestra lista"),[busy,setBusy]=useState(false);
   const refresh=async()=>{const next=cloud?await hydrateCloudControl():loadLocalDatabase();setDb(next);return next};
-  useEffect(()=>{let active=true;void(async()=>{try{const next=cloud?await hydrateCloudControl():loadLocalDatabase();if(active){setDb(next);setMessage(cloud?"KIUBO Control conectado a la nube":"Administración maestra lista")}}catch(error){if(active)setMessage(error instanceof Error?error.message:"No se pudo cargar KIUBO Control")}if(active)setLeads(loadLeads())})();return()=>{active=false}},[cloud]);
+  useEffect(()=>{clearClientPreviewMode();let active=true;void(async()=>{try{const next=cloud?await hydrateCloudControl():loadLocalDatabase();if(active){setDb(next);setMessage(cloud?"KIUBO Control conectado a la nube":"Administración maestra lista")}}catch(error){if(active)setMessage(error instanceof Error?error.message:"No se pudo cargar KIUBO Control")}if(active)setLeads(loadLeads())})();return()=>{active=false}},[cloud]);
   const overview=useMemo(()=>{const tenants=(db?.tenants??[]).filter(t=>t.plan!=="Internal"),active=tenants.filter(t=>t.status==="active"),trial=tenants.filter(t=>t.status==="trial"),mrr=active.reduce((n,t)=>n+price[t.plan as CommercialPlan],0),licenses=(db?.users??[]).filter(u=>!u.platformAdmin&&u.active).length;return{tenants,active,trial,mrr,licenses}},[db]);
   if(!db)return <div className="loading-card">Preparando KIUBO Control…</div>;
   const ctx=getWorkspaceContext(db);if(!ctx.user?.platformAdmin)return <div className="license-block"><div className="hero-mini">K</div><span className="eyebrow">ACCESO RESTRINGIDO</span><h2>KIUBO Control es solo para administración maestra.</h2></div>;
@@ -40,7 +41,7 @@ export function ControlClient(){
 
   const toggleModule=async(tenant:TenantRecord,key:"catalog"|"invoice")=>{if(busy)return;if(key==="catalog"&&tenant.plan==="Start"){setMessage("Catalog inteligente requiere Pro o Custom");return}const enabled=!tenant[key];setBusy(true);try{if(cloud){await setCloudTenantFeature(tenant.id,key,enabled);await refresh()}else{db.tenants=db.tenants.map(t=>t.id===tenant.id?{...t,[key]:enabled}:t);persist(db)}setMessage(`${key==="catalog"?"Catalog+":"Factura"} ${enabled?"activado":"desactivado"} para ${tenant.name}`)}catch(error){setMessage(error instanceof Error?error.message:"No se pudo actualizar el módulo")}finally{setBusy(false)}};
 
-  const openWorkspace=(tenantId:string)=>{const branch=db.branches.find(b=>b.tenantId===tenantId&&b.active);switchWorkspace(tenantId,branch?.id);const preview=window.open("/app?preview=client","_blank");if(preview)preview.opener=null;setMessage("Vista cliente abierta en una pestaña nueva")};
+  const openWorkspace=(tenantId:string)=>{const branch=db.branches.find(b=>b.tenantId===tenantId&&b.active),url=clientPreviewUrl(tenantId,branch?.id);const preview=window.open(url,"_blank","noopener,noreferrer");setMessage(preview?"Vista cliente abierta sin alterar tu sesión de administración":"El navegador bloqueó la vista cliente. Permite ventanas emergentes para KIUBO Control.")};
   const stageCounts={new:leads.filter(l=>l.stage==="new").length,contacted:leads.filter(l=>l.stage==="contacted").length,demo:leads.filter(l=>l.stage==="demo").length,trial:leads.filter(l=>l.stage==="trial").length,won:leads.filter(l=>l.stage==="won").length};
   const onboard=leads.filter(l=>l.stage==="trial"||l.stage==="won").sort((a,b)=>onboardingProgress(a)-onboardingProgress(b)).slice(0,5),planCounts={Start:commercialTenants.filter(t=>t.plan==="Start").length,Pro:commercialTenants.filter(t=>t.plan==="Pro").length,Custom:commercialTenants.filter(t=>t.plan==="Custom").length},totalPlans=Math.max(1,commercialTenants.length);
 
