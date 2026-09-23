@@ -80,11 +80,7 @@ export function FoodOrdersClientPro(){
     saveLocalDatabase(next);setCancelArmedId("");refresh();setMessage(`Pedido #${String(order.number).padStart(4,"0")} cancelado. No modificó caja porque nunca fue cobrado.`);
   };
   const checkout=(order:FoodOrderRecord)=>{window.sessionStorage.setItem(CHECKOUT_KEY,order.id);router.push("/pos")};
-  const print=(order:FoodOrderRecord)=>{
-    const url=`${window.location.origin}/order-print?order=${encodeURIComponent(order.id)}`;
-    const opened=window.open(url,"_blank","noopener,noreferrer");
-    if(!opened)setMessage("El navegador bloqueó la pestaña de impresión. Permite ventanas emergentes para KIUBO.");
-  };
+  const printUrl=(order:FoodOrderRecord)=>`/order-print?order=${encodeURIComponent(order.id)}`;
   const openPos=()=>{window.sessionStorage.removeItem(CHECKOUT_KEY);router.push("/pos")};
 
   const orderCard=(order:FoodOrderRecord,meta?:typeof activeMeta[number])=>{
@@ -103,7 +99,7 @@ export function FoodOrdersClientPro(){
         {!simpleFlow&&activeView==="kitchen"&&meta&&<button className={styles.action} onClick={()=>changeStatus(order,meta.next)}>{meta.action}</button>}
         {!simpleFlow&&order.paymentStatus==="paid"&&order.status!=="delivered"&&<button className={styles.checkout} onClick={()=>changeStatus(order,"delivered")}>Finalizar</button>}
         {order.paymentStatus==="unpaid"&&<button className={styles.print} onClick={()=>cancelPending(order)}>{cancelArmedId===order.id?"Confirmar cancelar":"Cancelar pedido"}</button>}
-        <button className={styles.print} onClick={()=>print(order)}>Imprimir</button>
+        <a className={styles.print} href={printUrl(order)} target="_blank" rel="noopener noreferrer">Imprimir</a>
       </div>
     </article>;
   };
@@ -124,7 +120,7 @@ export function FoodOrdersClientPro(){
       </>}
     </>:<section className={styles.historyPanel}>
       <div className={styles.historyHead}><div><span className={styles.kicker}>HISTORIAL</span><h2>{simpleFlow?"Pedidos cobrados":"Pedidos finalizados"}</h2></div><span>{historyOrders.length} pedidos</span></div>
-      <div className={styles.historyList}>{historyOrders.slice(0,80).map(order=>{const payment=orderPaymentSummary(db,order);return <article className={styles.historyRow} key={order.id}><div><strong>#{String(order.number).padStart(4,"0")}</strong><span>{order.serviceMode==="table"&&order.tableLabel?`Mesa ${order.tableLabel}`:modeLabel[order.serviceMode]} · {new Date(order.updatedAt||order.createdAt).toLocaleString("es-EC")}</span></div><div className={styles.historyCustomer}><strong>{order.customerName||"Cliente"}</strong><span>{order.items.reduce((sum,item)=>sum+item.qty,0)} productos · {payment.label}</span></div><div className={paymentStyles.historyPayment}><strong>{money(order.total)}</strong><span>{payment.cash>0?`Efectivo ${money(payment.cash)}`:""}{payment.cash>0&&payment.transfer>0?" · ":""}{payment.transfer>0?`Transferencia ${money(payment.transfer)}`:""}</span></div><button className={styles.print} onClick={()=>print(order)}>Ver / imprimir</button></article>})}{!historyOrders.length&&<div className={styles.emptyHistory}>Todavía no hay pedidos en el historial con este filtro.</div>}</div>
+      <div className={styles.historyList}>{historyOrders.slice(0,80).map(order=>{const payment=orderPaymentSummary(db,order);return <article className={styles.historyRow} key={order.id}><div><strong>#{String(order.number).padStart(4,"0")}</strong><span>{order.serviceMode==="table"&&order.tableLabel?`Mesa ${order.tableLabel}`:modeLabel[order.serviceMode]} · {new Date(order.updatedAt||order.createdAt).toLocaleString("es-EC")}</span></div><div className={styles.historyCustomer}><strong>{order.customerName||"Cliente"}</strong><span>{order.items.reduce((sum,item)=>sum+item.qty,0)} productos · {payment.label}</span></div><div className={paymentStyles.historyPayment}><strong>{money(order.total)}</strong><span>{payment.cash>0?`Efectivo ${money(payment.cash)}`:""}{payment.cash>0&&payment.transfer>0?" · ":""}{payment.transfer>0?`Transferencia ${money(payment.transfer)}`:""}</span></div><a className={styles.print} href={printUrl(order)} target="_blank" rel="noopener noreferrer">Ver / imprimir</a></article>})}{!historyOrders.length&&<div className={styles.emptyHistory}>Todavía no hay pedidos en el historial con este filtro.</div>}</div>
     </section>}
   </div>;
 }
