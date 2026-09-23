@@ -3,6 +3,7 @@ import { getDataProvider,type KiuboDataProvider } from "./data-provider";
 import { enqueueCashTransaction } from "./finance-transaction";
 import { getSyncSummary,getWorkspaceContext,loadLocalDatabase,saveLocalDatabase,updateSyncOperation,type CashMovementRecord,type FoodOrderRecord } from "./local-store";
 import { queueFoodOrder } from "./order-sync";
+import { getSupabaseBrowserClient } from "./supabase-browser";
 import type { SyncEntity,SyncPullResult,SyncPushResult,SyncQueueRecord } from "./sync-types";
 
 export type SyncCycleResult={ok:boolean;mode:"local"|"supabase";pushed:number;failed:number;pulled:number;message:string;hasMore?:boolean};
@@ -11,12 +12,64 @@ const SYNCABLE_ENTITIES=new Set<SyncQueueRecord["entityType"]>(["tenantProducts"
 const MAX_PULL_PAGES=4;
 const STALE_SYNCING_MS=60_000;
 const TENANT_ISOLATION_REPAIR_PREFIX="kiubo.sync.tenant-isolation-repair.v1:";
+const OPERATIONAL_RECONCILE_PREFIX="kiubo.sync.operational-reconcile.v2:";
+const OPERATIONAL_RECONCILE_VERSION="2026-09-23";
+const OPERATIONAL_RECONCILE_INTERVAL_MS=6*60*60*1000;
+const OPERATIONAL_SNAPSHOT_ENTITIES=new Set<SyncEntity>(["orders","sales","credits","creditPayments","cashSessions","cashMovements"]);
+const OPERATIONAL_QUEUE_TYPES=new Set<SyncQueueRecord["entityType"]>(["orders","sales","credits","creditPayments","cashSessions","cashMovements","saleTransactions","creditPaymentTransactions","cashTransactions"]);
 
 function keyFor(entity:SyncEntity,record:Record<string,unknown>){return entity==="settings"||entity==="branding"?String(record.tenantId||""):String(record.id||"")}
 function tenantForRecord(entity:SyncEntity,record:Record<string,unknown>){return entity==="tenants"?String(record.id||""):String(record.tenantId||"")}
 function samePulledIdentity(entity:SyncEntity,record:Record<string,unknown>,tenantId:string,entityId:string){return tenantForRecord(entity,record)===tenantId&&keyFor(entity,record)===entityId}
 function tenantIsolationRepairDone(tenantId:string){return typeof window!=="undefined"&&window.localStorage.getItem(TENANT_ISOLATION_REPAIR_PREFIX+tenantId)==="1"}
 function markTenantIsolationRepairDone(tenantId:string){if(typeof window!=="undefined")window.localStorage.setItem(TENANT_ISOLATION_REPAIR_PREFIX+tenantId,"1")}
+function operationalReconcileDue(tenantId:string){
+  if(typeof window==="undefined")return false;
+  try{
+    const raw=window.localStorage.getItem(OPERATIONAL_RECONCILE_PREFIX+tenantId);if(!raw)return true;
+    const parsed=JSON.parse(raw) as {version?:string;completedAt?:number};
+    return parsed.version!==OPERATIONAL_RECONCILE_VERSION||!Number.isFinite(parsed.completedAt)||Date.now()-Number(parsed.completedAt)>OPERATIONAL_RECONCILE_INTERVAL_MS;
+  }catch{return true}
+}
+function markOperationalReconciled(tenantId:string,watermark:string){
+  if(typeof window!=="undefined")window.localStorage.setItem(OPERATIONAL_RECONCILE_PREFIX+tenantId,JSON.stringify({version:OPERATIONAL_RECONCILE_VERSION,completedAt:Date.now(),watermark}));
+}
+function hasUnresolvedOperationalQueue(db:ReturnType<typeof loadLocalDatabase>,tenantId:string){
+  return db.syncQueue.some(item=>item.tenantId===tenantId&&OPERATIONAL_QUEUE_TYPES.has(item.entityType)&&item.status!=="synced");
+}
+function missingOperationalSnapshotRpc(message:string){
+  const value=message.toLowerCase();return value.includes("pull_operational_snapshot_v1")&&(value.includes("could not find")||value.includes("does not exist")||value.includes("schema cache"));
+}
+async function reconcileOperationalSnapshot(provider:KiuboDataProvider,tenantId:string){
+  if(!operationalReconcileDue(tenantId))return null;
+  const client=getSupabaseBrowserClient();if(!client)return null;
+  const initial=loadLocalDatabase();if(hasUnresolvedOperationalQueue(initial,tenantId))return null;
+  let after="0",watermark:string|undefined,hasMore=false;const changes:SyncPullResult["changes"]=[];
+  for(let page=0;page<20;page++){
+    const result=await client.rpc("pull_operational_snapshot_v1",{p_tenant:tenantId,p_after_revision:Number(after),p_watermark:watermark?Number(watermark):null,p_limit:1000});
+    if(result.error){if(missingOperationalSnapshotRpc(result.error.message))return null;throw new Error(result.error.message)}
+    const payload=result.data&&typeof result.data==="object"?result.data as {watermark?:string|number;cursor?:string|number;hasMore?:boolean;changes?:SyncPullResult["changes"]}:{};
+    watermark=String(payload.watermark??watermark??after);after=String(payload.cursor??after);hasMore=Boolean(payload.hasMore);
+    if(Array.isArray(payload.changes))changes.push(...payload.changes);
+    if(!hasMore)break;
+  }
+  if(hasMore||!watermark)return null;
+  const latest=loadLocalDatabase();if(hasUnresolvedOperationalQueue(latest,tenantId))return null;
+  const canonical=new Map<SyncEntity,Record<string,unknown>[]>();
+  for(const entity of OPERATIONAL_SNAPSHOT_ENTITIES)canonical.set(entity,[]);
+  for(const change of changes){
+    if(!OPERATIONAL_SNAPSHOT_ENTITIES.has(change.entityType)||change.action==="delete"||!change.payload||typeof change.payload!=="object")continue;
+    canonical.get(change.entityType)!.push(change.payload as Record<string,unknown>);
+  }
+  const mutable=latest as unknown as Record<string,Record<string,unknown>[]>;
+  for(const entity of OPERATIONAL_SNAPSHOT_ENTITIES){
+    const current=Array.isArray(mutable[entity])?mutable[entity]:[];
+    mutable[entity]=current.filter(record=>String(record.tenantId||"")!==tenantId).concat(canonical.get(entity)??[]);
+  }
+  latest.syncCursor=watermark;saveLocalDatabase(latest,{trackChanges:false});provider.commitCursor(watermark);markOperationalReconciled(tenantId,watermark);
+  const catchup=await pullAvailable(provider,watermark);persistPulled(provider,loadLocalDatabase(),catchup);
+  return{pulled:changes.length+catchup.changes.length,hasMore:Boolean(catchup.hasMore)};
+}
 function safeOperation(item:SyncQueueRecord):SyncQueueRecord{
   if(!item.payload||typeof item.payload!=="object")return item;
   const payload={...(item.payload as Record<string,unknown>)};
@@ -55,6 +108,10 @@ async function runSyncCycleCore():Promise<SyncCycleResult>{
   recoverExpiredSyncing(db,activeTenantId);
   const now=Date.now(),activeQueue=db.syncQueue.filter(item=>isActiveQueueItem(item,activeTenantId)),waitingRetry=activeQueue.filter(item=>item.status==="failed"&&!retryDue(item,now)),pending=activeQueue.filter(item=>item.status==="pending"||(item.status==="failed"&&retryDue(item,now))).slice(0,100);
   if(!pending.length){
+    try{
+      const reconciled=await reconcileOperationalSnapshot(provider,activeTenantId);
+      if(reconciled)return{ok:waitingRetry.length===0&&!reconciled.hasMore,mode:provider.mode,pushed:0,failed:waitingRetry.length,pulled:reconciled.pulled,hasMore:reconciled.hasMore,message:reconciled.hasMore?"KIUBO terminó de conciliar pedidos y sigue poniéndose al día":"Pedidos, cobros y caja conciliados con Cloud"};
+    }catch{}
     if(!waitingRetry.length&&!tenantIsolationRepairDone(activeTenantId)){try{const repaired=await repairTenantIsolation(provider,db,activeTenantId);if(repaired)return{ok:!repaired.hasMore,mode:provider.mode,pushed:0,failed:0,pulled:repaired.changes.length,hasMore:Boolean(repaired.hasMore),message:repaired.hasMore?"KIUBO sigue verificando el negocio en Cloud":"Datos del negocio verificados y aislados correctamente"}}catch{}}
     const pulled=await pullAvailable(provider);persistPulled(provider,db,pulled);return{ok:waitingRetry.length===0&&!pulled.hasMore,mode:provider.mode,pushed:0,failed:waitingRetry.length,pulled:pulled.changes.length,hasMore:Boolean(pulled.hasMore),message:waitingRetry.length?`Hay ${waitingRetry.length} cambio${waitingRetry.length===1?"":"s"} protegido${waitingRetry.length===1?"":"s"}; KIUBO reintentará automáticamente`:pulled.hasMore?"KIUBO sigue poniéndose al día":pulled.changes.length?"Datos cloud actualizados":"Todo sincronizado"};
   }
@@ -102,6 +159,10 @@ async function runSyncCycleCore():Promise<SyncCycleResult>{
     catch(error){const message=error instanceof Error?error.message:"No se pudo confirmar el estado cloud";return{ok:false,mode:provider.mode,pushed,failed:0,pulled:0,message:`KIUBO recuperó ${recovered} operación${recovered===1?"":"es"}; falta confirmar la nube: ${message}`}}
   }
   if(unresolved)return{ok:false,mode:provider.mode,pushed,failed,pulled:0,message:failed?"Quedaron cambios protegidos; KIUBO volverá a intentarlo":"Cambios locales enviados"};
+  try{
+    const reconciled=await reconcileOperationalSnapshot(provider,activeTenantId);
+    if(reconciled)return{ok:failed===0&&!reconciled.hasMore,mode:provider.mode,pushed,failed,pulled:reconciled.pulled,hasMore:reconciled.hasMore,message:reconciled.hasMore?"Cambios enviados; KIUBO concilió pedidos y sigue actualizando":"Cambios enviados y pedidos conciliados con Cloud"};
+  }catch{}
   if(!tenantIsolationRepairDone(activeTenantId)){try{const repaired=await repairTenantIsolation(provider,afterPush,activeTenantId);if(repaired)return{ok:failed===0&&!repaired.hasMore,mode:provider.mode,pushed,failed,pulled:repaired.changes.length,hasMore:Boolean(repaired.hasMore),message:repaired.hasMore?"Cambios enviados; KIUBO sigue verificando el negocio":"Cambios enviados y datos del negocio verificados"}}catch{}}
   const pulled=await pullAvailable(provider);persistPulled(provider,afterPush,pulled);return{ok:failed===0&&!pulled.hasMore,mode:provider.mode,pushed,failed,pulled:pulled.changes.length,hasMore:Boolean(pulled.hasMore),message:pulled.hasMore?"Cambios enviados; KIUBO sigue poniéndose al día":"Sincronización completada"};
 }

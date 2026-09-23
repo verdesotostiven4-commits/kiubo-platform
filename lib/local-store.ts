@@ -45,9 +45,20 @@ const SESSION_KEY="kiubo.local.session.v1";
 const DEVICE_KEY="kiubo.local.device.v1";
 const CLIENT_PREVIEW_KEY="kiubo.admin.client-preview.v1";
 const CLIENT_PREVIEW_WORKSPACE_KEY="kiubo.admin.client-preview.workspace.v1";
+export const KIUBO_SYNC_QUEUED_EVENT="kiubo:sync-queued";
 
 function localClientPreviewWorkspace(){
-  if(typeof window==="undefined"||window.sessionStorage.getItem(CLIENT_PREVIEW_KEY)!=="1")return null;
+  if(typeof window==="undefined")return null;
+  const params=new URLSearchParams(window.location.search);
+  if(params.get("preview")==="client"){
+    const tenantId=String(params.get("tenant")||"").trim(),branchId=String(params.get("branch")||"").trim();
+    if(tenantId){
+      window.sessionStorage.setItem(CLIENT_PREVIEW_KEY,"1");
+      window.sessionStorage.setItem(CLIENT_PREVIEW_WORKSPACE_KEY,JSON.stringify({tenantId,branchId:branchId||undefined}));
+      return{tenantId,branchId:branchId||undefined};
+    }
+  }
+  if(window.sessionStorage.getItem(CLIENT_PREVIEW_KEY)!=="1")return null;
   try{
     const raw=window.sessionStorage.getItem(CLIENT_PREVIEW_WORKSPACE_KEY);
     if(!raw)return null;
@@ -258,7 +269,16 @@ function trackChanges(previous:KiuboLocalDatabase,next:KiuboLocalDatabase){
 }
 
 export function loadLocalDatabase():KiuboLocalDatabase{if(typeof window==="undefined")return cloneInitial();try{const stored=window.localStorage.getItem(STORAGE_KEY);if(!stored){const fresh=cloneInitial();writeDatabase(fresh);return fresh}const normalized=normalize(JSON.parse(stored) as Partial<KiuboLocalDatabase>);writeDatabase(normalized);return normalized}catch{return cloneInitial()}}
-export function saveLocalDatabase(db:KiuboLocalDatabase,options?:{trackChanges?:boolean}){if(typeof window==="undefined")return;let previous:KiuboLocalDatabase;try{const raw=window.localStorage.getItem(STORAGE_KEY);previous=raw?normalize(JSON.parse(raw) as Partial<KiuboLocalDatabase>):cloneInitial()}catch{previous=cloneInitial()}const next=normalize(db);if(options?.trackChanges!==false)trackChanges(previous,next);writeDatabase(next)}
+export function saveLocalDatabase(db:KiuboLocalDatabase,options?:{trackChanges?:boolean}){
+  if(typeof window==="undefined")return;
+  let previous:KiuboLocalDatabase;
+  try{const raw=window.localStorage.getItem(STORAGE_KEY);previous=raw?normalize(JSON.parse(raw) as Partial<KiuboLocalDatabase>):cloneInitial()}catch{previous=cloneInitial()}
+  const next=normalize(db);if(options?.trackChanges!==false)trackChanges(previous,next);
+  const beforePending=new Map(previous.syncQueue.filter(item=>item.status==="pending").map(item=>[item.operationId,item.updatedAt]));
+  const queued=next.syncQueue.some(item=>item.status==="pending"&&beforePending.get(item.operationId)!==item.updatedAt);
+  writeDatabase(next);
+  if(queued)window.dispatchEvent(new CustomEvent(KIUBO_SYNC_QUEUED_EVENT));
+}
 export function resetLocalDatabase(){const fresh=cloneInitial();writeDatabase(fresh);return fresh}
 export function makeId(prefix:string){const uuid=typeof crypto!=="undefined"&&"randomUUID" in crypto?crypto.randomUUID():`${Date.now()}-${Math.random().toString(16).slice(2)}`;return`${prefix}-${uuid}`}
 export function getLocalDeviceId(){if(typeof window==="undefined")return"server";let id=window.localStorage.getItem(DEVICE_KEY);if(!id){id=makeId("device");window.localStorage.setItem(DEVICE_KEY,id)}return id}
