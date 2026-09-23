@@ -3,6 +3,7 @@ import {
   getPrimaryBranch, loadLocalDatabase, loadLocalSession, saveLocalDatabase, saveLocalSession,
   type BranchRecord, type KiuboLocalDatabase, type LocalSession, type Plan, type TenantRecord, type UserRecord, type UserRole
 } from "./local-store";
+import { getClientPreviewWorkspace } from "./client-preview";
 
 const planMap:Record<string,Plan>={start:"Start",pro:"Pro",custom:"Custom",internal:"Internal"};
 const CURSOR_PREFIXES=["kiubo.cloud.cursor.v1:","kiubo.cloud.cursor.v2:"] as const;
@@ -74,15 +75,22 @@ function purgeRevokedCloudData(
 }
 
 function platformOnlyIdentity(authUser:User){
-  const db=loadLocalDatabase();
-  const internal=db.tenants.find(t=>t.plan==="Internal")??db.tenants[0];
-  if(!internal)throw new Error("No existe el espacio interno de KIUBO");
-  const branch=getPrimaryBranch(db,internal.id);
+  const db=loadLocalDatabase(),now=new Date().toISOString();
+  let internal=db.tenants.find(t=>t.plan==="Internal");
+  if(!internal){
+    internal={id:"tenant-internal-control",name:"KIUBO Control",plan:"Internal",status:"active",users:1,branches:1,expiresAt:"Sin vencimiento",catalog:true,invoice:true,createdAt:now};
+    db.tenants.unshift(internal);
+  }
+  let branch=getPrimaryBranch(db,internal.id);
+  if(!branch){
+    branch={id:"branch-internal-control",tenantId:internal.id,name:"Control",code:"000",active:true,createdAt:now};
+    db.branches.unshift(branch);
+  }
   const previousUser=db.users.find(item=>item.id===authUser.id);
   const user:UserRecord={id:authUser.id,tenantId:internal.id,name:String(authUser.user_metadata?.full_name||authUser.user_metadata?.name||authUser.email?.split("@")[0]||"Admin KIUBO"),email:String(authUser.email||""),role:"owner",active:true,pin:previousUser?.pin||"",platformAdmin:true,createdAt:String(authUser.created_at||new Date().toISOString())};
   upsertById(db.users,user);
   saveLocalDatabase(db,{trackChanges:false});
-  const session:LocalSession={userId:user.id,tenantId:internal.id,activeTenantId:internal.id,activeBranchId:branch?.id,role:user.role,startedAt:new Date().toISOString()};
+  const session:LocalSession={userId:user.id,tenantId:internal.id,activeTenantId:internal.id,activeBranchId:branch.id,role:user.role,startedAt:new Date().toISOString()};
   saveLocalSession(session);
   return{user,session};
 }
@@ -92,21 +100,12 @@ export async function hydrateCloudIdentity(client:SupabaseClient,authUser:User){
   const platformAdmin=Boolean(adminResult.data)&&!adminResult.error;
   const memberResult=await client.from("tenant_members").select("id,tenant_id,role,active").eq("user_id",authUser.id).eq("active",true).limit(1).maybeSingle();
   if(memberResult.error)throw new Error(memberResult.error.message);
-  let tenantId=String(memberResult.data?.tenant_id||"");
+  const previewWorkspace=platformAdmin?getClientPreviewWorkspace():null;
+  let tenantId=platformAdmin&&previewWorkspace?.tenantId?previewWorkspace.tenantId:String(memberResult.data?.tenant_id||"");
 
-  if(!tenantId&&platformAdmin){
-    const preferred=loadLocalSession()?.activeTenantId;
-    if(preferred){
-      const preferredTenant=await client.from("tenants").select("id").eq("id",preferred).neq("status","cancelled").maybeSingle();
-      if(!preferredTenant.error&&preferredTenant.data)tenantId=String(preferredTenant.data.id);
-    }
-    if(!tenantId){
-      const firstTenant=await client.from("tenants").select("id").neq("status","cancelled").order("created_at").limit(1).maybeSingle();
-      if(firstTenant.error)throw new Error(firstTenant.error.message);
-      tenantId=String(firstTenant.data?.id||"");
-    }
-    if(!tenantId)return platformOnlyIdentity(authUser);
-  }
+  // La cuenta maestra vive en un espacio interno estable. Solo una pestaña abierta
+  // explícitamente con "Ver como cliente" hidrata un negocio comercial.
+  if(platformAdmin&&!previewWorkspace?.tenantId)return platformOnlyIdentity(authUser);
   if(!tenantId)throw new Error("Tu usuario todavía no está vinculado a un negocio KIUBO");
 
   const [tenantResult,branchResult,subscriptionResult]=await Promise.all([
@@ -138,6 +137,8 @@ export async function hydrateCloudIdentity(client:SupabaseClient,authUser:User){
   const primary=branches.find(branch=>branch.id===previousSession?.activeBranchId)??branches[0]??getPrimaryBranch(db,tenantId);
   saveLocalDatabase(db,{trackChanges:false});
   const session:LocalSession={userId:user.id,tenantId,activeTenantId:tenantId,activeBranchId:primary?.id,role:user.role,startedAt:new Date().toISOString()};
-  saveLocalSession(session);
+  // La vista cliente del administrador es efímera y por pestaña: nunca pisa la
+  // sesión base de KIUBO Control que comparten las demás pestañas del navegador.
+  if(!(platformAdmin&&previewWorkspace?.tenantId))saveLocalSession(session);
   return{user,session};
 }
