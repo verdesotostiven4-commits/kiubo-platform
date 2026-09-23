@@ -1,0 +1,21 @@
+.backdrop{position:fixed;inset:0;z-index:10050;display:grid;place-items:center;padding:24px;background:rgba(7,24,49,.48);backdrop-filter:blur(12px)}
+.card{width:min(520px,100%);display:grid;gap:14px;padding:28px;border:1px solid rgba(20,65,120,.14);border-radius:24px;background:#fff;box-shadow:0 28px 80px rgba(8,30,60,.24)}
+.icon{width:48px;height:48px;display:grid;place-items:center;border-radius:15px;background:#1469ff;color:#fff;font-size:22px;font-weight:950;box-shadow:0 10px 24px rgba(20,105,255,.22)}
+.kicker{font-size:11px;font-weight:950;letter-spacing:.13em;color:#1469ff}
+.card h2{margin:-3px 0 0;color:#0d2b50;font-size:28px;line-height:1.08;letter-spacing:-.035em}
+.card p{margin:0;color:#63748b;line-height:1.55;font-size:14px}
+.card p strong{color:#213a59}
+.device{display:grid;gap:3px;padding:13px 14px;border:1px solid #dce7f7;border-radius:14px;background:#f6f9fe}
+.device span{font-size:10px;font-weight:900;letter-spacing:.08em;color:#6d82a0}
+.device strong{color:#14375f;font-size:15px}
+.device small{color:#7d8da2;font-size:11px}
+.hint{padding:12px 13px;border-radius:13px;background:#f8fafc}
+.actions{display:grid;grid-template-columns:1fr auto;gap:9px;margin-top:2px}
+.actions button{min-height:45px;border-radius:13px;padding:10px 15px;font-weight:900;cursor:pointer}
+.actions button:disabled{opacity:.58;cursor:wait}
+.primary{border:0;background:#1469ff;color:#fff}
+.secondary{border:1px solid #dce5f0;background:#fff;color:#38516e}
+.checking{position:fixed;inset:0;z-index:10040;display:flex;align-items:center;justify-content:center;gap:10px;background:rgba(248,251,255,.92);color:#38516e;font-size:13px}
+.spinner{width:17px;height:17px;border:2px solid #cbd8ea;border-top-color:#1469ff;border-radius:999px;animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+@media(max-width:600px){.backdrop{padding:14px}.card{padding:22px;border-radius:20px}.card h2{font-size:24px}.actions{grid-template-columns:1fr}.actions button{width:100%}}
