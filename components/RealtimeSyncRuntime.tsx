@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
-import { getWorkspaceContext,loadLocalDatabase } from "@/lib/local-store";
+import { KIUBO_SYNC_QUEUED_EVENT,getWorkspaceContext,loadLocalDatabase } from "@/lib/local-store";
 import { runSyncCycle } from "@/lib/sync-engine";
 import { getSupabaseBrowserClient } from "@/lib/supabase-browser";
 
@@ -29,13 +29,22 @@ export function RealtimeSyncRuntime(){
     const channel=client.channel(`kiubo-live-${ctx.tenantId.slice(0,8)}`)
       .on("postgres_changes",{event:"*",schema:"public",table:"sync_entities",filter:`tenant_id=eq.${ctx.tenantId}`},sync)
       .subscribe();
-    const online=()=>sync();
+    const wake=()=>sync();
+    const visible=()=>{if(document.visibilityState==="visible")sync()};
+    const interval=window.setInterval(sync,30_000);
     sync();
-    window.addEventListener("online",online);
+    window.addEventListener("online",wake);
+    window.addEventListener("focus",wake);
+    window.addEventListener(KIUBO_SYNC_QUEUED_EVENT,wake);
+    document.addEventListener("visibilitychange",visible);
     return()=>{
       disposed=true;
       if(timer)window.clearTimeout(timer);
-      window.removeEventListener("online",online);
+      window.clearInterval(interval);
+      window.removeEventListener("online",wake);
+      window.removeEventListener("focus",wake);
+      window.removeEventListener(KIUBO_SYNC_QUEUED_EVENT,wake);
+      document.removeEventListener("visibilitychange",visible);
       void client.removeChannel(channel);
     };
   },[]);
