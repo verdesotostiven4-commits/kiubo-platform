@@ -18,6 +18,10 @@ assert.ok(!pos.includes("Abono / fiado"),"partial payment and fiado must not sha
 assert.ok(pos.includes('payment==="credit"&&!customerId'),"fiado must require a customer");
 assert.ok(pos.includes('payment!=="partial"||(Boolean(partialAmount.trim())'),"partial payment must require an amount");
 assert.ok(!pos.includes('payment==="partial"&&!customerId'),"partial payment must not require a customer");
+for(const needle of ["isPartialBalanceOrder","isOccupyingOrder",'paymentStatus==="unpaid"||isPartialBalanceOrder','setTableLabel("")','Completa el abono desde Pedidos.']){
+  assert.ok(pos.includes(needle),`partial table lifecycle missing: ${needle}`);
+}
+assert.ok(pos.includes('item.kind==="partial"'),"fiado must not keep a restaurant table occupied as if it were a partial payment");
 
 const payments=text("lib/order-payments.ts");
 for(const needle of ['sale.payment==="credit"||sale.payment==="partial"','kind==="partial"?"Pago parcial":"Fiado"',"Pago parcial ·","sale.total-balance","detailPending","actualizando detalle"]){
