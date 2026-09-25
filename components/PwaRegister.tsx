@@ -4,6 +4,7 @@ import { useEffect } from "react";
 const RESET_KEY = "kiubo.pwa.cache-reset.v3";
 const RECOVERY_KEY = "kiubo.bundle-recovery.v1";
 const SW_URL = "/sw.js?v=8";
+const CANONICAL_HOST = "kiubo-platform.vercel.app";
 
 function isAssetFailure(value: unknown) {
   const message = value instanceof Error ? value.message : String(value ?? "");
@@ -13,6 +14,17 @@ function isAssetFailure(value: unknown) {
 export function PwaRegister() {
   useEffect(() => {
     if (!("serviceWorker" in navigator)) return;
+
+    // A PWA installed from a Vercel deployment URL is permanently tied to
+    // that old deployment. Move it to the public production origin so future
+    // releases and Cloud synchronization reach the same application.
+    const host = window.location.hostname;
+    if (host.endsWith("-verdesotostiven4-5089s-projects.vercel.app") && host !== CANONICAL_HOST) {
+      const canonical = new URL(window.location.href);
+      canonical.hostname = CANONICAL_HOST;
+      window.location.replace(canonical.toString());
+      return;
+    }
 
     const clearAppShell = async () => {
       const registrations = await navigator.serviceWorker.getRegistrations();
