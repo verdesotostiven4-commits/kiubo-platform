@@ -24,9 +24,8 @@ export function OperationalSessionGuard(){
       else setConflict(null);
       return state;
     }catch{
-      // KIUBO conserva su tolerancia offline. La exclusividad se vuelve a validar
-      // en cuanto el dispositivo recupera conexión con Cloud.
-      return null;
+      // Fail closed: without Cloud validation we cannot guarantee one-device operation.
+      return {granted:false,conflict:true,offline:true} satisfies OperationalSessionState;
     }
   },[]);
 
@@ -45,7 +44,7 @@ export function OperationalSessionGuard(){
         if(cancelled)return;
         setConflict(!state.granted&&!state.bypassed?state:null);
       }catch{
-        if(!cancelled)setConflict(null);
+        if(!cancelled)setConflict({granted:false,conflict:true,offline:true});
       }finally{
         if(!cancelled)setChecking(false);
       }
@@ -81,7 +80,7 @@ export function OperationalSessionGuard(){
     try{
       const state=await claimOperationalSession(tenantId,deviceId);
       setConflict(!state.granted&&!state.bypassed?state:null);
-    }catch{}finally{setBusy(false)}
+    }catch{setConflict({granted:false,conflict:true,offline:true})}finally{setBusy(false)}
   };
 
   if(checking&&!conflict)return <div className={styles.checking} role="status"><span className={styles.spinner}/><strong>Confirmando dispositivo…</strong></div>;
@@ -91,16 +90,22 @@ export function OperationalSessionGuard(){
     <section className={styles.card} role="dialog" aria-modal="true" aria-labelledby="kiubo-device-title">
       <div className={styles.icon}>K</div>
       <span className={styles.kicker}>SESIÓN OPERATIVA</span>
-      <h2 id="kiubo-device-title">KIUBO ya está activo en otro dispositivo</h2>
-      <p>Este acceso puede trabajar operativamente en <strong>un dispositivo a la vez</strong>. Así evitamos pedidos, caja o mesas duplicadas con la misma cuenta.</p>
-      <div className={styles.device}>
-        <span>Dispositivo activo</span>
-        <strong>{conflict.activeDeviceLabel||"Otro dispositivo"}</strong>
-        <small>{conflict.lastSeenAt?"Con actividad reciente en KIUBO":"Sesión Cloud activa"}</small>
-      </div>
-      <p className={styles.hint}>Si cerraste KIUBO en el otro equipo o ahora necesitas continuar aquí, puedes transferir el control. El otro dispositivo quedará bloqueado para operar, pero sus cambios pendientes podrán terminar de sincronizarse.</p>
+      {conflict.offline?<>
+        <h2 id="kiubo-device-title">No se pudo validar este dispositivo</h2>
+        <p>KIUBO necesita conexión con el servidor para confirmar que esta cuenta no esté activa en otro equipo.</p>
+        <p className={styles.hint}>Cuando vuelva la conexión, pulsa <strong>Reintentar</strong>. El sistema queda bloqueado hasta validar la sesión.</p>
+      </>:<>
+        <h2 id="kiubo-device-title">KIUBO ya está activo en otro dispositivo</h2>
+        <p>Este acceso puede trabajar operativamente en <strong>un dispositivo a la vez</strong>. Así evitamos pedidos, caja o mesas duplicadas con la misma cuenta.</p>
+        <div className={styles.device}>
+          <span>Dispositivo activo</span>
+          <strong>{conflict.activeDeviceLabel||"Otro dispositivo"}</strong>
+          <small>{conflict.lastSeenAt?"Con actividad reciente en KIUBO":"Sesión Cloud activa"}</small>
+        </div>
+        <p className={styles.hint}>Si cerraste KIUBO en el otro equipo o ahora necesitas continuar aquí, puedes transferir el control. El otro dispositivo quedará bloqueado para operar, pero sus cambios pendientes podrán terminar de sincronizarse.</p>
+      </>}
       <div className={styles.actions}>
-        <button className={styles.primary} disabled={busy} onClick={()=>void takeOver()}>{busy?"Transfiriendo…":"Usar KIUBO en este dispositivo"}</button>
+        {!conflict.offline&&<button className={styles.primary} disabled={busy} onClick={()=>void takeOver()}>{busy?"Transfiriendo…":"Usar KIUBO en este dispositivo"}</button>}
         <button className={styles.secondary} disabled={busy} onClick={()=>void retry()}>Reintentar</button>
       </div>
     </section>
