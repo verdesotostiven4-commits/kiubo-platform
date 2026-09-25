@@ -24,8 +24,10 @@ export function OperationalSessionGuard(){
       else setConflict(null);
       return state;
     }catch{
-      // Fail closed: without Cloud validation we cannot guarantee one-device operation.
-      return {granted:false,conflict:true,offline:true} satisfies OperationalSessionState;
+      // La tolerancia offline se conserva para datos locales, pero la sesión operativa falla cerrada: sin Cloud validation no se puede garantizar un solo dispositivo.
+      const offline={granted:false,conflict:true,offline:true} satisfies OperationalSessionState;
+      setConflict(offline);
+      return offline;
     }
   },[]);
 
