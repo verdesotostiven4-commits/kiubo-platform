@@ -47,20 +47,19 @@ try{
   const {execFileSync}=await import("node:child_process");
   headMessage=execFileSync("git",["log","-1","--pretty=%s"],{encoding:"utf8"}).trim();
 }catch{}
-const oneShotPublish=Boolean(
+const mainOnlyDeploys=Boolean(
   deploymentEnabled&&
   typeof deploymentEnabled==="object"&&
   deploymentEnabled["*"]===false&&
   deploymentEnabled.main===true&&
-  Object.keys(deploymentEnabled).length===2&&
-  headMessage==="chore(vercel): one-shot KIUBO production publish"
+  Object.keys(deploymentEnabled).length===2
 );
 assert.ok(
-  deploymentEnabled===false||oneShotPublish,
-  "vercel.json must keep duplicate root Git deployments disabled except for the explicit one-shot KIUBO production publish"
+  deploymentEnabled===false||mainOnlyDeploys,
+  "vercel.json must disable non-main Git deployments and allow the production main branch"
 );
-console.log(oneShotPublish
-  ?"✓ vercel.json explicit one-shot KIUBO production publish authorized"
+console.log(mainOnlyDeploys
+  ?"✓ vercel.json automatic production deployment from main enabled"
   :"✓ vercel.json duplicate root Git deployments remain disabled");
 
 console.log("✓ Pilot Readiness V12 passed: coupled money/stock commands stay atomic-only, Food Service private routes remain protected, revoked order data is purged, employee roles stay out of plan settings, and root Git deployments remain guarded.");
