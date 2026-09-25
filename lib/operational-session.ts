@@ -4,6 +4,7 @@ export type OperationalSessionState={
   granted:boolean;
   bypassed?:boolean;
   conflict?:boolean;
+  offline?:boolean;
   activeDeviceLabel?:string;
   claimedAt?:string;
   lastSeenAt?:string;
@@ -16,6 +17,7 @@ function normalize(value:unknown):OperationalSessionState{
     granted:Boolean(row.granted),
     bypassed:Boolean(row.bypassed)||undefined,
     conflict:Boolean(row.conflict)||undefined,
+    offline:Boolean(row.offline)||undefined,
     activeDeviceLabel:typeof row.activeDeviceLabel==="string"?row.activeDeviceLabel:undefined,
     claimedAt:typeof row.claimedAt==="string"?row.claimedAt:undefined,
     lastSeenAt:typeof row.lastSeenAt==="string"?row.lastSeenAt:undefined,
