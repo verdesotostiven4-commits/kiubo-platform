@@ -105,6 +105,19 @@ async function runSyncCycleCore():Promise<SyncCycleResult>{
   const db=loadLocalDatabase(),ctx=getWorkspaceContext(db),activeTenantId=ctx.tenant&&ctx.tenant.plan!=="Internal"&&UUID_RE.test(ctx.tenantId)?ctx.tenantId:null;
   if(!activeTenantId)return{ok:true,mode:provider.mode,pushed:0,failed:0,pulled:0,message:"Sin negocio cloud activo para sincronizar"};
 
+  // If a fresh browser or a stale local workspace has no products for the active branch,
+  // replay the tenant stream from revision zero. This repairs hydration without deleting
+  // local data or changing the cloud source of truth.
+  const hasWorkspaceProducts=db.tenantProducts.some(product=>product.tenantId===activeTenantId&&product.branchId===ctx.branchId);
+  if(!hasWorkspaceProducts&&!hasUnresolvedOperationalQueue(db,activeTenantId)){
+    try{
+      const hydration=await pullAvailable(provider,"0");
+      persistPulled(provider,db,hydration);
+      if(!hydration.hasMore)markTenantIsolationRepairDone(activeTenantId);
+      return{ok:!hydration.hasMore,mode:provider.mode,pushed:0,failed:0,pulled:hydration.changes.length,hasMore:Boolean(hydration.hasMore),message:hydration.hasMore?"KIUBO está recuperando los productos del negocio":"Productos del negocio recuperados desde Cloud"};
+    }catch{}
+  }
+
   recoverExpiredSyncing(db,activeTenantId);
   const now=Date.now(),activeQueue=db.syncQueue.filter(item=>isActiveQueueItem(item,activeTenantId)),waitingRetry=activeQueue.filter(item=>item.status==="failed"&&!retryDue(item,now)),pending=activeQueue.filter(item=>item.status==="pending"||(item.status==="failed"&&retryDue(item,now))).slice(0,100);
   if(!pending.length){
