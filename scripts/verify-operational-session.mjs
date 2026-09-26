@@ -26,7 +26,7 @@ for(const needle of ["claim_operational_session_v1","transfer_operational_sessio
 }
 
 const guard=text("components/OperationalSessionGuard.tsx");
-for(const needle of ["ctx.user.platformAdmin","HEARTBEAT_MS=20_000","Usar KIUBO en este dispositivo","transferOperationalSession","heartbeatOperationalSession","tolerancia offline"]){
+for(const needle of ["ctx.user.platformAdmin","HEARTBEAT_MS=20_000","Usar KIUBO en este dispositivo","transferOperationalSession","heartbeatOperationalSession","tolerancia offline","claimedKey","if(checking&&!conflict)return null"]){
   assert.ok(guard.includes(needle),`operational session guard missing: ${needle}`);
 }
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback,useEffect,useState } from "react";
+import { useCallback,useEffect,useRef,useState } from "react";
 import { usePathname } from "next/navigation";
 import { getLocalDeviceId,getWorkspaceContext,loadLocalDatabase } from "@/lib/local-store";
 import { claimOperationalSession,heartbeatOperationalSession,transferOperationalSession,type OperationalSessionState } from "@/lib/operational-session";
@@ -16,6 +16,7 @@ export function OperationalSessionGuard(){
   const[busy,setBusy]=useState(false);
   const[tenantId,setTenantId]=useState("");
   const[deviceId,setDeviceId]=useState("");
+  const claimedKey=useRef("");
 
   const verify=useCallback(async(currentTenant:string,currentDevice:string)=>{
     try{
@@ -38,6 +39,11 @@ export function OperationalSessionGuard(){
     if(!ctx.user||ctx.user.platformAdmin||ctx.tenant?.plan==="Internal"){setChecking(false);setConflict(null);return}
 
     const tenant=ctx.tenantId,device=getLocalDeviceId();
+    const key=`${tenant}:${device}`;
+    // Route navigation must not reclaim the same operational session. The
+    // guard stays mounted while moving between Inicio, Ventas and Caja.
+    if(claimedKey.current===key){setChecking(false);return}
+    claimedKey.current=key;
     setTenantId(tenant);setDeviceId(device);setChecking(true);
 
     void(async()=>{
@@ -85,7 +91,10 @@ export function OperationalSessionGuard(){
     }catch{setConflict({granted:false,conflict:true,offline:true})}finally{setBusy(false)}
   };
 
-  if(checking&&!conflict)return <div className={styles.checking} role="status"><span className={styles.spinner}/><strong>Confirmando dispositivo…</strong></div>;
+  // The initial claim runs in the background. Showing a full-screen loader on
+  // every route change made the POS feel blocked even when validation was
+  // already succeeding. A real conflict still renders the blocking dialog.
+  if(checking&&!conflict)return null;
   if(!conflict)return null;
 
   return <div className={styles.backdrop} role="presentation">

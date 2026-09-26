@@ -16,6 +16,7 @@ const checks=[
   [pos.includes("cancelOpenSlotOrders")&&pos.includes("cancelled.length"),"clearing a table cancels every duplicated open order in that slot in one action"],
   [pos.includes('clearContextLabel=activeServiceMode==="table"&&tableLabel?"Liberar mesa"'),"table cleanup is presented explicitly as Liberar mesa"],
   [pos.includes("selectDelivery")&&pos.includes("loadDeliveryOrder(label,source)"),"switching delivery slots persists and loads the correct context"],
+  [pos.includes("TableOrderAutoSave")&&pos.includes("tableAutoSaveSignature")&&pos.includes("saveOrder(true)"),"open table drafts are persisted automatically before browser data can be lost"],
   [pos.includes("Mesa, Para llevar y Domicilio conservan pedidos independientes"),"POS explains isolated service behavior"],
   [pos.includes("isPartialBalanceOrder")&&pos.includes('item.kind==="partial"&&item.status==="open"'),"only real partial-payment balances keep a table occupied; fiado does not"],
   [pos.includes('open?.paymentStatus==="partial"?`Abonado · saldo'),"partially paid tables remain visibly occupied with their remaining balance"],
