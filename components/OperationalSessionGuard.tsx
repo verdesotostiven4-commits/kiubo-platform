@@ -34,7 +34,7 @@ export function OperationalSessionGuard(){
 
   useEffect(()=>{
     let cancelled=false;
-    if(platformPath(path)){setChecking(false);setConflict(null);return}
+    if(platformPath(path)){claimedKey.current="";setChecking(false);setConflict(null);return}
     const db=loadLocalDatabase(),ctx=getWorkspaceContext(db);
     if(!ctx.user||ctx.user.platformAdmin||ctx.tenant?.plan==="Internal"){setChecking(false);setConflict(null);return}
 
