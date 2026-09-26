@@ -1,6 +1,8 @@
 import { $, $$, api, uploadApi, money, escapeHTML, initials, productColor, slugFromLocation, toast, vibrate, debounce, phoneDigits, formatDate, config } from "./core.js";
 
 const isMaster = location.pathname === "/master" || new URLSearchParams(location.search).get("mode") === "master";
+document.documentElement.classList.toggle("provider-mode", !isMaster);
+document.documentElement.dataset.hmSimpleOrders = "1";
 const slug = slugFromLocation();
 const providerSessionKey = `kiubo-provider-session:${slug}`;
 const masterSessionKey = "kiubo-master-session";
@@ -16,7 +18,6 @@ const state = {
   orders: [],
   customers: [],
   productFilter: "all",
-  orderFilter: "open",
   editingProduct: null,
   editingCategory: null,
   activeOrder: null,
@@ -32,11 +33,6 @@ const viewTitles = {
   customers: ["RELACIONES", "Clientes", "Clientes"],
   business: ["CONFIGURACIÓN", "Mi negocio", "Negocio"]
 };
-
-const orderStatuses = [
-  ["new", "Nuevo"], ["confirmed", "Confirmado"], ["preparing", "Preparando"],
-  ["dispatched", "Despachado"], ["delivered", "Entregado"], ["cancelled", "Cancelado"]
-];
 
 function readMasterSession() {
   try { return JSON.parse(sessionStorage.getItem(masterSessionKey) || "null"); } catch { return null; }
@@ -176,6 +172,7 @@ async function bootstrap(accountSlug = "") {
     renderAll();
     if (state.mode === "master") renderMasterSwitcher();
     startPolling();
+    openInitialPanelTarget();
   } catch (error) {
     if (error.code === "session_expired" || error.status === 401) {
       if (state.mode === "master") { saveMasterSession(null); setGate("#masterGate"); }
@@ -229,14 +226,19 @@ function renderStats() {
   const stock = state.products.filter(product => !product.archived_at && ["low", "out"].includes(product.status)).length;
   const newOrders = state.orders.filter(order => order.status === "new").length;
   const openOrders = state.orders.filter(order => !["delivered", "cancelled"].includes(order.status));
+  const inProcess = state.orders.filter(order => order.status !== "new").length;
   const openValue = openOrders.reduce((sum, order) => sum + Number(order.total || 0), 0);
   $("#statProducts").textContent = visible;
   $("#statStock").textContent = stock;
   $("#statNewOrders").textContent = newOrders;
   $("#statOpenValue").textContent = money(openValue);
+  if ($("#dailyNewOrders")) $("#dailyNewOrders").textContent = newOrders;
+  if ($("#dailyInProcess")) $("#dailyInProcess").textContent = inProcess;
+  if ($("#dailyStock")) $("#dailyStock").textContent = stock;
   $("#orderBadge").textContent = $("#mobileOrderBadge").textContent = newOrders;
   $("#orderBadge").hidden = $("#mobileOrderBadge").hidden = newOrders === 0;
-  $("#welcomeTitle").textContent = newOrders ? `Tienes ${newOrders} pedido${newOrders === 1 ? " nuevo" : "s nuevos"} por revisar.` : "Tu catálogo está listo para recibir pedidos.";
+  $("#welcomeTitle").textContent = newOrders ? `${newOrders} pedido${newOrders === 1 ? " necesita" : "s necesitan"} tu revisión.` : "Todo está al día.";
+  $("#welcomeCopy").textContent = newOrders ? "El stock ya está reservado. Abre el pedido, revisa los datos y confirma o cancela." : "Aquí verás primero lo que realmente necesita tu atención.";
 }
 
 function renderDashboard() {
@@ -258,6 +260,7 @@ function filteredProducts() {
     if (state.productFilter === "archived") return Boolean(product.archived_at);
     if (product.archived_at) return false;
     if (state.productFilter === "hidden") return !product.visible;
+    if (state.productFilter === "attention") return ["low", "out"].includes(product.status);
     if (state.productFilter !== "all" && product.status !== state.productFilter) return false;
     return true;
   }).filter(product => !query || [product.name, product.brand, product.sku, product.unit].some(value => String(value || "").toLowerCase().includes(query)));
@@ -271,33 +274,53 @@ function renderProducts() {
   $$('[data-status]', $("#adminProductList")).forEach(button => button.onclick = () => quickStatus(button.dataset.productId, button.dataset.status));
 }
 
+function orderStatusLabel(status) {
+  return ({ new: "Por revisar", confirmed: "Confirmado", preparing: "Preparando", dispatched: "Despachado", delivered: "Entregado", cancelled: "Cancelado" })[status] || "Actualizado";
+}
+
 function filteredOrders() {
   const query = $("#orderSearch").value.trim().toLowerCase();
-  return state.orders.filter(order => {
-    if (state.orderFilter === "open") return !["delivered", "cancelled"].includes(order.status);
-    if (state.orderFilter === "new") return order.status === "new";
-    if (state.orderFilter === "done") return ["delivered", "cancelled"].includes(order.status);
-    return true;
-  }).filter(order => !query || [order.order_number, order.customer_business, order.customer_name, order.customer_phone].some(value => String(value || "").toLowerCase().includes(query)));
+  return state.orders.filter(order => !query || [order.order_number, order.customer_business, order.customer_name, order.customer_phone].some(value => String(value || "").toLowerCase().includes(query)));
 }
 
 function orderItemSummary(order) {
   return (order.items || []).slice(0, 3).map(item => `${item.quantity}× ${item.product_name}`).join(" · ") + ((order.items || []).length > 3 ? ` · +${order.items.length - 3} más` : "");
 }
 
-function statusOptions(active) {
-  return orderStatuses.map(([value, label]) => `<option value="${value}" ${value === active ? "selected" : ""}>${label}</option>`).join("");
+function orderCard(order, pending = false) {
+  const units = (order.items || []).reduce((sum, item) => sum + Number(item.quantity || 0), 0);
+  const statusClass = String(order.status || "new").replace(/[^a-z-]/g, "");
+  return `<article class="order-card ${pending ? "order-card--pending" : "order-card--history"}">
+    <div class="order-card__top"><div><span class="order-card__number">${escapeHTML(order.order_number)}</span><h3>${escapeHTML(order.customer_business || order.customer_name)}</h3></div><strong class="order-card__amount">${money(order.total)}</strong></div>
+    <div class="order-card__meta"><span>${formatDate(order.created_at)}</span><span>·</span><span>${units} unidades</span></div>
+    <div class="order-card__items">${escapeHTML(orderItemSummary(order) || "Sin detalle")}</div>
+    ${pending
+      ? `<div class="order-card__decision"><button class="order-action order-action--confirm" data-order-confirm="${order.id}">Confirmar</button><button class="order-action order-action--cancel" data-order-cancel="${order.id}">Cancelar</button><button class="order-open-btn order-open-btn--light" data-open-order="${order.id}">Ver detalle</button></div>`
+      : `<div class="order-card__foot"><span class="order-state order-state--${statusClass}">${escapeHTML(orderStatusLabel(order.status))}</span><button class="order-open-btn" data-open-order="${order.id}">Ver detalle</button></div>`}
+  </article>`;
 }
 
 function renderOrders() {
   const items = filteredOrders();
-  $("#adminOrderList").innerHTML = items.length ? items.map(order => `<article class="order-card"><div class="order-card__top"><div><span class="order-card__number">${escapeHTML(order.order_number)}</span><h3>${escapeHTML(order.customer_business || order.customer_name)}</h3></div><strong class="order-card__amount">${money(order.total)}</strong></div><div class="order-card__meta"><span>${formatDate(order.created_at)}</span><span>·</span><span>${(order.items || []).reduce((sum, item) => sum + Number(item.quantity), 0)} unidades</span></div><div class="order-card__items">${escapeHTML(orderItemSummary(order) || "Sin detalle")}</div><div class="order-card__foot"><select class="status-select" data-order-status="${order.id}">${statusOptions(order.status)}</select><button class="order-open-btn" data-open-order="${order.id}">Ver detalle</button></div></article>`).join("") : `<div class="empty-admin" style="grid-column:1/-1"><svg class="icon"><use href="#i-receipt"/></svg><b>No hay pedidos en esta vista</b><span>Los pedidos nuevos aparecerán automáticamente.</span></div>`;
-  $$('[data-order-status]').forEach(select => select.onchange = () => updateOrderStatus(select.dataset.orderStatus, select.value));
-  bindOrderOpeners($("#adminOrderList"));
+  const pending = items.filter(order => order.status === "new");
+  const history = items.filter(order => order.status !== "new");
+  const host = $("#adminOrderList");
+  host.innerHTML = `
+    <section class="order-queue-section" id="ordersPendingSection">
+      <header class="order-queue-head"><div><span>POR REVISAR</span><h2>Pedidos que necesitan respuesta</h2><p>Confirma o cancela. El cliente recibe el cambio automáticamente.</p></div><b>${pending.length}</b></header>
+      <div class="order-queue-grid">${pending.length ? pending.map(order => orderCard(order, true)).join("") : `<div class="empty-admin order-empty"><svg class="icon"><use href="#i-check"/></svg><b>No tienes pedidos pendientes</b><span>Los nuevos aparecerán aquí.</span></div>`}</div>
+    </section>
+    <section class="order-queue-section order-queue-section--history" id="ordersHistorySection">
+      <header class="order-queue-head"><div><span>HISTORIAL RECIENTE</span><h2>Pedidos respondidos</h2><p>Confirmados, cancelados y seguimientos opcionales.</p></div><b>${history.length}</b></header>
+      <div class="order-queue-grid">${history.length ? history.map(order => orderCard(order, false)).join("") : `<div class="empty-admin order-empty"><svg class="icon"><use href="#i-receipt"/></svg><b>Aún no hay historial</b><span>Cuando respondas un pedido aparecerá aquí.</span></div>`}</div>
+    </section>`;
+  $$("[data-order-confirm]", host).forEach(button => button.onclick = () => updateOrderStatus(button.dataset.orderConfirm, "confirmed", button));
+  $$("[data-order-cancel]", host).forEach(button => button.onclick = () => updateOrderStatus(button.dataset.orderCancel, "cancelled", button));
+  bindOrderOpeners(host);
 }
 
 function bindOrderOpeners(root) {
-  $$('[data-open-order]', root).forEach(button => button.onclick = () => openOrder(button.dataset.openOrder));
+  $$("[data-open-order]", root).forEach(button => button.onclick = () => openOrder(button.dataset.openOrder));
 }
 
 function renderCustomers() {
@@ -376,8 +399,16 @@ async function saveProduct() {
     const file = $("#productImage").files[0];
     if (file) { const uploaded = await uploadFile(file, "product", imagePath); imagePath = uploaded.path; imageUrl = uploaded.public_url; }
     const product = { id: state.editingProduct?.id || null, name, category_id: $("#productCategory").value || null, brand: $("#productBrand").value.trim() || null, price, compare_at_price: $("#productComparePrice").value ? Number($("#productComparePrice").value) : null, unit: $("#productUnit").value.trim() || null, sku: $("#productSku").value.trim() || null, description: $("#productDescription").value.trim() || null, status: $("#productStatus").value, sort_order: Number($("#productSort").value || 0), visible: $("#productVisible").checked, featured: $("#productFeatured").checked, image_path: imagePath || null, image_url: imageUrl || null };
-    await callApi("save_product", { slug: state.account.slug, product });
-    closeModals(); toast("Producto guardado", "success"); await refreshData();
+    const saved = await callApi("save_product", { slug: state.account.slug, product });
+    const id = saved?.id || product.id;
+    if (id) {
+      const index = state.products.findIndex(item => String(item.id) === String(id));
+      const next = { ...(index >= 0 ? state.products[index] : {}), ...product, id };
+      if (index >= 0) state.products[index] = next; else state.products.unshift(next);
+      renderProducts(); renderStats(); renderDashboard();
+    }
+    closeModals(); toast("Producto guardado", "success");
+    refreshData({ silent: true });
   } catch (error) { toast(error.message === "file_too_large" ? "La imagen supera 5 MB" : "No pudimos guardar el producto", "error"); }
   finally { state.busy = false; $("#saveProductBtn").disabled = false; $("#saveProductBtn").textContent = "Guardar producto"; }
 }
@@ -415,21 +446,44 @@ async function deleteCategory(id) {
 function openOrder(id) {
   const order = state.orders.find(item => item.id === id); if (!order) return; state.activeOrder = order;
   $("#orderModalTitle").textContent = order.order_number;
-  const progressIndex = Math.max(0, orderStatuses.findIndex(([value]) => value === order.status));
   const phone = phoneDigits(order.customer_phone);
   const lat=Number(order.delivery_lat),lng=Number(order.delivery_lng),hasMap=Number.isFinite(lat)&&Number.isFinite(lng)&&lat>=-90&&lat<=90&&lng>=-180&&lng<=180;
   const mapUrl=hasMap?`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${lat},${lng}`)}`:"";
   const deliveryCard=order.delivery_method==="pickup"
-    ? `<div class="review-card" style="margin-top:12px"><h3>Entrega</h3><p style="margin:0;color:var(--muted);font-size:10px;line-height:1.5">Retiro acordado.</p></div>`
-    : `<div class="review-card" style="margin-top:12px"><h3>Entrega</h3><p style="margin:0 0 ${hasMap?"10px":"0"};color:var(--muted);font-size:10px;line-height:1.5">${escapeHTML(order.delivery_address||(hasMap?"Ubicación marcada por el cliente.":"Dirección por coordinar."))}</p>${hasMap?`<a class="button button--secondary" href="${mapUrl}" target="_blank" rel="noopener">Abrir ubicación en mapa</a>`:""}</div>`;
-  $("#orderModalContent").innerHTML = `<div class="order-detail-top"><h3>${escapeHTML(order.customer_business || order.customer_name)}</h3><p>${escapeHTML(order.customer_name || "Contacto")} · +${escapeHTML(phone)} · ${formatDate(order.created_at)}</p><div class="status-timeline">${orderStatuses.slice(0,5).map((_,index) => `<i class="${index <= progressIndex && order.status !== "cancelled" ? "done" : ""}"></i>`).join("")}</div></div><div class="order-detail-items">${(order.items || []).map(item => `<div class="order-detail-item"><b>${item.quantity}×</b><span>${escapeHTML(item.product_name)}<small style="display:block;color:var(--muted);margin-top:3px">${escapeHTML(item.unit || "")}</small></span><strong>${money(item.line_total)}</strong></div>`).join("")}</div><div class="order-detail-total"><span>Total estimado</span><strong>${money(order.total)}</strong></div>${deliveryCard}${order.notes ? `<div class="review-card" style="margin-top:12px"><h3>Observaciones</h3><p style="margin:0;color:var(--muted);font-size:10px;line-height:1.5">${escapeHTML(order.notes)}</p></div>` : ""}<div class="order-detail-actions"><select class="status-select" id="modalOrderStatus">${statusOptions(order.status)}</select><a class="button button--primary" href="https://wa.me/${phone}" target="_blank" rel="noopener"><svg class="icon"><use href="#i-message"/></svg>WhatsApp</a></div>`;
-  $("#modalOrderStatus").onchange = async event => { await updateOrderStatus(order.id, event.target.value); closeModals(); };
+    ? `<div class="review-card order-info-card"><h3>Entrega</h3><p>Retiro acordado.</p></div>`
+    : `<div class="review-card order-info-card"><h3>Entrega</h3><p>${escapeHTML(order.delivery_address||(hasMap?"Ubicación marcada por el cliente.":"Dirección por coordinar."))}</p>${hasMap?`<a class="button button--secondary" href="${mapUrl}" target="_blank" rel="noopener">Abrir ubicación en mapa</a>`:""}</div>`;
+  const statusClass = String(order.status || "new").replace(/[^a-z-]/g, "");
+  const decision = order.status === "new"
+    ? `<section class="order-primary-decision"><div><small>RESPONDER PEDIDO</small><h3>¿Vas a aceptar este pedido?</h3><p>Con una sola acción el cliente recibe la confirmación o cancelación.</p></div><div><button class="order-action order-action--confirm" data-modal-confirm>Confirmar pedido</button><button class="order-action order-action--cancel" data-modal-cancel>Cancelar</button></div></section>`
+    : "";
+  const next = order.status === "confirmed" ? ["preparing","Marcar como preparando"] : order.status === "preparing" ? ["dispatched","Marcar como despachado"] : order.status === "dispatched" ? ["delivered","Marcar como entregado"] : null;
+  const optional = next
+    ? `<details class="order-followup"><summary><span><b>Seguimiento opcional</b><small>Úsalo solo si quieres avisar avances después de confirmar.</small></span><span>+</span></summary><div class="order-followup__body"><button class="button button--secondary" data-modal-progress="${next[0]}">${next[1]}</button><button class="button button--ghost order-cancel-secondary" data-modal-cancel>Cancelar pedido</button></div></details>`
+    : "";
+  $("#orderModalContent").innerHTML = `<div class="order-detail-top order-detail-top--simple"><div><span class="order-state order-state--${statusClass}">${escapeHTML(orderStatusLabel(order.status))}</span><h3>${escapeHTML(order.customer_business || order.customer_name)}</h3><p>${escapeHTML(order.customer_name || "Contacto")} · +${escapeHTML(phone)} · ${formatDate(order.created_at)}</p></div></div>${decision}<div class="order-detail-items">${(order.items || []).map(item => `<div class="order-detail-item"><b>${item.quantity}×</b><span>${escapeHTML(item.product_name)}<small>${escapeHTML(item.presentation_name || item.unit || "")}</small>${item.item_note?`<small class="order-item-note">“${escapeHTML(item.item_note)}”</small>`:""}</span><strong>${money(item.line_total)}</strong></div>`).join("")}</div><div class="order-detail-total"><span>Total estimado</span><strong>${money(order.total)}</strong></div>${deliveryCard}${order.notes ? `<div class="review-card order-info-card"><h3>Observaciones</h3><p>${escapeHTML(order.notes)}</p></div>` : ""}${optional}<div class="order-detail-contact"><a class="button button--primary" href="https://wa.me/${phone}" target="_blank" rel="noopener"><svg class="icon"><use href="#i-message"/></svg>Escribir por WhatsApp</a></div>`;
+  $("[data-modal-confirm]", $("#orderModalContent"))?.addEventListener("click", async event => { if (await updateOrderStatus(order.id, "confirmed", event.currentTarget)) openOrder(order.id); });
+  $$("[data-modal-cancel]", $("#orderModalContent")).forEach(button => button.onclick = async event => { if (await updateOrderStatus(order.id, "cancelled", event.currentTarget)) openOrder(order.id); });
+  $("[data-modal-progress]", $("#orderModalContent"))?.addEventListener("click", async event => { if (await updateOrderStatus(order.id, event.currentTarget.dataset.modalProgress, event.currentTarget)) openOrder(order.id); });
   openModal($("#orderModal"));
 }
 
-async function updateOrderStatus(id, status) {
-  try { await callApi("update_order_status", { slug: state.account.slug, order_id: id, status }); const order = state.orders.find(item => item.id === id); if (order) order.status = status; renderStats(); renderOrders(); renderDashboard(); toast("Pedido actualizado", "success"); }
-  catch { toast("No se pudo actualizar el pedido", "error"); }
+async function updateOrderStatus(id, status, button = null) {
+  const order = state.orders.find(item => item.id === id);
+  const original = button?.textContent || "";
+  if (button) { button.disabled = true; button.textContent = status === "confirmed" ? "Confirmando…" : status === "cancelled" ? "Cancelando…" : "Actualizando…"; }
+  try {
+    await callApi("update_order_status", { slug: state.account.slug, order_id: id, status });
+    if (order) order.status = status;
+    renderStats(); renderOrders(); renderDashboard(); vibrate(status === "confirmed" ? [18, 28, 45] : 18);
+    toast(status === "confirmed" ? "Pedido confirmado · cliente avisado" : status === "cancelled" ? "Pedido cancelado · cliente avisado" : `Pedido ${orderStatusLabel(status).toLowerCase()} · cliente avisado`, "success", 3600);
+    return true;
+  } catch (error) {
+    const stockIssue = status === "confirmed" && (error.status === 409 || String(error.code || "").includes("stock"));
+    toast(stockIssue ? "No se pudo confirmar: revisa el stock disponible." : "No se pudo actualizar el pedido", "error", 4200);
+    return false;
+  } finally {
+    if (button) { button.disabled = false; button.textContent = original; }
+  }
 }
 
 async function saveIdentity(event) {
@@ -516,9 +570,10 @@ function bindEvents() {
   $("#productSearch").addEventListener("input", debounce(renderProducts, 120));
   $$('[data-product-filter]').forEach(button => button.onclick = () => { state.productFilter = button.dataset.productFilter; $$('[data-product-filter]').forEach(item => item.classList.toggle("active", item === button)); renderProducts(); });
   $("#orderSearch").addEventListener("input", debounce(renderOrders, 120));
-  $$('[data-order-filter]').forEach(button => button.onclick = () => { state.orderFilter = button.dataset.orderFilter; $$('[data-order-filter]').forEach(item => item.classList.toggle("active", item === button)); renderOrders(); });
+
   $("#customerSearch").addEventListener("input", debounce(renderCustomers, 120));
-  $$('[data-quick]').forEach(button => button.onclick = () => { const action = button.dataset.quick; if (action === "new-product") openProductModal(); else if (action === "stock") { state.productFilter = "out"; navigate("products"); renderProducts(); } else navigate(action); });
+  $$('[data-quick]').forEach(button => button.onclick = () => { const action = button.dataset.quick; if (action === "new-product") openProductModal(); else if (action === "stock") { state.productFilter = "attention"; navigate("products"); renderProducts(); } else navigate(action); });
+  $$('[data-daily]').forEach(button => button.onclick = () => { const action = button.dataset.daily; if (action === "stock") { state.productFilter = "attention"; navigate("products"); renderProducts(); return; } navigate("orders"); setTimeout(() => document.querySelector(action === "new-orders" ? "#ordersPendingSection" : "#ordersHistorySection")?.scrollIntoView({ behavior: "smooth", block: "start" }), 80); });
   $$('[data-settings]').forEach(button => button.onclick = () => { $$('[data-settings]').forEach(item => item.classList.toggle("active", item === button)); $$('[data-settings-panel]').forEach(panel => panel.classList.toggle("active", panel.dataset.settingsPanel === button.dataset.settings)); });
   $("#newCategoryBtn").onclick = () => openCategoryModal(); $("#saveCategoryBtn").onclick = saveCategory;
   $("#identityForm").onsubmit = saveIdentity; $("#catalogSettingsForm").onsubmit = saveCatalogSettings; $("#pinChangeForm").onsubmit = changePin; $("#revokeSessionsBtn").onclick = revokeSessions;
@@ -534,6 +589,22 @@ function bindEvents() {
 
 function updateConnection(online) {
   $("#connectionChip").classList.toggle("offline", !online); $("#connectionChip span").textContent = online ? "En línea" : "Sin conexión";
+}
+
+let initialPanelTargetHandled = false;
+function openInitialPanelTarget() {
+  if (initialPanelTargetHandled || !state.account) return;
+  initialPanelTargetHandled = true;
+  const params = new URLSearchParams(location.search);
+  const view = params.get("view");
+  const orderId = params.get("order") || "";
+  if (view === "orders" || /^[0-9a-f-]{36}$/i.test(orderId)) navigate("orders");
+  if (/^[0-9a-f-]{36}$/i.test(orderId) && state.orders.some(order => String(order.id) === orderId)) setTimeout(() => openOrder(orderId), 100);
+  if (view || orderId) {
+    params.delete("view"); params.delete("order");
+    const query = params.toString();
+    history.replaceState({}, "", `${location.pathname}${query ? `?${query}` : ""}${location.hash || ""}`);
+  }
 }
 
 async function init() {

@@ -46,11 +46,8 @@ async function upload(file,oldPath=''){
   if(!data.public_url||!data.path)throw new Error('upload_incomplete');
   return data;
 }
-async function bootstrap(){return api('provider_bootstrap',{},18000)}
-async function verify(item){
-  const b=await bootstrap();
-  const rows=item.kind==='product'?(b.products||[]):(b.presentations||[]);
-  const row=rows.find(x=>String(x.id)===String(item.id));
+function verifyPersisted(item,data){
+  const row=item.kind==='product'?data?.product:data?.presentation;
   return Boolean(row&&String(row.image_url||'')===String(item.url||''));
 }
 function enqueue(item){
@@ -59,9 +56,11 @@ function enqueue(item){
   q.push({...item,kind,at:Date.now(),tries:Number(item.tries||0)});writeQueue(q);
 }
 async function persist(item,verifyAfter=true){
-  if(item.kind==='product')await api('save_product_image',{product_id:item.id,image_url:item.url,image_path:item.path});
-  else await api('save_presentation_image',{presentation_id:item.id,image_url:item.url,image_path:item.path});
-  if(verifyAfter&&!(await verify(item)))throw new Error('verify_failed');
+  const data=item.kind==='product'
+    ? await api('save_product_image',{product_id:item.id,image_url:item.url,image_path:item.path})
+    : await api('save_presentation_image',{presentation_id:item.id,image_url:item.url,image_path:item.path});
+  if(verifyAfter&&!verifyPersisted(item,data))throw new Error('verify_failed');
+  return data;
 }
 async function flush(){
   if(flushing||!navigator.onLine||!token())return;flushing=true;
@@ -98,12 +97,8 @@ function setGeneralState(message='',type=''){
 }
 function polishGeneral(){
   const wrap=$('.product-image-upload');if(!wrap)return;
-  const title=$('label b',wrap),hint=$('label small',wrap);if(title)title.textContent='Portada general (opcional)';
-  if(hint)hint.textContent=activeProductId?'Se guarda automáticamente al elegirla. No depende del botón Guardar producto.':'Guarda el producto una vez; después sus fotos se guardan automáticamente.';
-}
-async function syncGeneralFromServer(productId=activeProductId){
-  if(!productId||!token())return;
-  try{const b=await bootstrap(),p=(b.products||[]).find(x=>String(x.id)===String(productId));if(p?.image_url)setGeneralPreview(p.image_url)}catch{}
+  const title=$('label b',wrap),hint=$('label small',wrap);if(title)title.textContent='Foto general (opcional)';
+  if(hint)hint.textContent='La vista previa es inmediata. La foto se guarda junto con el producto al tocar Guardar.';
 }
 async function handlePresentation(input){
   const row=input.closest('.v5-presentation-row'),file=input.files?.[0];if(!row||!file)return;
@@ -127,19 +122,12 @@ async function handlePresentation(input){
   }catch(error){setRowState(row,'','No pudimos subirla. Intenta otra vez.');toast(error?.name==='AbortError'?'La subida tardó demasiado. Intenta nuevamente.':'No pudimos subir la foto.',true)}
   finally{input.value=''}
 }
-async function handleGeneral(input){
+function handleGeneral(input){
   const file=input.files?.[0];if(!file)return;
-  if(!activeProductId){setGeneralState('Foto seleccionada · se guardará al crear el producto.','pending');return}
   if(file.size>5*1024*1024){input.value='';return toast('La imagen supera 5 MB.',true)}
   if(!/^image\/(png|jpeg|webp)$/i.test(file.type)){input.value='';return toast('Usa PNG, JPG o WebP.',true)}
-  const local=URL.createObjectURL(file);setGeneralPreview(local);setGeneralState('Subiendo y guardando automáticamente…','saving');input.disabled=true;
-  try{
-    const before=await bootstrap(),product=(before.products||[]).find(x=>String(x.id)===String(activeProductId));
-    const up=await upload(file,product?.image_path||'');const item={kind:'product',id:activeProductId,url:up.public_url,path:up.path};
-    try{await persist(item,true);writeQueue(readQueue().filter(x=>!(String(x.id)===String(activeProductId)&&x.kind==='product')));setGeneralPreview(item.url);setGeneralState('Guardada automáticamente.','saved');toast('Portada guardada automáticamente')}
-    catch{enqueue(item);setGeneralPreview(item.url);setGeneralState('Subida y protegida · se terminará de guardar al reconectar.','pending');toast('Portada protegida en cola; reintentaremos automáticamente.',true)}
-  }catch(error){setGeneralState('No pudimos subirla. Toca Elegir foto para reintentar.','error');toast(error?.name==='AbortError'?'La subida tardó demasiado. Intenta nuevamente.':'No pudimos subir la portada.',true)}
-  finally{input.value='';input.disabled=false}
+  const local=URL.createObjectURL(file);setGeneralPreview(local);
+  setGeneralState('Lista para guardar con el producto.','pending');
 }
 function rememberProductFromTarget(target){
   const edit=target?.closest?.('[data-edit-product]');if(edit)activeProductId=String(edit.dataset.editProduct||'');
@@ -148,7 +136,7 @@ function rememberProductFromTarget(target){
 document.addEventListener('pointerdown',e=>rememberProductFromTarget(e.target),true);
 document.addEventListener('click',e=>{
   rememberProductFromTarget(e.target);
-  if(e.target.closest?.('[data-edit-product],#newProductBtn,#mobileCreateBtn,[data-quick="new-product"]'))setTimeout(()=>{polishGeneral();setGeneralState('');syncGeneralFromServer()},80);
+  if(e.target.closest?.('[data-edit-product],#newProductBtn,#mobileCreateBtn,[data-quick="new-product"]'))setTimeout(()=>{polishGeneral();setGeneralState('')},35);
 },true);
 document.addEventListener('change',e=>{
   if(e.target?.matches?.('.v77-presentation-file')){e.preventDefault();handlePresentation(e.target);return}

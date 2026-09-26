@@ -79,3 +79,38 @@
     overscroll-behavior:contain!important;
   }
 }
+
+
+/* Hakuna 10.18.3 — final product-detail media contract.
+   Presentation photos are authored 1:1: never crop them, regardless of older sheet rules. */
+@media(max-width:900px){
+  html #sheetHost .v10-sheet:has(.v102-detail) .v10-sheet-scroll{
+    overflow-y:auto!important;
+    overscroll-behavior:contain!important;
+    -webkit-overflow-scrolling:touch!important;
+  }
+  html #sheetHost .v102-detail .v10-detail-media{
+    width:100%!important;
+    height:auto!important;
+    min-height:0!important;
+    max-height:none!important;
+    aspect-ratio:1/1!important;
+    padding:16px 24px 8px!important;
+    overflow:hidden!important;
+    display:grid!important;
+    place-items:center!important;
+    background:#fff!important;
+  }
+  html #sheetHost .v102-detail .v10-detail-media>img{
+    display:block!important;
+    width:100%!important;
+    height:100%!important;
+    max-width:100%!important;
+    max-height:100%!important;
+    aspect-ratio:auto!important;
+    object-fit:contain!important;
+    object-position:center center!important;
+    margin:auto!important;
+    transform:none!important;
+  }
+}
