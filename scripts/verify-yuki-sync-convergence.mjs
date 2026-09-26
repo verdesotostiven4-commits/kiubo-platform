@@ -14,9 +14,12 @@ const runtime=text("components/RealtimeSyncRuntime.tsx");
 for(const needle of ["KIUBO_SYNC_QUEUED_EVENT","window.addEventListener(\"focus\",wake)","visibilitychange","setInterval(sync,30_000)"]){
   assert.ok(runtime.includes(needle),`realtime retry trigger missing: ${needle}`);
 }
-for(const needle of ["isSyntheticYukiProductId","Cloud es la fuente canónica","including tombstones"]){
+for(const needle of ["isSyntheticYukiProductId","Cloud es la fuente canónica","including tombstones","reconcileCanonicalSnapshot","CANONICAL_SNAPSHOT_INTERVAL"]){
   assert.ok(runtime.includes(needle),`stale YUKI product bootstrap protection missing: ${needle}`);
 }
+
+const syncStatus=text("components/SyncStatus.tsx");
+assert.ok(!syncStatus.includes("Sincronizar ahora"),"manual sync button must not replace automatic convergence");
 
 const bootstrap=text("components/YukiPilotCatalogBootstrap.tsx");
 for(const needle of ["getDataProvider","getDataProvider().mode===\"supabase\"","never manufacture production catalog data"]){

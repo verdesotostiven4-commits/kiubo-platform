@@ -23,5 +23,5 @@ export function SyncStatus(){
   },[provider.configured,provider.mode,refresh,sync]);
   const waiting=summary.pending+summary.failed+summary.syncing;
   const label=!online?"Sin internet":provider.mode==="local"?"Modo local":!provider.configured?"Cloud pendiente":waiting?`${waiting} por sincronizar`:"Cloud conectado";
-  return <div className={`sync-compact ${online?"online":"offline"}`}><span className="sync-dot" aria-hidden="true"/><span>{label}</span>{provider.configured&&provider.mode!=="local"&&<button type="button" aria-label="Sincronizar ahora" title="Sincronizar ahora" onClick={()=>void sync()} disabled={busy||!online}>{busy?"…":"↻"}</button>}</div>;
+  return <div className={`sync-compact ${online?"online":"offline"}`}><span className="sync-dot" aria-hidden="true"/><span>{label}</span></div>;
 }
