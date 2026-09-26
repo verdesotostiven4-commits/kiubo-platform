@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
+import { getDataProvider } from "@/lib/data-provider";
 import { getTenantSettings,getWorkspaceContext,loadLocalDatabase,saveLocalDatabase,type ServiceMode,type TenantProduct } from "@/lib/local-store";
 import type { ProductOptionConfig } from "@/lib/product-options";
 import { tableLabelsFromSettings,withTableLabels,type TableAwareSettings } from "@/lib/table-settings";
@@ -48,11 +49,32 @@ type ConfigurableProduct=TenantProduct&{optionConfig?:ProductOptionConfig};
 
 export function YukiPilotCatalogBootstrap(){
   useEffect(()=>{
-    const db=loadLocalDatabase(),ctx=getWorkspaceContext(db);
-    if(!ctx.tenant||ctx.tenant.name.trim().toUpperCase()!=="YUKI"||!ctx.branchId)return;
-    const settings=getTenantSettings(db,ctx.tenantId);
-    if(settings.businessType!=="food_service")return;
-    let changed=false;
+    let disposed=false;
+    const bootstrap=async()=>{
+      let db=loadLocalDatabase(),ctx=getWorkspaceContext(db);
+      if(!ctx.user||!ctx.tenant||ctx.tenant.name.trim().toUpperCase()!=="YUKI"||!ctx.branchId)return;
+      const settings=getTenantSettings(db,ctx.tenantId);
+      if(settings.businessType!=="food_service")return;
+
+      // Cloud is the source of truth for a real business. The old bootstrap
+      // seeded a default menu as soon as the local cache was empty; that could
+      // race the first Cloud pull and publish stale prices/products back to
+      // Supabase. Hydrate first and never manufacture production catalog data.
+      if(getDataProvider().mode==="supabase"){
+        const result=await runSyncCycle().catch(()=>null);
+        if(disposed)return;
+        if(result&&(result.pulled>0||result.pushed>0))window.dispatchEvent(new CustomEvent(KIUBO_DATA_REFRESHED,{detail:result}));
+        db=loadLocalDatabase();
+        ctx=getWorkspaceContext(db);
+        if(!ctx.tenant||ctx.tenant.name.trim().toUpperCase()!=="YUKI"||!ctx.branchId)return;
+        // Any menu/settings migration must be performed from the canonical
+        // Cloud records. If none arrived, leave the workspace untouched and
+        // let the normal sync runtime continue retrying.
+        if(!db.tenantProducts.some(product=>product.tenantId===ctx.tenantId&&product.branchId===ctx.branchId))return;
+        return;
+      }
+
+      let changed=false;
 
     const settingsIndex=db.settings.findIndex(item=>item.tenantId===ctx.tenantId);
     if(settingsIndex>=0){
@@ -113,10 +135,13 @@ export function YukiPilotCatalogBootstrap(){
       }
     }
 
-    if(!changed)return;
-    saveLocalDatabase(db);
-    window.dispatchEvent(new CustomEvent(KIUBO_DATA_REFRESHED,{detail:{source:"yuki-pilot-restaurant"}}));
-    void runSyncCycle().then(result=>{if(result.pulled>0||result.pushed>0)window.dispatchEvent(new CustomEvent(KIUBO_DATA_REFRESHED,{detail:result}))}).catch(()=>undefined);
+      if(!changed)return;
+      saveLocalDatabase(db);
+      window.dispatchEvent(new CustomEvent(KIUBO_DATA_REFRESHED,{detail:{source:"yuki-pilot-restaurant"}}));
+      void runSyncCycle().then(result=>{if(!disposed&&(result.pulled>0||result.pushed>0))window.dispatchEvent(new CustomEvent(KIUBO_DATA_REFRESHED,{detail:result}))}).catch(()=>undefined);
+    };
+    void bootstrap();
+    return()=>{disposed=true};
   },[]);
   return null;
 }

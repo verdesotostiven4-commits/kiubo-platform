@@ -1,10 +1,14 @@
 "use client";
 import { useEffect } from "react";
 
-const RESET_KEY = "kiubo.pwa.cache-reset.v3";
-const RECOVERY_KEY = "kiubo.bundle-recovery.v1";
-const SW_URL = "/sw.js?v=8";
+const RESET_KEY = "kiubo.pwa.cache-reset.v4";
+const RECOVERY_KEY = "kiubo.bundle-recovery.v2";
+const SW_URL = "/sw.js?v=9";
 const CANONICAL_HOST = "kiubo-platform.vercel.app";
+
+function isKiuboPreviewHost(host: string) {
+  return host !== CANONICAL_HOST && host.includes("kiubo-platform") && host.endsWith(".vercel.app");
+}
 
 function isAssetFailure(value: unknown) {
   const message = value instanceof Error ? value.message : String(value ?? "");
@@ -19,9 +23,11 @@ export function PwaRegister() {
     // that old deployment. Move it to the public production origin so future
     // releases and Cloud synchronization reach the same application.
     const host = window.location.hostname;
-    if (host.endsWith("-verdesotostiven4-5089s-projects.vercel.app") && host !== CANONICAL_HOST) {
+    if (isKiuboPreviewHost(host)) {
       const canonical = new URL(window.location.href);
+      canonical.protocol = window.location.protocol;
       canonical.hostname = CANONICAL_HOST;
+      canonical.port = "";
       window.location.replace(canonical.toString());
       return;
     }

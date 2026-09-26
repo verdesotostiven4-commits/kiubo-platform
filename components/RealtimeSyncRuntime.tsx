@@ -26,24 +26,71 @@ function pendingProductIds(tenantId:string){
   return ids;
 }
 
+function isSyntheticYukiProductId(id:string){
+  return id==="yuki-service-packaging"||/^yuki-menu-[a-z0-9-]+$/i.test(id);
+}
+
 async function reconcileProductSnapshot(tenantId:string,branchId:string){
   const client=getSupabaseBrowserClient();
   if(!client)return 0;
-  const result=await client.from("sync_entities").select("entity_id,branch_id,payload,deleted").eq("tenant_id",tenantId).eq("entity_type","tenantProducts").eq("deleted",false);
+  // Read the complete canonical product snapshot, including tombstones. The
+  // revision cursor is intentionally not used here: an old device can have a
+  // cursor ahead of the changes it missed, so it still needs a full product
+  // reconciliation when it returns to the business.
+  const result=await client.from("sync_entities").select("entity_id,branch_id,payload,deleted").eq("tenant_id",tenantId).eq("entity_type","tenantProducts");
   if(result.error||!Array.isArray(result.data))return 0;
-  const protectedIds=pendingProductIds(tenantId),next=loadLocalDatabase();
+  const next=loadLocalDatabase(),localContext=getWorkspaceContext(next);
+  const isYuki=localContext.tenantId===tenantId&&localContext.tenant?.name.trim().toUpperCase()==="YUKI";
+  // Older YUKI installations could enqueue the built-in demo menu before the
+  // first Cloud pull. Those synthetic writes are not customer edits and must
+  // not keep protecting stale local prices forever. Keep their queue history
+  // for backup/audit purposes, but stop retrying them and let Cloud win.
+  let queueChanged=false;
+  if(isYuki){
+    next.syncQueue=next.syncQueue.map(item=>{
+      const synthetic=item.tenantId===tenantId&&item.branchId===branchId&&item.entityType==="tenantProducts"&&isSyntheticYukiProductId(item.entityId)&&item.status!=="synced";
+      if(!synthetic)return item;
+      queueChanged=true;
+      return{...item,status:"synced" as const,lastError:"Ignorada semilla local antigua; Cloud es la fuente canónica",updatedAt:new Date().toISOString()};
+    });
+  }
+  const protectedIds=pendingProductIds(tenantId);
+  const remoteIds=new Set<string>();
   let changed=0;
   for(const row of result.data as Array<{entity_id?:string;branch_id?:string;payload?:unknown;deleted?:boolean}>){
-    const id=String(row.entity_id||""),payload=row.payload&&typeof row.payload==="object"?row.payload as TenantProduct:null;
-    if(!id||!payload||row.branch_id!==branchId||protectedIds.has(id))continue;
+    const id=String(row.entity_id||"");
+    if(!id||row.branch_id!==branchId)continue;
+    if(row.deleted){
+      if(!protectedIds.has(id)){
+        const before=next.tenantProducts.length;
+        next.tenantProducts=next.tenantProducts.filter(product=>!(product.id===id&&product.tenantId===tenantId&&product.branchId===branchId));
+        if(next.tenantProducts.length!==before)changed++;
+      }
+      continue;
+    }
+    remoteIds.add(id);
+    const payload=row.payload&&typeof row.payload==="object"?row.payload as TenantProduct:null;
+    if(!payload||protectedIds.has(id))continue;
     const index=next.tenantProducts.findIndex(product=>product.id===id&&product.tenantId===tenantId&&product.branchId===branchId);
     if(index<0){next.tenantProducts.push(payload);changed++;continue}
     if(JSON.stringify(next.tenantProducts[index])!==JSON.stringify(payload)){next.tenantProducts[index]=payload;changed++}
   }
-  if(!changed)return 0;
+  // A product removed or archived in Cloud must not remain sellable on a
+  // stale installation. Preserve any product with a pending local operation
+  // until that operation is resolved.
+  const before=next.tenantProducts.length;
+  next.tenantProducts=next.tenantProducts.filter(product=>{
+    if(product.tenantId!==tenantId||product.branchId!==branchId||protectedIds.has(product.id))return true;
+    return remoteIds.has(product.id);
+  });
+  if(next.tenantProducts.length!==before)changed++;
+  if(!changed&&!queueChanged)return 0;
   // A second queue check closes the race where a local sale/adjustment is
   // created while the read-only Cloud snapshot is in flight.
-  if(pendingProductIds(tenantId).size>0)return 0;
+  if(pendingProductIds(tenantId).size>0){
+    if(queueChanged)saveLocalDatabase(next,{trackChanges:false});
+    return 0;
+  }
   saveLocalDatabase(next,{trackChanges:false});
   return changed;
 }
@@ -60,8 +107,10 @@ export function RealtimeSyncRuntime(){
       if(timer)window.clearTimeout(timer);
       timer=window.setTimeout(()=>{
         busy=true;
-        void runSyncCycle().then(async result=>{
-          const productChanges=await reconcileProductSnapshot(ctx.tenantId,ctx.branchId).catch(()=>0);
+        // Reconcile the catalog before pushing local operations. This prevents
+        // a stale installation from publishing an old price/menu snapshot just
+        // because its revision cursor was already ahead.
+        void reconcileProductSnapshot(ctx.tenantId,ctx.branchId).catch(()=>0).then(productChanges=>runSyncCycle().then(result=>({result,productChanges}))).then(async ({result,productChanges})=>{
           continueSync=Boolean(result.hasMore);
           if(!disposed&&(result.pulled>0||result.pushed>0||productChanges>0))window.dispatchEvent(new CustomEvent(KIUBO_DATA_REFRESHED,{detail:{...result,pulled:result.pulled+productChanges}}));
         }).finally(()=>{busy=false;if(!disposed&&continueSync){continueSync=false;sync()}});
