@@ -3,7 +3,7 @@
 import { useCallback,useEffect,useRef,useState } from "react";
 import { usePathname } from "next/navigation";
 import { getLocalDeviceId,getWorkspaceContext,loadLocalDatabase } from "@/lib/local-store";
-import { claimOperationalSession,heartbeatOperationalSession,transferOperationalSession,type OperationalSessionState } from "@/lib/operational-session";
+import { claimOperationalSession,heartbeatOperationalSession,rememberOperationalLease,hasRecentOfflineLease,transferOperationalSession,type OperationalSessionState } from "@/lib/operational-session";
 import styles from "./OperationalSessionGuard.module.css";
 
 const HEARTBEAT_MS=20_000;
@@ -21,11 +21,20 @@ export function OperationalSessionGuard(){
   const verify=useCallback(async(currentTenant:string,currentDevice:string)=>{
     try{
       const state=await heartbeatOperationalSession(currentTenant,currentDevice);
+      if(state.granted||state.bypassed)rememberOperationalLease(currentTenant,currentDevice);
       if(!state.granted&&!state.bypassed)setConflict(state);
       else setConflict(null);
       return state;
     }catch{
-      // La tolerancia offline se conserva para datos locales, pero la sesión operativa falla cerrada: sin Cloud validation no se puede garantizar un solo dispositivo.
+      // La tolerancia offline permite que un dispositivo que ya tenía la
+      // sesión Cloud validada termine su jornada durante una caída temporal.
+      // A device that already owned the Cloud lease may finish its current
+      // shift during a temporary outage. A new browser/device still fails
+      // closed until it can claim the lease online.
+      if(hasRecentOfflineLease(currentTenant,currentDevice)){
+        setConflict(null);
+        return{granted:true,offline:true} satisfies OperationalSessionState;
+      }
       const offline={granted:false,conflict:true,offline:true} satisfies OperationalSessionState;
       setConflict(offline);
       return offline;
@@ -50,9 +59,10 @@ export function OperationalSessionGuard(){
       try{
         const state=await claimOperationalSession(tenant,device);
         if(cancelled)return;
+        if(state.granted||state.bypassed)rememberOperationalLease(tenant,device);
         setConflict(!state.granted&&!state.bypassed?state:null);
       }catch{
-        if(!cancelled)setConflict({granted:false,conflict:true,offline:true});
+        if(!cancelled)setConflict(hasRecentOfflineLease(tenant,device)?null:{granted:false,conflict:true,offline:true});
       }finally{
         if(!cancelled)setChecking(false);
       }
@@ -76,6 +86,7 @@ export function OperationalSessionGuard(){
     setBusy(true);
     try{
       const state=await transferOperationalSession(tenantId,deviceId);
+      if(state.granted||state.bypassed)rememberOperationalLease(tenantId,deviceId);
       setConflict(!state.granted&&!state.bypassed?state:null);
     }catch{
       setConflict(current=>current??{granted:false,conflict:true});
@@ -87,6 +98,7 @@ export function OperationalSessionGuard(){
     setBusy(true);
     try{
       const state=await claimOperationalSession(tenantId,deviceId);
+      if(state.granted||state.bypassed)rememberOperationalLease(tenantId,deviceId);
       setConflict(!state.granted&&!state.bypassed?state:null);
     }catch{setConflict({granted:false,conflict:true,offline:true})}finally{setBusy(false)}
   };

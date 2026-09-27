@@ -1,5 +1,8 @@
 import { getSupabaseBrowserClient } from "./supabase-browser";
 
+const OFFLINE_LEASE_PREFIX="kiubo.operational-lease.v1:";
+const OFFLINE_LEASE_MAX_AGE_MS=12*60*60*1000;
+
 export type OperationalSessionState={
   granted:boolean;
   bypassed?:boolean;
@@ -30,6 +33,29 @@ async function rpc(name:string,args:Record<string,unknown>){
   const result=await client.rpc(name,args);
   if(result.error)throw new Error(result.error.message);
   return normalize(result.data);
+}
+
+function offlineLeaseKey(tenantId:string,deviceId:string){
+  return `${OFFLINE_LEASE_PREFIX}${tenantId}:${deviceId}`;
+}
+
+/** Remember only that this browser successfully owned the lease recently.
+ * This is not a second source of truth: it lets the same device continue an
+ * already-started shift during a temporary outage. A new device still needs
+ * Cloud validation before it can start operating.
+ */
+export function rememberOperationalLease(tenantId:string,deviceId:string){
+  if(typeof window!=="undefined")window.localStorage.setItem(offlineLeaseKey(tenantId,deviceId),String(Date.now()));
+}
+
+export function hasRecentOfflineLease(tenantId:string,deviceId:string){
+  if(typeof window==="undefined")return false;
+  const value=Number(window.localStorage.getItem(offlineLeaseKey(tenantId,deviceId))||0);
+  return Number.isFinite(value)&&value>0&&Date.now()-value<=OFFLINE_LEASE_MAX_AGE_MS;
+}
+
+export function forgetOperationalLease(tenantId:string,deviceId:string){
+  if(typeof window!=="undefined")window.localStorage.removeItem(offlineLeaseKey(tenantId,deviceId));
 }
 
 export function operationalDeviceLabel(){
