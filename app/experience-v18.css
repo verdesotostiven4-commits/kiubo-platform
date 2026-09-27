@@ -26,6 +26,10 @@
 .partial-help{font-size:9px;line-height:1.45;color:#70798d}
 .restaurant-checkout.pro-checkout .credit-checkout{border-color:#eadfcb!important;background:#fffdf9!important}
 .restaurant-checkout.pro-checkout .credit-title>div>span{color:#9a6b29!important}
+/* Credit search must expand above the add-customer action instead of being
+   clipped by the older compact checkout height. */
+.restaurant-checkout.pro-checkout .credit-checkout{max-height:none!important;overflow:visible!important;position:relative;z-index:4}
+.restaurant-checkout.pro-checkout .credit-results{position:relative;z-index:5;max-height:205px!important;overflow:auto!important}
 @media(max-width:760px){
   .restaurant-checkout.pro-checkout .five-payment-grid{grid-template-columns:repeat(2,minmax(0,1fr))!important}
   .restaurant-checkout.pro-checkout .five-payment-grid>button{grid-column:span 1!important}
