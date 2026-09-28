@@ -16,9 +16,17 @@ export function YukiFlavorManager(){
   if(!db)return null;
   const ctx=getWorkspaceContext(db),settings=getTenantSettings(db,ctx.tenantId);
   if(ctx.tenant?.name.trim().toUpperCase()!=="YUKI"||settings.businessType!=="food_service"||!ctx.branchId)return null;
-  const all=db.tenantProducts.filter(product=>product.tenantId===ctx.tenantId&&product.branchId===ctx.branchId&&normalize(product.category||"")==="yogurts");
-  const active=all.filter(product=>product.active).sort((a,b)=>a.name.localeCompare(b.name,"es"));
   const flavorName=(product:TenantProduct)=>product.name.replace(/^yogurt\s+/i,"").trim();
+  const all=db.tenantProducts.filter(product=>product.tenantId===ctx.tenantId&&product.branchId===ctx.branchId&&normalize(product.category||"")==="yogurts");
+  const activeByFlavor=new Map<string,TenantProduct>();
+  for(const product of all.filter(item=>item.active)){
+    const key=normalize(flavorName(product)),current=activeByFlavor.get(key);
+    // Prefer the canonical YUKI product id when an old PWA left a duplicate
+    // local record behind. This keeps the menu compact without deleting the
+    // duplicate history; the Cloud snapshot cleanup removes the stale row.
+    if(!current||(/^yuki-menu-yogurt-/i.test(product.id)&&!/^yuki-menu-yogurt-/i.test(current.id)))activeByFlavor.set(key,product);
+  }
+  const active=[...activeByFlavor.values()].sort((a,b)=>a.name.localeCompare(b.name,"es"));
   const defaultPrice=active.length?active.reduce((sum,product)=>sum+product.price,0)/active.length:4.5;
   const persist=(next:ReturnType<typeof loadLocalDatabase>,text:string)=>{saveLocalDatabase(next);setDb(loadLocalDatabase());setMessage(text);window.dispatchEvent(new CustomEvent(KIUBO_DATA_REFRESHED,{detail:{source:"yuki-flavors"}}))};
   const addFlavor=(event:FormEvent<HTMLFormElement>)=>{

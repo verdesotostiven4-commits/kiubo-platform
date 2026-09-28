@@ -122,16 +122,32 @@ async function reconcileCanonicalSnapshot(tenantId:string,branchId:string){
     if(index<0){collection.push(payload as unknown as Record<string,unknown>);changed++;continue}
     if(JSON.stringify(collection[index])!==JSON.stringify(payload)){collection[index]=payload as unknown as Record<string,unknown>;changed++}
   }
-  // Synthetic YUKI seed records are the only absent-record cleanup we perform:
-  // canonical Cloud rows may legitimately omit a product that was never synced,
-  // while an old PWA can still have those local demo rows.
-  const productIds=remoteIds.get("tenantProducts")!,productProtected=protectedByEntity.get("tenantProducts")!;
-  const beforeProducts=next.tenantProducts.length;
-  next.tenantProducts=next.tenantProducts.filter(product=>{
-    if(product.tenantId!==tenantId||product.branchId!==branchId||productProtected.has(product.id))return true;
-    return productIds.has(product.id)||!isSyntheticYukiProductId(product.id);
-  });
-  if(next.tenantProducts.length!==beforeProducts)changed++;
+  // Cloud is the canonical catalog and workspace snapshot. Older PWAs could
+  // retain products, customers or inventory rows that had already been
+  // removed from Cloud, which caused inflated counts and duplicate YUKI
+  // flavors. Remove absent rows after the complete snapshot is read, while
+  // preserving records that still have a pending local operation so offline
+  // work can finish syncing instead of being lost.
+  for(const entity of CANONICAL_ENTITIES){
+    const collectionKey=COLLECTION_BY_ENTITY[entity];
+    if(!collectionKey)continue;
+    const remote=remoteIds.get(entity)!;
+    const protectedIds=protectedByEntity.get(entity)!;
+    const collection=next[collectionKey] as unknown as Record<string,unknown>[];
+    const before=collection.length;
+    const filtered=collection.filter(record=>{
+      const recordTenant=String(record.tenantId||"");
+      if(recordTenant!==tenantId)return true;
+      const branchScoped=entity==="tenantProducts"||entity==="purchases"||entity==="supplierPayments"||entity==="stockMovements";
+      if(branchScoped&&String(record.branchId||"")!==branchId)return true;
+      const key=(entity==="settings"||entity==="branding")?tenantId:String(record.id||"");
+      return protectedIds.has(key)||remote.has(key);
+    });
+    if(filtered.length!==before){
+      (next[collectionKey] as unknown as Record<string,unknown>[])=filtered;
+      changed++;
+    }
+  }
   if(!changed&&!queueChanged){markCanonicalSnapshot(tenantId);return 0}
   // A second queue check closes the race where a local sale/adjustment is
   // created while the read-only Cloud snapshot is in flight.

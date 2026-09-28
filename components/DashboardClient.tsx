@@ -9,7 +9,7 @@ import { lowStockThreshold } from "@/lib/recipe-inventory";
 import { KIUBO_DATA_REFRESHED } from "./RealtimeSyncRuntime";
 import { DashboardSalesExplorer } from "./DashboardSalesExplorer";
 
-const money=(value:number)=>`$${value.toFixed(2)}`;
+const money=(value:number)=>new Intl.NumberFormat("es-EC",{style:"currency",currency:"USD"}).format(value||0);
 const paymentLabel={cash:"Efectivo",transfer:"Transferencia",mixed:"Mixto",partial:"Pago parcial",credit:"Fiado"} as const;
 type DashboardRange="today"|"7d"|"30d"|"month"|"custom";
 const rangeCopy:Record<DashboardRange,{button:string;title:string;short:string;hint:string}>={

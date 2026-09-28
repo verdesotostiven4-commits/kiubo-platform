@@ -34,7 +34,7 @@ const statusLabel:Record<SriInvoiceRecord["status"],string>={
   rejected:"Rechazada",
   error:"Error"
 };
-const money=(n:number)=>`$${n.toFixed(2)}`;
+const money=(n:number)=>new Intl.NumberFormat("es-EC",{style:"currency",currency:"USD"}).format(n||0);
 const profileFromCode=(code:string)=>SRI_TAX_OPTIONS.find(option=>option.percentageCode===code);
 
 function configErrors(config:SriConfig){

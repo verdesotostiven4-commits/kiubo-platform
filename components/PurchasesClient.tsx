@@ -6,7 +6,7 @@ import { enqueuePurchaseTransaction,enqueueSupplierPaymentTransaction } from "@/
 type DraftLine={id:string;productId:string;name:string;qty:number;unitCost:number};
 const paymentLabel:Record<PurchasePaymentMethod,string>={cash:"Efectivo",transfer:"Transferencia",card:"Tarjeta",other:"Otro"};
 const documentLabel={invoice:"Factura",note:"Nota de venta",receipt:"Recibo",other:"Otro"} as const;
-const money=(value:number)=>`$${value.toFixed(2)}`;
+const money=(value:number)=>new Intl.NumberFormat("es-EC",{style:"currency",currency:"USD"}).format(value||0);
 
 export function PurchasesClient(){
   const[db,setDb]=useState<KiuboLocalDatabase|null>(null),[lines,setLines]=useState<DraftLine[]>([]),[message,setMessage]=useState("Compras listas"),[supplierId,setSupplierId]=useState(""),[documentType,setDocumentType]=useState<keyof typeof documentLabel>("invoice"),[documentNumber,setDocumentNumber]=useState(""),[documentDate,setDocumentDate]=useState(()=>new Date().toISOString().slice(0,10)),[dueDate,setDueDate]=useState(""),[notes,setNotes]=useState(""),[initialPayment,setInitialPayment]=useState(0),[initialMethod,setInitialMethod]=useState<PurchasePaymentMethod>("transfer");

@@ -6,7 +6,7 @@ import { reconcileCashSession } from "@/lib/cash-reconciliation";
 import { reverseSaleLocally,saleLifecycle,type SaleWithLifecycle } from "@/lib/sale-reversal";
 
 const label:Record<SaleRecord["payment"],string>={cash:"Efectivo",transfer:"Transferencia",mixed:"Mixto",partial:"Pago parcial",credit:"Fiado"};
-const money=(value:number)=>`$${value.toFixed(2)}`;
+const money=(value:number)=>new Intl.NumberFormat("es-EC",{style:"currency",currency:"USD"}).format(value||0);
 const dateOnly=(iso:string)=>iso.slice(0,10);
 
 export function ReportsClient(){
