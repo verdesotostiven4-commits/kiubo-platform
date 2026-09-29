@@ -12,6 +12,7 @@ const DURABILITY_CACHE="kiubo-data-durability-v1";
 function localRole(role:string):UserRole{return role==="owner"||role==="admin"||role==="cashier"||role==="inventory"||role==="viewer"?role:"viewer"}
 function upsertById<T extends {id:string}>(items:T[],record:T){const index=items.findIndex(item=>item.id===record.id);if(index>=0)items[index]=record;else items.push(record)}
 function sameStringSet(left:string[],right:string[]){if(left.length!==right.length)return false;const expected=new Set(left);return right.every(item=>expected.has(item))}
+function sessionStartedAt(previousSession:LocalSession|null,userId:string){return previousSession?.userId===userId&&previousSession.startedAt?previousSession.startedAt:new Date().toISOString()}
 function clearTenantCursors(tenantId:string){
   if(typeof window==="undefined")return;
   for(const prefix of CURSOR_PREFIXES)window.localStorage.removeItem(`${prefix}${tenantId}`);
@@ -75,7 +76,7 @@ function purgeRevokedCloudData(
 }
 
 function platformOnlyIdentity(authUser:User){
-  const db=loadLocalDatabase(),now=new Date().toISOString();
+  const db=loadLocalDatabase(),previousSession=loadLocalSession(),now=new Date().toISOString();
   let internal=db.tenants.find(t=>t.plan==="Internal");
   if(!internal){
     internal={id:"tenant-internal-control",name:"KIUBO Control",plan:"Internal",status:"active",users:1,branches:1,expiresAt:"Sin vencimiento",catalog:true,invoice:true,createdAt:now};
@@ -90,7 +91,7 @@ function platformOnlyIdentity(authUser:User){
   const user:UserRecord={id:authUser.id,tenantId:internal.id,name:String(authUser.user_metadata?.full_name||authUser.user_metadata?.name||authUser.email?.split("@")[0]||"Admin KIUBO"),email:String(authUser.email||""),role:"owner",active:true,pin:previousUser?.pin||"",platformAdmin:true,createdAt:String(authUser.created_at||new Date().toISOString())};
   upsertById(db.users,user);
   saveLocalDatabase(db,{trackChanges:false});
-  const session:LocalSession={userId:user.id,tenantId:internal.id,activeTenantId:internal.id,activeBranchId:branch.id,role:user.role,startedAt:new Date().toISOString()};
+  const session:LocalSession={userId:user.id,tenantId:internal.id,activeTenantId:internal.id,activeBranchId:branch.id,role:user.role,startedAt:sessionStartedAt(previousSession,user.id)};
   saveLocalSession(session);
   return{user,session};
 }
@@ -136,7 +137,7 @@ export async function hydrateCloudIdentity(client:SupabaseClient,authUser:User){
 
   const primary=branches.find(branch=>branch.id===previousSession?.activeBranchId)??branches[0]??getPrimaryBranch(db,tenantId);
   saveLocalDatabase(db,{trackChanges:false});
-  const session:LocalSession={userId:user.id,tenantId,activeTenantId:tenantId,activeBranchId:primary?.id,role:user.role,startedAt:new Date().toISOString()};
+  const session:LocalSession={userId:user.id,tenantId,activeTenantId:tenantId,activeBranchId:primary?.id,role:user.role,startedAt:sessionStartedAt(previousSession,user.id)};
   // La vista cliente del administrador es efímera y por pestaña: nunca pisa la
   // sesión base de KIUBO Control que comparten las demás pestañas del navegador.
   if(!(platformAdmin&&previewWorkspace?.tenantId))saveLocalSession(session);

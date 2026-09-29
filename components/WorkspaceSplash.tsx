@@ -1,36 +1,44 @@
 "use client";
 
-import { useEffect,useState } from "react";
+import { useEffect,useRef,useState } from "react";
 import { usePathname } from "next/navigation";
 import { loadLocalSession } from "@/lib/local-store";
 import { KIUBO_LOGO_DARK_BG_URL } from "@/lib/kiubo-brand-assets";
 import styles from "./WorkspaceSplash.module.css";
 
 const SKIP_PREFIXES=["/login","/set-password","/auth/","/control","/leads","/demo","/precios","/como-funciona","/receipt","/order-print"];
-const SESSION_SPLASH_KEY="kiubo.app.launch-splash.v2";
+const SESSION_SPLASH_KEY="kiubo.app.launch-splash.v3";
 const STAGES=["Preparando tu espacio","Sincronizando tu negocio","Ordenando ventas e inventario","Todo listo"];
 const SPLASH_MS=5600;
 
 export function WorkspaceSplash(){
   const pathname=usePathname();
-  const initialEligible=!SKIP_PREFIXES.some(prefix=>pathname.startsWith(prefix));
-  const[show,setShow]=useState(initialEligible);
+  const activeLaunchRef=useRef("");
+  const[show,setShow]=useState(false);
   const[stage,setStage]=useState(0);
 
   useEffect(()=>{
-    if(SKIP_PREFIXES.some(prefix=>pathname.startsWith(prefix))||!loadLocalSession()){
+    const session=loadLocalSession();
+    if(SKIP_PREFIXES.some(prefix=>pathname.startsWith(prefix))||!session){
+      activeLaunchRef.current="";
       setShow(false);
       return;
     }
-    if(window.sessionStorage.getItem(SESSION_SPLASH_KEY)){
+    const launchId=`${session.userId}:${session.startedAt}`;
+    const alreadyPlayed=window.sessionStorage.getItem(SESSION_SPLASH_KEY)===launchId;
+    if(alreadyPlayed&&activeLaunchRef.current!==launchId){
       setShow(false);
       return;
     }
-    window.sessionStorage.setItem(SESSION_SPLASH_KEY,"1");
+    activeLaunchRef.current=launchId;
+    window.sessionStorage.setItem(SESSION_SPLASH_KEY,launchId);
     setStage(0);
     setShow(true);
     const stageTimers=[1250,2550,3900].map((delay,index)=>window.setTimeout(()=>setStage(index+1),delay));
-    const closeTimer=window.setTimeout(()=>setShow(false),SPLASH_MS);
+    const closeTimer=window.setTimeout(()=>{
+      activeLaunchRef.current="";
+      setShow(false);
+    },SPLASH_MS);
     return()=>{stageTimers.forEach(window.clearTimeout);window.clearTimeout(closeTimer)};
   },[pathname]);
 
