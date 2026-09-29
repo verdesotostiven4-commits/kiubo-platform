@@ -3,50 +3,16 @@
 import { useEffect } from "react";
 import { getDataProvider } from "@/lib/data-provider";
 import { getTenantSettings,getWorkspaceContext,loadLocalDatabase,saveLocalDatabase,type ServiceMode,type TenantProduct } from "@/lib/local-store";
-import type { ProductOptionConfig } from "@/lib/product-options";
 import { tableLabelsFromSettings,withTableLabels,type TableAwareSettings } from "@/lib/table-settings";
 import { runSyncCycle } from "@/lib/sync-engine";
+import { YUKI_INGREDIENTS,YUKI_INGREDIENT_BY_KEY,YUKI_MENU,YUKI_MENU_VERSION,YUKI_VIRTUAL_STOCK } from "@/lib/yuki-menu";
 import { KIUBO_DATA_REFRESHED } from "./RealtimeSyncRuntime";
 
-const VIRTUAL_STOCK=1_000_000;
 const YUKI_TABLE_SETUP_VERSION=2;
 // Esta URL pertenece únicamente al selector visual de sabores. Se conserva aquí solo para reparar el dato que se guardó por error como foto comercial del producto Coco.
 const LEGACY_COCO_SELECTOR_IMAGE_URL="https://blogger.googleusercontent.com/img/a/AVvXsEiv07v-ruXVIQ8V8l1DhDNdrL8k7RWh8hIk1oWsz1oyhZpk6oWWR5OU7WafhAA_A6fj0lBiOAmG3r8zpiB2CUOD4nn7gUvJ1AVZ6zNHPg1s-1jKN6t2YutjWSSq_uF4NY40hxleLS-VvK7jQa86nYbelg9ASElDiFzEJwTeBKJgUS1GY1V5d7d9JT4FSBg";
 export const YUKI_PACKAGING_BARCODE="YUKI-ENVASE";
 export const YUKI_PACKAGING_PRICE=.50;
-const YUKI_MENU=[
-  {slug:"yogurt-mora",name:"Yogurt Mora",category:"Yogurts",price:4.50},
-  {slug:"yogurt-fresa",name:"Yogurt Fresa",category:"Yogurts",price:4.50},
-  {slug:"yogurt-melon",name:"Yogurt Melón",category:"Yogurts",price:4.50},
-  {slug:"yogurt-tomate-arbol",name:"Yogurt Tomate de árbol",category:"Yogurts",price:4.50},
-  {slug:"yogurt-banana",name:"Yogurt Banana",category:"Yogurts",price:4.50},
-  {slug:"yogurt-naranjilla",name:"Yogurt Naranjilla",category:"Yogurts",price:4.50},
-  {slug:"yogurt-maracuya",name:"Yogurt Maracuyá",category:"Yogurts",price:4.50},
-  {slug:"yogurt-mango",name:"Yogurt Mango",category:"Yogurts",price:4.50},
-  {slug:"yogurt-coco",name:"Yogurt Coco",category:"Yogurts",price:4.50},
-  {slug:"sandwich-pollo-cremoso",name:"Pollo Cremoso",category:"Sánduches",price:8.95},
-  {slug:"sandwich-carne-brava",name:"Carne Brava",category:"Sánduches",price:9.90},
-  {slug:"sandwich-la-fresca",name:"La Fresca",category:"Sánduches",price:7.75},
-  {slug:"tortillas-queso",name:"Tortillas de yuca / verde rellenas de queso",category:"Especialidades",price:6.25},
-  {slug:"tortillas-pollo-carne",name:"Tortillas de yuca rellena de pollo / verde rellena de carne",category:"Especialidades",price:6.95},
-  {slug:"muchines-queso",name:"Muchines de queso",category:"Especialidades",price:6.25},
-  {slug:"corviche-manaba",name:"Corviche Manaba",category:"Especialidades",price:6.95},
-  {slug:"combo-1",name:"Combo 1",category:"Combos",price:5.75},
-  {slug:"combo-2",name:"Combo 2",category:"Combos",price:7.50},
-  {slug:"combo-3",name:"Combo 3",category:"Combos",price:7.50},
-  {slug:"combo-4",name:"Combo 4",category:"Combos",price:14.00},
-  {slug:"cafe-americano",name:"Café americano caliente / frío",category:"Bebidas",price:3.25},
-  {slug:"cappuccino",name:"Cappuccino",category:"Bebidas",price:3.00},
-  {slug:"espresso",name:"Espresso",category:"Bebidas",price:3.00},
-  {slug:"te",name:"Té",category:"Bebidas",price:3.00},
-  {slug:"smoothies",name:"Smoothies",category:"Bebidas",price:4.00},
-  {slug:"jugo-frutas",name:"Jugo de frutas",category:"Bebidas",price:3.50},
-  {slug:"colas",name:"Colas",category:"Bebidas",price:2.25},
-  {slug:"agua-gas",name:"Agua con gas",category:"Bebidas",price:2.65},
-] as const;
-const YUKI_COMBO_OPTION_COUNTS:Record<string,number>={"YUKI-COMBO1":1,"YUKI-COMBO2":1,"YUKI-COMBO3":1,"YUKI-COMBO4":2};
-type ConfigurableProduct=TenantProduct&{optionConfig?:ProductOptionConfig};
-
 export function YukiPilotCatalogBootstrap(){
   useEffect(()=>{
     let disposed=false;
@@ -87,50 +53,51 @@ export function YukiPilotCatalogBootstrap(){
       }
     }
 
-    const branchProducts=db.tenantProducts.filter(product=>product.tenantId===ctx.tenantId&&product.branchId===ctx.branchId);
-    if(!branchProducts.length){
-      const products:TenantProduct[]=YUKI_MENU.map(item=>({
-        id:`yuki-menu-${item.slug}`,tenantId:ctx.tenantId,branchId:ctx.branchId,masterProductId:`custom-yuki-${item.slug}`,
-        barcode:`YUKI-${item.slug.replace(/-/g,"").slice(0,22).toUpperCase()}`,name:item.name,price:item.price,cost:0,stock:VIRTUAL_STOCK,active:true,category:item.category,trackStock:false,
-      }));
-      db.tenantProducts.push(...products);changed=true;
+    const ingredientIds=new Map<string,string>();
+    for(const definition of YUKI_INGREDIENTS){
+      let product=db.tenantProducts.find(candidate=>candidate.tenantId===ctx.tenantId&&candidate.branchId===ctx.branchId&&(candidate.id===definition.id||((candidate.inventoryOnly===true||candidate.productKind==="ingredient")&&candidate.name.toLocaleLowerCase("es")===definition.name.toLocaleLowerCase("es"))));
+      if(!product){
+        product={id:definition.id,tenantId:ctx.tenantId,branchId:ctx.branchId,masterProductId:`ingredient-${definition.key}`,barcode:`INS-YUKI-${definition.key.replace(/-/g,"").toUpperCase().slice(0,20)}`,name:definition.name,price:0,cost:0,stock:0,active:true,category:"Insumos",productKind:"ingredient",trackStock:definition.trackStock,inventoryOnly:true,stockUnit:definition.unit,lowStockThreshold:definition.lowStockThreshold};
+        db.tenantProducts.push(product);changed=true;
+      }
+      ingredientIds.set(definition.key,product.id);
     }
 
-    const coconutProduct=db.tenantProducts.find(product=>product.tenantId===ctx.tenantId&&product.branchId===ctx.branchId&&(product.barcode==="YUKI-YOGURTCOCO"||product.name.trim().toLocaleLowerCase("es")==="yogurt coco"));
-    if(!coconutProduct){
-      db.tenantProducts.push({id:"yuki-menu-yogurt-coco",tenantId:ctx.tenantId,branchId:ctx.branchId,masterProductId:"custom-yuki-yogurt-coco",barcode:"YUKI-YOGURTCOCO",name:"Yogurt Coco",price:4.50,cost:0,stock:VIRTUAL_STOCK,active:true,category:"Yogurts",trackStock:false});
-      changed=true;
-    }else if(coconutProduct.imageUrl===LEGACY_COCO_SELECTOR_IMAGE_URL){
-      delete coconutProduct.imageUrl;
-      changed=true;
+    for(const item of YUKI_MENU){
+      const quantities=new Map<string,number>();
+      for(const key of item.recipe){const ingredientId=ingredientIds.get(key)||YUKI_INGREDIENT_BY_KEY.get(key)?.id;if(ingredientId)quantities.set(ingredientId,(quantities.get(ingredientId)||0)+1)}
+      const recipe=[...quantities].map(([productId,qty])=>({productId,qty}));
+      const current=db.tenantProducts.find(product=>product.tenantId===ctx.tenantId&&product.branchId===ctx.branchId&&(product.id===item.id||product.barcode===item.barcode));
+      if(!current){
+        db.tenantProducts.push({id:item.id,tenantId:ctx.tenantId,branchId:ctx.branchId,masterProductId:`custom-yuki-${item.slug}`,barcode:item.barcode,name:item.name,price:item.price,cost:0,stock:YUKI_VIRTUAL_STOCK,active:true,category:item.category,productKind:"sellable",trackStock:false,menuFeatured:true,menuDescription:item.description,menuVersion:YUKI_MENU_VERSION,recipe,...(item.optionConfig?{optionConfig:item.optionConfig}: {})} as TenantProduct);
+        changed=true;
+        continue;
+      }
+      const before=JSON.stringify(current);
+      Object.assign(current,{name:item.name,price:item.price,active:true,category:item.category,productKind:"sellable",trackStock:false,menuFeatured:true,menuDescription:item.description,menuVersion:YUKI_MENU_VERSION,recipe,...(item.optionConfig?{optionConfig:item.optionConfig}:{})});
+      if(current.id==="yuki-menu-yogurt-coco"&&current.imageUrl===LEGACY_COCO_SELECTOR_IMAGE_URL)delete current.imageUrl;
+      if(JSON.stringify(current)!==before)changed=true;
     }
 
     const currentBranchProducts=db.tenantProducts.filter(product=>product.tenantId===ctx.tenantId&&product.branchId===ctx.branchId);
-    for(const product of currentBranchProducts){
-      const count=YUKI_COMBO_OPTION_COUNTS[product.barcode]||(/^combo\s*([1-4])$/i.test(product.name.trim())?(product.name.trim().endsWith("4")?2:1):0);
-      const configurable=product as ConfigurableProduct;
-      if(count&&!configurable.optionConfig){
-        configurable.optionConfig={label:"Yogur",selectionCount:count,source:"category",sourceCategory:"Yogurts",allowRepeat:true};
-        changed=true;
-      }
-    }
 
     const packagingProduct=currentBranchProducts.find(product=>product.barcode===YUKI_PACKAGING_BARCODE);
     if(!packagingProduct){
       db.tenantProducts.push({
         id:"yuki-service-packaging",tenantId:ctx.tenantId,branchId:ctx.branchId,masterProductId:"custom-yuki-packaging",
-        barcode:YUKI_PACKAGING_BARCODE,name:"Envase",price:YUKI_PACKAGING_PRICE,cost:0,stock:VIRTUAL_STOCK,active:true,category:"Cargos",trackStock:false,
+        barcode:YUKI_PACKAGING_BARCODE,name:"Envase",price:YUKI_PACKAGING_PRICE,cost:0,stock:YUKI_VIRTUAL_STOCK,active:true,category:"Cargos",productKind:"charge",trackStock:false,
       });
       changed=true;
     }else{
-      const needsRepair=!packagingProduct.active||packagingProduct.name!=="Envase"||packagingProduct.price!==YUKI_PACKAGING_PRICE||packagingProduct.category!=="Cargos"||packagingProduct.trackStock!==false;
+      const needsRepair=!packagingProduct.active||packagingProduct.name!=="Envase"||packagingProduct.price!==YUKI_PACKAGING_PRICE||packagingProduct.category!=="Cargos"||packagingProduct.productKind!=="charge"||packagingProduct.trackStock!==false;
       if(needsRepair){
         packagingProduct.name="Envase";
         packagingProduct.price=YUKI_PACKAGING_PRICE;
         packagingProduct.active=true;
         packagingProduct.category="Cargos";
+        packagingProduct.productKind="charge";
         packagingProduct.trackStock=false;
-        if(packagingProduct.stock<=0)packagingProduct.stock=VIRTUAL_STOCK;
+        if(packagingProduct.stock<=0)packagingProduct.stock=YUKI_VIRTUAL_STOCK;
         changed=true;
       }
     }

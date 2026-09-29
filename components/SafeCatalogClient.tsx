@@ -10,6 +10,7 @@ import {
   type TenantProduct,
 } from "@/lib/local-store";
 import { getProductOptionConfig,type ProductOptionConfig } from "@/lib/product-options";
+import { isMenuFeatured,isSellableProduct } from "@/lib/product-classification";
 import { mediaSavings, uploadOptimizedMedia } from "@/lib/media-storage";
 import styles from "./SafeCatalogClient.module.css";
 
@@ -22,6 +23,7 @@ type Draft = {
   price: string;
   stock: string;
   imageUrl: string;
+  menuFeatured:boolean;
   optionEnabled:boolean;
   optionLabel:string;
   optionCount:string;
@@ -41,6 +43,7 @@ const blankDraft = (): Draft => ({
   price: "0",
   stock: "0",
   imageUrl: "",
+  menuFeatured:false,
   optionEnabled:false,
   optionLabel:"Sabor",
   optionCount:"1",
@@ -79,8 +82,8 @@ export function SafeCatalogClient() {
   const settings = getTenantSettings(db, ctx.tenantId);
   const foodService = settings.businessType === "food_service";
   const products = db.tenantProducts.filter(
-    (product) => product.tenantId === ctx.tenantId && product.branchId === ctx.branchId && product.active,
-  );
+    (product) => product.tenantId === ctx.tenantId && product.branchId === ctx.branchId && product.active && isSellableProduct(product),
+  ).sort((a,b)=>Number(isMenuFeatured(b))-Number(isMenuFeatured(a))||a.name.localeCompare(b.name,"es"));
   const categories = Array.from(
     new Set(products.map((product) => cleanSingleLine(product.category || "General")).filter(Boolean)),
   ).sort((a, b) => a.localeCompare(b, "es"));
@@ -118,6 +121,7 @@ export function SafeCatalogClient() {
       price: String(Number(product.price || 0)),
       stock: product.trackStock === false ? "0" : String(Number(product.stock || 0)),
       imageUrl: product.imageUrl || "",
+      menuFeatured:isMenuFeatured(product),
       optionEnabled:Boolean(optionConfig),
       optionLabel:optionConfig?.label||"Sabor",
       optionCount:String(optionConfig?.selectionCount||1),
@@ -221,6 +225,8 @@ export function SafeCatalogClient() {
           price,
           stock,
           imageUrl: imageUrl || undefined,
+          productKind:"sellable",
+          menuFeatured:draft.menuFeatured,
           active: true,
           trackStock,
           optionConfig,
@@ -238,6 +244,8 @@ export function SafeCatalogClient() {
           price,
           stock,
           imageUrl: imageUrl || undefined,
+          productKind:"sellable",
+          menuFeatured:draft.menuFeatured,
           active: true,
           trackStock,
           optionConfig,
@@ -255,6 +263,7 @@ export function SafeCatalogClient() {
         price: String(price),
         stock: trackStock ? String(stock) : "0",
         imageUrl,
+        menuFeatured:draft.menuFeatured,
         optionEnabled:Boolean(optionConfig),
         optionLabel:optionConfig?.label||"Sabor",
         optionCount:String(optionConfig?.selectionCount||1),
@@ -301,7 +310,7 @@ export function SafeCatalogClient() {
           <span>ESTÁS TRABAJANDO EN</span>
           <strong>{ctx.tenant?.name ?? "Negocio"} · {ctx.branch?.code ?? "001"} {ctx.branch?.name ?? "Matriz"}</strong>
         </div>
-        <span>{products.length} productos activos</span>
+        <span>{products.length} productos vendibles activos</span>
       </section>
 
       <section className={styles.toolbar}>
@@ -313,12 +322,12 @@ export function SafeCatalogClient() {
 
       <section className={styles.layout}>
         <div className={styles.listPanel}>
-          <div className={styles.panelHead}><div><span>INVENTARIO DE SUCURSAL</span><h2>Mis productos</h2></div><b>{visibleProducts.length}</b></div>
+          <div className={styles.panelHead}><div><span>CATÁLOGO DE VENTA</span><h2>Mis productos</h2></div><b>{visibleProducts.length}</b></div>
           <div className={styles.productList}>
             {visibleProducts.map((product) => {const optionConfig=getProductOptionConfig(product);return (
               <button key={product.id} type="button" className={`${styles.productRow} ${editor?.kind === "edit" && editor.id === product.id ? styles.selected : ""}`} onClick={() => openEdit(product)}>
                 <span className={styles.photo}>{product.imageUrl ? <img src={product.imageUrl} alt="" loading="lazy" /> : product.name.charAt(0).toUpperCase()}</span>
-                <span className={styles.productInfo}><strong>{product.name}</strong><small>{product.category || "General"} · {product.barcode}{optionConfig?` · pide ${optionConfig.selectionCount} ${optionConfig.label.toLowerCase()}${optionConfig.selectionCount>1?"s":""}`:""}</small></span>
+                <span className={styles.productInfo}><strong>{product.name}{isMenuFeatured(product)&&<em className={styles.menuBadge}>Menú actual</em>}</strong><small>{product.category || "General"} · {product.barcode}{optionConfig?` · pide ${optionConfig.selectionCount} ${optionConfig.label.toLowerCase()}${optionConfig.selectionCount>1?"s":""}`:""}</small></span>
                 <span className={styles.productPrice}>{money(product.price)}</span>
                 <span className={styles.stock}>{product.trackStock === false ? "Elaborado" : `${Number(product.stock || 0)} stock`}</span>
               </button>
@@ -342,6 +351,8 @@ export function SafeCatalogClient() {
             <label>Foto desde la laptop<input key={fileInputKey} name="imageFile" type="file" accept="image/jpeg,image/png,image/webp" disabled={!editor || saving}/><small className={styles.hint}>Para YUKI: horizontal 4:3. KIUBO optimiza la imagen antes de subirla.</small></label>
             <label>O URL de imagen<input type="url" value={draft.imageUrl} onChange={change("imageUrl")} disabled={!editor || saving} placeholder="https://…"/></label>
             {editor && draft.imageUrl && <div className={styles.preview}><img src={draft.imageUrl} alt="Vista previa del producto" /></div>}
+
+            <label className={styles.checkRow}><input type="checkbox" checked={draft.menuFeatured} onChange={event=>setDraft(current=>({...current,menuFeatured:event.target.checked}))} disabled={!editor||saving}/><span><strong>Forma parte del menú actual</strong><small className={styles.hint}>Destaca los productos que aparecen en el menú para clientes. Los complementarios siguen disponibles normalmente.</small></span></label>
 
             <section style={{display:"grid",gap:10,padding:12,border:"1px solid #dfe8e3",borderRadius:16,background:"#f8fbf9"}}>
               <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:10}}><div><strong style={{display:"block",fontSize:11,color:"#264b3a"}}>Opciones al vender</strong><small className={styles.hint}>Para combos, sabores, tamaños o cualquier elección antes de agregar al carrito.</small></div><button className={styles.secondary} type="button" disabled={!editor||saving} onClick={()=>setDraft(current=>({...current,optionEnabled:!current.optionEnabled}))}>{draft.optionEnabled?"Desactivar":"Activar"}</button></div>
