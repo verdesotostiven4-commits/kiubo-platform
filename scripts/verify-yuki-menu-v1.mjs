@@ -8,6 +8,7 @@ const catalog=read("components/SafeCatalogClient.tsx");
 const inventory=read("components/InventoryClient.tsx");
 const bootstrap=read("components/YukiPilotCatalogBootstrap.tsx");
 const migration=read("supabase/migrations/20260929003428_yuki_menu_catalog_v1.sql");
+const duplicateCleanup=read("supabase/migrations/20260929024500_yuki_menu_exact_duplicate_cleanup_v1.sql");
 const rollback=read("supabase/manual/restore_yuki_menu_catalog_v1.sql");
 
 for(const needle of [
@@ -43,6 +44,9 @@ assert.ok(migration.includes("where slug='yuki-irwf' and display_name='YUKI'"),"
 assert.ok(migration.includes("v_ingredient_ids"),"Migration must preserve existing ingredient ids through a runtime map");
 assert.ok(!/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i.test(migration),"Migration must not hardcode generated ids");
 assert.ok(rollback.includes("select tenant_id,branch_id,snapshot into v_tenant,v_branch,v_snapshot"),"Rollback must resolve its target from the backup");
+assert.ok(duplicateCleanup.includes("Duplicado exacto conciliado por menú YUKI 2026-09"),"Concurrent exact duplicates must be archived without deletion");
+assert.ok(duplicateCleanup.includes("canonical.payload->>'menuVersion'='2026-09'"),"Duplicate cleanup must only trust the canonical menu version");
+assert.ok(!duplicateCleanup.includes("delete from"),"Duplicate cleanup must preserve historical rows");
 
 for(const complementary of ["yuki-menu-corviche-manaba","yuki-menu-muchines-queso","tp-e344be1e-ae64-43a9-9502-17be9e7bd1bc"]){
   const archiveBlock=migration.slice(migration.indexOf("Archive only confirmed duplicates"),migration.indexOf("Keep internal charges"));
