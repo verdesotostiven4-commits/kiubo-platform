@@ -1,5 +1,6 @@
 import type { TenantProduct } from "./local-store";
 import { getProductOptionConfig } from "./product-options";
+import { isIngredientProduct } from "./product-classification";
 
 export type RecipeComponent={productId:string;qty:number};
 export type InventoryProduct=TenantProduct&{
@@ -26,10 +27,23 @@ export function productRecipe(product:TenantProduct):RecipeComponent[]{
   }
   return [...seen].map(([productId,qty])=>({productId,qty}));
 }
-export function inventoryOnly(product:TenantProduct){return asInventoryProduct(product).inventoryOnly===true}
+export function inventoryOnly(product:TenantProduct){return isIngredientProduct(product)}
 export function stockUnit(product:TenantProduct){return String(asInventoryProduct(product).stockUnit||"u").trim()||"u"}
 export function lowStockThreshold(product:TenantProduct){const value=Number(asInventoryProduct(product).lowStockThreshold);return Number.isFinite(value)&&value>=0?value:5}
 export function hasRecipe(product:TenantProduct){return productRecipe(product).length>0}
+
+export type RecipeReadiness="missing"|"partial"|"ready";
+export function recipeReadiness(product:TenantProduct,products:TenantProduct[]):RecipeReadiness{
+  const lines=productRecipe(product),config=getProductOptionConfig(product);
+  if(!lines.length&&config?.source==="category"&&config.sourceCategory){
+    const category=normalize(config.sourceCategory),choices=products.filter(candidate=>candidate.active&&candidate.id!==product.id&&normalize(candidate.category||"General")===category);
+    if(!choices.length)return"missing";
+    return choices.every(choice=>productRecipe(choice).length>0)?"ready":"partial";
+  }
+  if(!lines.length)return"missing";
+  const byId=new Map(products.map(candidate=>[candidate.id,candidate]));
+  return lines.every(line=>{const component=byId.get(line.productId);return Boolean(component&&component.active&&component.trackStock!==false)})?"ready":"partial";
+}
 
 function optionChoiceProduct(product:TenantProduct,label:string,products:TenantProduct[]){
   const config=getProductOptionConfig(product);if(!config||config.source!=="category"||!config.sourceCategory)return undefined;
@@ -38,6 +52,7 @@ function optionChoiceProduct(product:TenantProduct,label:string,products:TenantP
     if(candidate.id===product.id||!candidate.active||normalize(candidate.category||"General")!==category)return false;
     let display=candidate.name.trim();
     if(category==="yogurts")display=display.replace(/^yogurt\s+/i,"").trim();
+    if(category==="jugos")display=display.replace(/^jugo(?:\s+de)?\s+/i,"").trim();
     return normalize(display)===needle||normalize(candidate.name)===needle;
   });
 }

@@ -1,4 +1,5 @@
 import type { TenantProduct } from "./local-store";
+import { isSellableProduct } from "./product-classification";
 
 export type ProductOptionSource="category"|"custom";
 export type ProductOptionConfig={
@@ -33,7 +34,9 @@ export function getProductOptionConfig(product:TenantProduct):ProductOptionConfi
 
 function displayName(product:TenantProduct,config:ProductOptionConfig){
   const name=clean(product.name,160);
-  if((config.sourceCategory||"").toLocaleLowerCase("es")==="yogurts")return name.replace(/^yogurt\s+/i,"").trim()||name;
+  const category=(config.sourceCategory||"").toLocaleLowerCase("es");
+  if(category==="yogurts")return name.replace(/^yogurt\s+/i,"").trim()||name;
+  if(category==="jugos")return name.replace(/^jugo(?:\s+de)?\s+/i,"").trim()||name;
   const label=config.label.replace(/[.*+?^${}()|[\]\\]/g,"\\$&");
   return name.replace(new RegExp(`^${label}\\s+`,"i"),"").trim()||name;
 }
@@ -43,7 +46,7 @@ export function getProductOptionChoices(config:ProductOptionConfig,products:Tena
   const wanted=(config.sourceCategory||"").toLocaleLowerCase("es");
   const seen=new Set<string>(),choices:ProductOptionChoice[]=[];
   for(const product of products){
-    if(product.id===currentProductId||!product.active||(product.category||"General").toLocaleLowerCase("es")!==wanted)continue;
+    if(product.id===currentProductId||!product.active||!isSellableProduct(product)||(product.category||"General").toLocaleLowerCase("es")!==wanted)continue;
     const label=displayName(product,config),key=label.toLocaleLowerCase("es");if(!label||seen.has(key))continue;seen.add(key);choices.push({label,imageUrl:product.imageUrl});
   }
   return choices.sort((a,b)=>a.label.localeCompare(b.label,"es"));

@@ -14,7 +14,14 @@ export type PurchaseStatus = "received"|"cancelled";
 export type TenantRecord = { id:string; name:string; plan:Plan; status:TenantStatus; users:number; branches:number; expiresAt:string; catalog:boolean; invoice:boolean; createdAt:string };
 export type BranchRecord = { id:string; tenantId:string; name:string; code:string; active:boolean; createdAt:string };
 export type MasterProduct = { id:string; barcode:string; name:string; brand:string; presentation:string; category:string; image?:string };
-export type TenantProduct = { id:string; tenantId:string; branchId:string; masterProductId:string; barcode:string; name:string; price:number; cost:number; stock:number; active:boolean; category?:string; imageUrl?:string; trackStock?:boolean };
+export type ProductKind="sellable"|"option"|"ingredient"|"charge";
+export type ProductRecipeComponent={productId:string;qty:number};
+export type TenantProduct = {
+  id:string; tenantId:string; branchId:string; masterProductId:string; barcode:string; name:string;
+  price:number; cost:number; stock:number; active:boolean; category?:string; imageUrl?:string; trackStock?:boolean;
+  productKind?:ProductKind; inventoryOnly?:boolean; stockUnit?:string; lowStockThreshold?:number;
+  recipe?:ProductRecipeComponent[]; menuFeatured?:boolean; menuDescription?:string; menuVersion?:string;
+};
 export type CustomerRecord = { id:string; tenantId:string; identification:string; name:string; email:string; phone:string; address:string; createdAt:string };
 export type SaleRecord = { id:string; tenantId:string; branchId:string; customerId?:string; orderId?:string; total:number; payment:"cash"|"transfer"|"mixed"|"partial"|"credit"; items:{productId:string;name:string;qty:number;unitPrice:number;unitCost?:number;optionLabel?:string;optionSelections?:string[]}[]; clientOperationId?:string; createdAt:string };
 export type FoodOrderItem = { productId:string; name:string; qty:number; unitPrice:number; notes?:string; courtesy?:boolean };
