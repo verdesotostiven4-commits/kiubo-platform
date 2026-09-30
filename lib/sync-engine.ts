@@ -17,6 +17,7 @@ const OPERATIONAL_RECONCILE_VERSION="2026-09-23";
 const OPERATIONAL_RECONCILE_INTERVAL_MS=6*60*60*1000;
 const OPERATIONAL_SNAPSHOT_ENTITIES=new Set<SyncEntity>(["orders","sales","credits","creditPayments","cashSessions","cashMovements"]);
 const OPERATIONAL_QUEUE_TYPES=new Set<SyncQueueRecord["entityType"]>(["orders","sales","credits","creditPayments","cashSessions","cashMovements","saleTransactions","creditPaymentTransactions","cashTransactions"]);
+const PRODUCT_SNAPSHOT_PAGE_SIZE=1000;
 
 function keyFor(entity:SyncEntity,record:Record<string,unknown>){return entity==="settings"||entity==="branding"?String(record.tenantId||""):String(record.id||"")}
 function tenantForRecord(entity:SyncEntity,record:Record<string,unknown>){return entity==="tenants"?String(record.id||""):String(record.tenantId||"")}
@@ -98,6 +99,50 @@ function retryDelayMs(attempts:number){const exponent=Math.max(0,Math.min(6,atte
 function retryDue(item:SyncQueueRecord,now=Date.now()){if(item.status!=="failed")return true;const updated=Date.parse(item.updatedAt);if(!Number.isFinite(updated))return true;return now-updated>=retryDelayMs(item.attempts)}
 function recoverExpiredSyncing(db:ReturnType<typeof loadLocalDatabase>,tenantId:string){const now=Date.now();let recovered=0;db.syncQueue=db.syncQueue.map(item=>{if(!isActiveQueueItem(item,tenantId)||item.status!=="syncing")return item;const updated=Date.parse(item.updatedAt);if(Number.isFinite(updated)&&now-updated<STALE_SYNCING_MS)return item;recovered++;return{...item,status:"pending" as const,updatedAt:new Date(now).toISOString(),lastError:item.lastError||"Reanudada después de una sincronización interrumpida"}});if(recovered)saveLocalDatabase(db,{trackChanges:false});return recovered}
 
+async function hydrateWorkspaceProductsFromCloud(tenantId:string,branchId:string){
+  const client=getSupabaseBrowserClient();if(!client)return 0;
+  const rows:Array<{entity_id?:string;payload?:unknown}>=[];
+  for(let offset=0;offset<10_000;offset+=PRODUCT_SNAPSHOT_PAGE_SIZE){
+    const result=await client.from("sync_entities")
+      .select("entity_id,payload")
+      .eq("tenant_id",tenantId)
+      .eq("branch_id",branchId)
+      .eq("entity_type","tenantProducts")
+      .eq("deleted",false)
+      .order("entity_id")
+      .range(offset,offset+PRODUCT_SNAPSHOT_PAGE_SIZE-1);
+    if(result.error)throw new Error(result.error.message);
+    const page=Array.isArray(result.data)?result.data as typeof rows:[];
+    rows.push(...page);
+    if(page.length<PRODUCT_SNAPSHOT_PAGE_SIZE)break;
+  }
+  if(!rows.length)return 0;
+
+  // Read local state again after the network request so an offline edit made
+  // while the snapshot was in flight is never overwritten by recovery.
+  const latest=loadLocalDatabase();
+  const pendingIds=new Set(latest.syncQueue
+    .filter(item=>item.tenantId===tenantId&&item.branchId===branchId&&item.entityType==="tenantProducts"&&item.status!=="synced")
+    .map(item=>item.entityId));
+  const localWorkspace=latest.tenantProducts.filter(product=>product.tenantId===tenantId&&product.branchId===branchId);
+  const localById=new Map(localWorkspace.map(product=>[product.id,product]));
+  const canonical=rows.flatMap(row=>{
+    if(!row.payload||typeof row.payload!=="object")return[];
+    const product=row.payload as Record<string,unknown>,id=String(product.id||row.entity_id||"");
+    if(!id||String(product.tenantId||"")!==tenantId||String(product.branchId||"")!==branchId)return[];
+    const local=localById.get(id);
+    return[pendingIds.has(id)&&local?local:product as unknown as (typeof latest.tenantProducts)[number]];
+  });
+  if(!canonical.length)return 0;
+  const remoteIds=new Set(canonical.map(product=>product.id));
+  const pendingLocal=localWorkspace.filter(product=>pendingIds.has(product.id)&&!remoteIds.has(product.id));
+  latest.tenantProducts=latest.tenantProducts
+    .filter(product=>product.tenantId!==tenantId||product.branchId!==branchId)
+    .concat(canonical,pendingLocal);
+  saveLocalDatabase(latest,{trackChanges:false});
+  return canonical.length;
+}
+
 async function runSyncCycleCore():Promise<SyncCycleResult>{
   const provider=getDataProvider(),health=await provider.healthcheck();
   if(provider.mode==="local"||!provider.configured||!health.ok)return{ok:health.ok,mode:provider.mode,pushed:0,failed:0,pulled:0,message:health.message||"Backend cloud pendiente"};
@@ -105,16 +150,15 @@ async function runSyncCycleCore():Promise<SyncCycleResult>{
   const db=loadLocalDatabase(),ctx=getWorkspaceContext(db),activeTenantId=ctx.tenant&&ctx.tenant.plan!=="Internal"&&UUID_RE.test(ctx.tenantId)?ctx.tenantId:null;
   if(!activeTenantId)return{ok:true,mode:provider.mode,pushed:0,failed:0,pulled:0,message:"Sin negocio cloud activo para sincronizar"};
 
-  // If a fresh browser or a stale local workspace has no products for the active branch,
-  // replay the tenant stream from revision zero. This repairs hydration without deleting
-  // local data or changing the cloud source of truth.
+  // Product recovery must not replay the complete tenant history. A mature
+  // business can have thousands of orders before its latest catalog revisions,
+  // so a bounded revision replay can loop forever without ever reaching a
+  // product. Read the small canonical branch catalog directly instead.
   const hasWorkspaceProducts=db.tenantProducts.some(product=>product.tenantId===activeTenantId&&product.branchId===ctx.branchId);
-  if(!hasWorkspaceProducts&&!hasUnresolvedOperationalQueue(db,activeTenantId)){
+  if(!hasWorkspaceProducts&&ctx.branchId){
     try{
-      const hydration=await pullAvailable(provider,"0");
-      persistPulled(provider,db,hydration);
-      if(!hydration.hasMore)markTenantIsolationRepairDone(activeTenantId);
-      return{ok:!hydration.hasMore,mode:provider.mode,pushed:0,failed:0,pulled:hydration.changes.length,hasMore:Boolean(hydration.hasMore),message:hydration.hasMore?"KIUBO está recuperando los productos del negocio":"Productos del negocio recuperados desde Cloud"};
+      const restored=await hydrateWorkspaceProductsFromCloud(activeTenantId,ctx.branchId);
+      if(restored)return{ok:true,mode:provider.mode,pushed:0,failed:0,pulled:restored,hasMore:false,message:"Productos del negocio recuperados desde Cloud"};
     }catch{}
   }
 

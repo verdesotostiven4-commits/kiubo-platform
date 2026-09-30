@@ -1,7 +1,6 @@
 "use client";
 import { useEffect } from "react";
 
-const RESET_KEY = "kiubo.pwa.cache-reset.v4";
 const RECOVERY_KEY = "kiubo.bundle-recovery.v2";
 const SW_URL = "/sw.js?v=9";
 const CANONICAL_HOST = "kiubo-platform.vercel.app";
@@ -83,31 +82,18 @@ export function PwaRegister() {
       window.setTimeout(() => window.sessionStorage.removeItem(RECOVERY_KEY), 15_000);
     }
 
-    const resetLegacyWorker = async () => {
+    const registerWorker = async () => {
       try {
-        // Remove old workers and only the shell caches. User data lives in
-        // localStorage and is deliberately left untouched.
-        const hadController = Boolean(navigator.serviceWorker.controller);
-        await clearAppShell();
-
-        // If an old worker was controlling this page, reload once so the
-        // browser can leave the stale bundle before continuing.
-        if (hadController && window.sessionStorage.getItem(RESET_KEY) !== "1") {
-          window.sessionStorage.setItem(RESET_KEY, "1");
-          window.location.reload();
-          return;
-        }
-
-        window.sessionStorage.removeItem(RESET_KEY);
-        // Re-enable the PWA after the migration. updateViaCache:none prevents
-        // the browser from reusing an old service-worker script.
+        // Registering the same scope updates an old worker in place. The
+        // worker activates with skipWaiting/clients.claim and clears obsolete
+        // shell caches itself, so a normal F5 must never force a second reload.
         await navigator.serviceWorker.register(SW_URL, { updateViaCache: "none" });
       } catch {
         // PWA is an enhancement; the application remains usable without it.
       }
     };
 
-    void resetLegacyWorker();
+    void registerWorker();
     return () => {
       window.removeEventListener("error", onWindowError);
       window.removeEventListener("unhandledrejection", onUnhandledRejection);

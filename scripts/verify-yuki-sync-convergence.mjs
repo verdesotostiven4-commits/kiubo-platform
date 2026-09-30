@@ -14,7 +14,7 @@ const runtime=text("components/RealtimeSyncRuntime.tsx");
 for(const needle of ["KIUBO_SYNC_QUEUED_EVENT","window.addEventListener(\"focus\",wake)","visibilitychange","setInterval(sync,30_000)"]){
   assert.ok(runtime.includes(needle),`realtime retry trigger missing: ${needle}`);
 }
-for(const needle of ["isSyntheticYukiProductId","Cloud es la fuente canónica","including tombstones","reconcileCanonicalSnapshot","CANONICAL_SNAPSHOT_INTERVAL"]){
+for(const needle of ["isSyntheticYukiProductId","Cloud es la fuente canónica","including tombstones","reconcileCanonicalSnapshot","CANONICAL_SNAPSHOT_INTERVAL","missingWorkspaceProducts","canonicalSnapshotDue(tenantId,missingWorkspaceProducts)"]){
   assert.ok(runtime.includes(needle),`stale YUKI product bootstrap protection missing: ${needle}`);
 }
 
@@ -27,9 +27,10 @@ for(const needle of ["getDataProvider","getDataProvider().mode===\"supabase\"","
 }
 
 const engine=text("lib/sync-engine.ts");
-for(const needle of ["pull_operational_snapshot_v1","reconcileOperationalSnapshot","OPERATIONAL_SNAPSHOT_ENTITIES","hasUnresolvedOperationalQueue","provider.commitCursor(watermark)"]){
+for(const needle of ["pull_operational_snapshot_v1","reconcileOperationalSnapshot","OPERATIONAL_SNAPSHOT_ENTITIES","hasUnresolvedOperationalQueue","provider.commitCursor(watermark)","hydrateWorkspaceProductsFromCloud",'.eq("entity_type","tenantProducts")','.eq("branch_id",branchId)',"bounded revision replay can loop forever"]){
   assert.ok(engine.includes(needle),`operational convergence guard missing: ${needle}`);
 }
+assert.ok(!engine.includes('const hydration=await pullAvailable(provider,"0")'),"empty catalog recovery must not restart the complete tenant stream");
 
 const migration=text("supabase/migrations/20260923011000_operational_snapshot_v1.sql");
 for(const needle of ["pull_operational_snapshot_v1","p_watermark","revision<=v_watermark","'orders','sales','credits','creditPayments','cashSessions','cashMovements'","grant execute"]){
