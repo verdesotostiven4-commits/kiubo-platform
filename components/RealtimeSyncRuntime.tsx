@@ -15,8 +15,9 @@ const COLLECTION_BY_ENTITY:Partial<Record<SyncEntity,keyof KiuboLocalDatabase>>=
 };
 export const KIUBO_DATA_REFRESHED="kiubo:data-refreshed";
 
-function canonicalSnapshotDue(tenantId:string){
+function canonicalSnapshotDue(tenantId:string,force=false){
   if(typeof window==="undefined")return true;
+  if(force)return true;
   try{
     const raw=window.localStorage.getItem(CANONICAL_SNAPSHOT_KEY+tenantId);
     if(!raw)return true;
@@ -75,7 +76,9 @@ async function readCanonicalRows(tenantId:string){
 }
 
 async function reconcileCanonicalSnapshot(tenantId:string,branchId:string){
-  if(!canonicalSnapshotDue(tenantId))return 0;
+  const initial=loadLocalDatabase();
+  const missingWorkspaceProducts=!initial.tenantProducts.some(product=>product.tenantId===tenantId&&product.branchId===branchId);
+  if(!canonicalSnapshotDue(tenantId,missingWorkspaceProducts))return 0;
   // Read the complete canonical snapshot, including tombstones. The revision
   // cursor is intentionally not used here: an old device can have a cursor
   // ahead of changes it missed, so it still needs a periodic full reconciliation.
