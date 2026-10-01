@@ -31,7 +31,7 @@ export type CashSessionRecord = { id:string; tenantId:string; branchId:string; o
 export type CashMovementRecord = { id:string; tenantId:string; branchId:string; sessionId:string; type:"in"|"out"; amount:number; reason:string; clientOperationId?:string; createdAt:string };
 export type CreditRecord = { id:string; tenantId:string; branchId:string; customerId?:string; kind?:"fiado"|"partial"; saleId?:string; description:string; originalAmount:number; balance:number; status:"open"|"paid"; createdAt:string };
 export type CreditPaymentRecord = { id:string; tenantId:string; branchId:string; creditId:string; amount:number; method:"cash"|"transfer"; clientOperationId?:string; createdAt:string };
-export type TenantSettings = { tenantId:string; tradeName:string; legalName:string; ruc:string; establishment:string; emissionPoint:string; currency:"USD"; accent:string; receiptFooter:string; requireCashSession:boolean; allowCredit:boolean; address:string; phone:string; businessType:BusinessType; serviceModes:ServiceMode[]; tableCount:number; categoryOrder?:string[]; showProductImages:boolean; splashEnabled:boolean; receiptWidth:"58mm"|"80mm"; salesHistoryResetAtByBranch?:Record<string,string> };
+export type TenantSettings = { tenantId:string; tradeName:string; legalName:string; ruc:string; establishment:string; emissionPoint:string; currency:"USD"; accent:string; receiptFooter:string; requireCashSession:boolean; allowCredit:boolean; address:string; phone:string; businessType:BusinessType; serviceModes:ServiceMode[]; tableCount:number; deliverySlotCount?:number; categoryOrder?:string[]; showProductImages:boolean; splashEnabled:boolean; receiptWidth:"58mm"|"80mm"; salesHistoryResetAtByBranch?:Record<string,string> };
 export type TenantBrandingRecord = { tenantId:string; businessName:string; logoUrl:string; primaryColor:string; secondaryColor:string; accentColor:string; receiptTagline:string; updatedAt:string };
 export type SupplierRecord = { id:string; tenantId:string; identification:string; name:string; email:string; phone:string; address:string; createdAt:string };
 export type PurchaseRecord = { id:string; tenantId:string; branchId:string; supplierId:string; total:number; items:{productId:string;name:string;qty:number;unitCost:number}[]; documentType?:"invoice"|"note"|"receipt"|"other"; documentNumber?:string; documentDate?:string; dueDate?:string; notes?:string; status?:PurchaseStatus; paymentStatus?:PurchasePaymentStatus; paidAmount?:number; clientOperationId?:string; createdAt:string };
@@ -174,6 +174,7 @@ function normalizeSettings(item:TenantSettings):TenantSettings{
     businessType:normalizeBusinessType(item.businessType),
     serviceModes:normalizeServiceModes(item.serviceModes),
     tableCount:Math.max(0,Math.min(500,Math.floor(Number(item.tableCount)||0))),
+    deliverySlotCount:item.deliverySlotCount===undefined?undefined:Math.max(3,Math.min(50,Math.floor(Number(item.deliverySlotCount)||3))),
     categoryOrder:Array.isArray(item.categoryOrder)?[...new Set(item.categoryOrder.map(value=>safeSingleLine(value,80)).filter(Boolean))].slice(0,100):undefined,
     showProductImages:item.showProductImages!==false,
     splashEnabled:item.splashEnabled!==false,

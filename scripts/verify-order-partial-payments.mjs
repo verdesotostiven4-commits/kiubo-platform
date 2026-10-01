@@ -22,6 +22,9 @@ for(const needle of ["isPartialBalanceOrder","isOccupyingOrder",'paymentStatus==
   assert.ok(pos.includes(needle),`partial table lifecycle missing: ${needle}`);
 }
 assert.ok(pos.includes('item.kind==="partial"'),"fiado must not keep a restaurant table occupied as if it were a partial payment");
+for(const needle of ['keepsSlotOpen','setPartialOrderId(order.id)','setActiveOrderId(order.id)','sigue abierto']){
+  assert.ok(pos.includes(needle),`the first partial payment must retain its table/delivery context: ${needle}`);
+}
 
 const payments=text("lib/order-payments.ts");
 for(const needle of ['sale.payment==="credit"||sale.payment==="partial"','kind==="partial"?"Pago parcial":"Fiado"',"Pago parcial ·","sale.total-balance","detailPending","actualizando detalle"]){

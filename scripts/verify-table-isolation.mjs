@@ -21,6 +21,7 @@ const checks=[
   [pos.includes("isPartialBalanceOrder")&&pos.includes('item.kind==="partial"&&item.status==="open"'),"only real partial-payment balances keep a table occupied; fiado does not"],
   [pos.includes('open?.paymentStatus==="partial"?`Abonado · saldo'),"partially paid tables remain visibly occupied with their remaining balance"],
   [pos.includes("Completa el saldo antes de abrir un pedido nuevo"),"a partial table cannot accidentally receive a second independent order"],
+  [pos.includes("deliverySlotCount")&&pos.includes("createDelivery"),"delivery slots can be expanded and remain synchronized in tenant settings"],
   [!pos.includes("Pedido vacío · En vivo"),"table cards no longer show noisy En vivo label"],
   [orders.includes("Cancelar pedido"),"unpaid orders can be cancelled explicitly"],
   [orders.includes("No modificó caja porque nunca fue cobrado"),"pending cancellation is cash-safe"],
