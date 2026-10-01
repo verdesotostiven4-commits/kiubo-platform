@@ -13,7 +13,7 @@ const cloud=text("lib/cloud-auth.ts");
 assert.ok(cloud.includes('pin:previousUser?.pin||""'),"cloud hydration must preserve the local authorization PIN");
 
 const reports=text("components/ReportsClientPro.tsx");
-for(const needle of ["salePaymentSummary","Pagado","Efectivo","Transferencia","Pendiente","/receipt?sale="]){
+for(const needle of ["salePaymentSummary","Pagado","Efectivo","Transferencia","Pendiente","/receipt?sale=","productSummary","Total vendido por producto","Cantidad","Tickets"]){
   assert.ok(reports.includes(needle),`reports payment history missing: ${needle}`);
 }
 
