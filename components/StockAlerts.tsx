@@ -2,8 +2,9 @@
 
 import Link from "next/link";
 import { useEffect,useMemo,useState } from "react";
-import { getWorkspaceContext,loadLocalDatabase } from "@/lib/local-store";
+import { getTenantSettings,getWorkspaceContext,loadLocalDatabase } from "@/lib/local-store";
 import { formatStock,inventoryOnly,lowStockThreshold,stockUnit } from "@/lib/recipe-inventory";
+import { businessDateKey,businessTimeZone,businessTodayKey } from "@/lib/business-time";
 import { InventoryQuickRestock } from "./InventoryQuickRestock";
 import { KIUBO_DATA_REFRESHED } from "./RealtimeSyncRuntime";
 import styles from "./StockAlerts.module.css";
@@ -13,15 +14,15 @@ export function StockAlerts(){
   useEffect(()=>{const refresh=()=>setDb(loadLocalDatabase());refresh();window.addEventListener(KIUBO_DATA_REFRESHED,refresh);return()=>window.removeEventListener(KIUBO_DATA_REFRESHED,refresh)},[]);
   const data=useMemo(()=>{
     if(!db)return null;
-    const ctx=getWorkspaceContext(db),tracked=db.tenantProducts.filter(product=>product.tenantId===ctx.tenantId&&product.branchId===ctx.branchId&&product.active&&product.trackStock!==false),byId=new Map(tracked.map(product=>[product.id,product]));
+    const ctx=getWorkspaceContext(db),timeZone=businessTimeZone(getTenantSettings(db,ctx.tenantId).timeZone),today=businessTodayKey(timeZone),tracked=db.tenantProducts.filter(product=>product.tenantId===ctx.tenantId&&product.branchId===ctx.branchId&&product.active&&product.trackStock!==false),byId=new Map(tracked.map(product=>[product.id,product]));
     const rows=tracked.map(product=>({product,threshold:lowStockThreshold(product)}));
     const out=rows.filter(row=>row.product.stock<=0),low=rows.filter(row=>row.product.stock>0&&row.product.stock<=row.threshold),attention=[...out,...low].sort((a,b)=>a.product.stock-b.product.stock);
     const stockRows=[...rows].sort((a,b)=>{
       const aAttention=a.product.stock<=a.threshold?0:1,bAttention=b.product.stock<=b.threshold?0:1,aIngredient=inventoryOnly(a.product)?0:1,bIngredient=inventoryOnly(b.product)?0:1;
       return aAttention-bAttention||aIngredient-bIngredient||a.product.name.localeCompare(b.product.name,"es");
     }).slice(0,10);
-    const today=new Date();today.setHours(0,0,0,0);const consumed=new Map<string,number>();
-    for(const movement of db.stockMovements){if(movement.tenantId!==ctx.tenantId||movement.branchId!==ctx.branchId||movement.type!=="sale"||movement.quantity>=0||new Date(movement.createdAt)<today)continue;consumed.set(movement.productId,(consumed.get(movement.productId)||0)+Math.abs(movement.quantity))}
+    const consumed=new Map<string,number>();
+    for(const movement of db.stockMovements){if(movement.tenantId!==ctx.tenantId||movement.branchId!==ctx.branchId||movement.type!=="sale"||movement.quantity>=0||businessDateKey(movement.createdAt,timeZone)!==today)continue;consumed.set(movement.productId,(consumed.get(movement.productId)||0)+Math.abs(movement.quantity))}
     const consumedRows=[...consumed.entries()].map(([productId,qty])=>({product:byId.get(productId),qty})).filter((row):row is {product:NonNullable<typeof row.product>;qty:number}=>Boolean(row.product)).sort((a,b)=>b.qty-a.qty).slice(0,8);
     return{tracked,out,low,attention,stockRows,consumedRows};
   },[db]);

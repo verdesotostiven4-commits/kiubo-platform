@@ -5,6 +5,7 @@ import { useEffect, useId, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import type { SaleRecord } from "@/lib/local-store";
 import { parseOperationalItemName } from "@/lib/sale-adjustments";
+import { businessTimeLabel } from "@/lib/business-time";
 
 const money = (value: number) =>
   new Intl.NumberFormat("es-EC", { style: "currency", currency: "USD" }).format(value || 0);
@@ -25,11 +26,13 @@ export function DashboardSalesExplorer({
   total,
   trend,
   periodLabel,
+  timeZone,
 }: {
   chart: ChartPoint[];
   total: number;
   trend: number;
   periodLabel: string;
+  timeZone: string;
 }) {
   const [selectedKey, setSelectedKey] = useState("");
   const [hoveredKey, setHoveredKey] = useState("");
@@ -128,7 +131,7 @@ export function DashboardSalesExplorer({
                   .map((sale) => (
                     <article key={sale.id}>
                       <div>
-                        <strong>{new Date(sale.createdAt).toLocaleTimeString("es-EC", { hour: "2-digit", minute: "2-digit" })}</strong>
+                        <strong>{businessTimeLabel(sale.createdAt,timeZone)}</strong>
                         <span>{paymentLabel[sale.payment]}</span>
                       </div>
                       <b>{money(sale.total)}</b>

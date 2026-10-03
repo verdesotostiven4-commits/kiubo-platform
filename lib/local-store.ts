@@ -31,7 +31,7 @@ export type CashSessionRecord = { id:string; tenantId:string; branchId:string; o
 export type CashMovementRecord = { id:string; tenantId:string; branchId:string; sessionId:string; type:"in"|"out"; amount:number; reason:string; clientOperationId?:string; createdAt:string };
 export type CreditRecord = { id:string; tenantId:string; branchId:string; customerId?:string; kind?:"fiado"|"partial"; saleId?:string; description:string; originalAmount:number; balance:number; status:"open"|"paid"; createdAt:string };
 export type CreditPaymentRecord = { id:string; tenantId:string; branchId:string; creditId:string; amount:number; method:"cash"|"transfer"; clientOperationId?:string; createdAt:string };
-export type TenantSettings = { tenantId:string; tradeName:string; legalName:string; ruc:string; establishment:string; emissionPoint:string; currency:"USD"; accent:string; receiptFooter:string; requireCashSession:boolean; allowCredit:boolean; address:string; phone:string; businessType:BusinessType; serviceModes:ServiceMode[]; tableCount:number; deliverySlotCount?:number; categoryOrder?:string[]; showProductImages:boolean; splashEnabled:boolean; receiptWidth:"58mm"|"80mm"; salesHistoryResetAtByBranch?:Record<string,string> };
+export type TenantSettings = { tenantId:string; tradeName:string; legalName:string; ruc:string; establishment:string; emissionPoint:string; currency:"USD"; accent:string; receiptFooter:string; requireCashSession:boolean; allowCredit:boolean; address:string; phone:string; businessType:BusinessType; serviceModes:ServiceMode[]; tableCount:number; deliverySlotCount?:number; categoryOrder?:string[]; showProductImages:boolean; splashEnabled:boolean; receiptWidth:"58mm"|"80mm"; timeZone?:string; salesHistoryResetAtByBranch?:Record<string,string> };
 export type TenantBrandingRecord = { tenantId:string; businessName:string; logoUrl:string; primaryColor:string; secondaryColor:string; accentColor:string; receiptTagline:string; updatedAt:string };
 export type SupplierRecord = { id:string; tenantId:string; identification:string; name:string; email:string; phone:string; address:string; createdAt:string };
 export type PurchaseRecord = { id:string; tenantId:string; branchId:string; supplierId:string; total:number; items:{productId:string;name:string;qty:number;unitCost:number}[]; documentType?:"invoice"|"note"|"receipt"|"other"; documentNumber?:string; documentDate?:string; dueDate?:string; notes?:string; status?:PurchaseStatus; paymentStatus?:PurchasePaymentStatus; paidAmount?:number; clientOperationId?:string; createdAt:string };
@@ -86,7 +86,7 @@ const epoch=new Date(0).toISOString();
 const defaultSettings=(tenantId:string,tradeName:string):TenantSettings=>({
   tenantId,tradeName,legalName:"",ruc:"",establishment:"001",emissionPoint:"001",currency:"USD",accent:"#ff5b55",
   receiptFooter:"Gracias por tu compra",requireCashSession:false,allowCredit:true,address:"",phone:"",businessType:"general",
-  serviceModes:["counter"],tableCount:0,showProductImages:true,splashEnabled:true,receiptWidth:"80mm"
+  serviceModes:["counter"],tableCount:0,showProductImages:true,splashEnabled:true,receiptWidth:"80mm",timeZone:"America/Guayaquil"
 });
 const defaultBranding=(tenantId:string,businessName:string):TenantBrandingRecord=>({tenantId,businessName,logoUrl:"",primaryColor:"#ff5b55",secondaryColor:"#0d2b4d",accentColor:"#ff8a3d",receiptTagline:"Todo tu negocio, en orden.",updatedAt:epoch});
 const defaultBranch=(tenantId:string,name="Matriz",code="001"):BranchRecord=>({id:`branch-${tenantId.replace(/[^a-z0-9]/gi,"").slice(-12)}-${code}`,tenantId,name,code,active:true,createdAt:epoch});
@@ -178,6 +178,7 @@ function normalizeSettings(item:TenantSettings):TenantSettings{
     categoryOrder:Array.isArray(item.categoryOrder)?[...new Set(item.categoryOrder.map(value=>safeSingleLine(value,80)).filter(Boolean))].slice(0,100):undefined,
     showProductImages:item.showProductImages!==false,
     splashEnabled:item.splashEnabled!==false,
+    timeZone:safeSingleLine(item.timeZone,80)||"America/Guayaquil",
     receiptWidth
   };
 }

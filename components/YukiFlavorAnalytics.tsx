@@ -5,29 +5,18 @@ import { getTenantSettings,getWorkspaceContext,loadLocalDatabase } from "@/lib/l
 import { saleVisibleAfterHistoryReset } from "@/lib/sale-adjustments";
 import { saleLifecycle } from "@/lib/sale-reversal";
 import { yukiFlavorImage } from "@/lib/yuki-flavor-visuals";
+import { addBusinessDays,businessDateKey,businessTimeZone,businessTodayKey } from "@/lib/business-time";
 import { KIUBO_DATA_REFRESHED } from "./RealtimeSyncRuntime";
 import styles from "./YukiFlavorAnalytics.module.css";
 
 type Range="today"|"7d"|"30d"|"all";
 const labels:Record<Range,string>={today:"Hoy","7d":"7 días","30d":"30 días",all:"Todo"};
 const normalize=(value:string)=>value.replace(/\s+/g," ").trim();
-const startOfDay=()=>{const date=new Date();date.setHours(0,0,0,0);return date.getTime()};
-
-function periodStart(range:Range){
-  if(range==="all")return 0;
-  const today=startOfDay();
-  if(range==="today")return today;
-  return today-(range==="7d"?6:29)*86400000;
-}
+function periodStart(range:Range,timeZone:string){const today=businessTodayKey(timeZone);return range==="all"?"":range==="today"?today:addBusinessDays(today,range==="7d"?-6:-29)}
 
 function flavorsFromName(name:string){
-  const values:string[]=[];
-  const slots=/Yogur(?:t)?\s+\d+\s*:\s*([^·/×]+?)(?=\s*·|\s*\/|\s*×|\s*$)/gi;
-  let match:RegExpExecArray|null;
-  while((match=slots.exec(name)))values.push(normalize(match[1]||""));
-  if(values.length)return values.filter(Boolean);
-  const simple=/Yogur(?:t)?\s+(?!\d+\s*:)([^·/×]+?)(?=\s*·|\s*\/|\s*×|\s*$)/gi;
-  while((match=simple.exec(name)))values.push(normalize(match[1]||""));
+  const values:string[]=[],matcher=/Yogur(?:t)?(?:\s+\d+\s*:)?\s*([^·/×]+?)(?:\s*×\s*(\d+))?(?=\s*·|\s*\/|\s*$)/gi;let match:RegExpExecArray|null;
+  while((match=matcher.exec(name))){const flavor=normalize(match[1]||""),count=Math.max(1,Number(match[2])||1);for(let index=0;index<count;index++)values.push(flavor)}
   return values.filter(value=>value&&!/^sin especificar$/i.test(value));
 }
 
@@ -39,15 +28,15 @@ export function YukiFlavorAnalytics(){
   const data=useMemo(()=>{
     if(!db)return null;
     const ctx=getWorkspaceContext(db);if(ctx.tenant?.name.trim().toUpperCase()!=="YUKI")return null;
-    const settings=getTenantSettings(db,ctx.tenantId),start=periodStart(range),counts=new Map<string,{name:string;qty:number}>();let selections=0,salesWithFlavor=0;
+    const settings=getTenantSettings(db,ctx.tenantId),timeZone=businessTimeZone(settings.timeZone),start=periodStart(range,timeZone),counts=new Map<string,{name:string;qty:number}>();let selections=0,salesWithFlavor=0;
     for(const sale of db.sales){
-      if(sale.tenantId!==ctx.tenantId||sale.branchId!==ctx.branchId||saleLifecycle(sale)!=="completed"||!saleVisibleAfterHistoryReset(sale,settings)||Date.parse(sale.createdAt)<start)continue;
+      if(sale.tenantId!==ctx.tenantId||sale.branchId!==ctx.branchId||saleLifecycle(sale)!=="completed"||!saleVisibleAfterHistoryReset(sale,settings)||(start&&businessDateKey(sale.createdAt,timeZone)<start))continue;
       let hasFlavor=false;
       for(const item of sale.items){
-        const flavors=flavorsFromName(item.name);
+        const stored=item.optionSelections?.map(normalize).filter(Boolean)||[],parsed=stored.length?stored:flavorsFromName(item.name),flavors=stored.length?Array.from({length:Math.max(1,Number(item.qty)||1)},()=>parsed).flat():!item.optionLabel&&item.productId.startsWith("yuki-menu-yogurt-")&&item.qty>1?Array.from({length:item.qty},()=>parsed).flat():parsed;
         if(!flavors.length)continue;
         hasFlavor=true;
-        for(const flavor of flavors){const key=flavor.toLocaleLowerCase("es");const row=counts.get(key)||{name:flavor,qty:0};row.qty+=Math.max(1,Number(item.qty)||1);counts.set(key,row);selections+=Math.max(1,Number(item.qty)||1)}
+        for(const flavor of flavors){const key=flavor.toLocaleLowerCase("es"),row=counts.get(key)||{name:flavor,qty:0};row.qty+=1;counts.set(key,row);selections+=1}
       }
       if(hasFlavor)salesWithFlavor++;
     }
