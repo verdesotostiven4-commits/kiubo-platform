@@ -6,13 +6,11 @@ import { saleLifecycle } from "@/lib/sale-reversal";
 import { operationalDiscountAmount,parseOperationalItemName,saleVisibleAfterHistoryReset } from "@/lib/sale-adjustments";
 import { runSyncCycle } from "@/lib/sync-engine";
 import { KIUBO_DATA_REFRESHED } from "./RealtimeSyncRuntime";
+import { businessDateKey,businessDateLabel,businessMonthKey,businessTimeLabel,businessTimeZone } from "@/lib/business-time";
 import styles from "./OperationalSalesInsights.module.css";
 
 const money=(value:number)=>new Intl.NumberFormat("es-EC",{style:"currency",currency:"USD"}).format(value||0);
 const paymentLabel:Record<SaleRecord["payment"],string>={cash:"Efectivo",transfer:"Transferencia",mixed:"Mixto",partial:"Pago parcial",credit:"Fiado"};
-const localDate=(value:Date)=>`${value.getFullYear()}-${String(value.getMonth()+1).padStart(2,"0")}-${String(value.getDate()).padStart(2,"0")}`;
-const saleDay=(iso:string)=>localDate(new Date(iso));
-const currentMonth=()=>localDate(new Date()).slice(0,7);
 type ResettableSettings=ReturnType<typeof getTenantSettings>&{salesHistoryResetAtByBranch?:Record<string,string>};
 
 function saleFlags(sale:SaleRecord){
@@ -25,7 +23,7 @@ function saleFlags(sale:SaleRecord){
 
 export function OperationalSalesInsights(){
   const[db,setDb]=useState<ReturnType<typeof loadLocalDatabase>|null>(null);
-  const[month,setMonth]=useState(currentMonth());
+  const[month,setMonth]=useState("");
   const[selectedDay,setSelectedDay]=useState("");
   const[resetOpen,setResetOpen]=useState(false);
   const[resetCode,setResetCode]=useState("");
@@ -33,16 +31,17 @@ export function OperationalSalesInsights(){
   const[resetBusy,setResetBusy]=useState(false);
   const refresh=()=>setDb(loadLocalDatabase());
   useEffect(()=>{refresh();window.addEventListener(KIUBO_DATA_REFRESHED,refresh);return()=>window.removeEventListener(KIUBO_DATA_REFRESHED,refresh)},[]);
+  const workspace=db?getWorkspaceContext(db):null,timeZone=businessTimeZone(db&&workspace?getTenantSettings(db,workspace.tenantId).timeZone:undefined),activeMonth=month||businessMonthKey(new Date(),timeZone);
 
   const data=useMemo(()=>{
     if(!db)return null;
     const ctx=getWorkspaceContext(db),settings=getTenantSettings(db,ctx.tenantId),branchSales=db.sales.filter(s=>s.tenantId===ctx.tenantId&&s.branchId===ctx.branchId&&saleVisibleAfterHistoryReset(s,settings)),completed=branchSales.filter(s=>saleLifecycle(s)==="completed");
-    const monthSales=completed.filter(s=>saleDay(s.createdAt).startsWith(month));
+    const monthSales=completed.filter(s=>businessDateKey(s.createdAt,timeZone).startsWith(activeMonth));
     const courtesyMap=new Map<string,number>(),internalMap=new Map<string,number>();let courtesyUnits=0,internalUnits=0,discountAmount=0,discountedSales=0;
     for(const sale of monthSales){const flags=saleFlags(sale);courtesyUnits+=flags.courtesy;internalUnits+=flags.internal;discountAmount+=flags.discount;if(flags.discount>0)discountedSales++;
       for(const item of flags.parsed){if(item.meta.mode==="courtesy")courtesyMap.set(item.meta.displayName,(courtesyMap.get(item.meta.displayName)||0)+item.qty);if(item.meta.mode==="internal")internalMap.set(item.meta.displayName,(internalMap.get(item.meta.displayName)||0)+item.qty)}
     }
-    const dayMap=new Map<string,SaleRecord[]>();for(const sale of completed){const day=saleDay(sale.createdAt),list=dayMap.get(day)||[];list.push(sale);dayMap.set(day,list)}
+    const dayMap=new Map<string,SaleRecord[]>();for(const sale of completed){const day=businessDateKey(sale.createdAt,timeZone),list=dayMap.get(day)||[];list.push(sale);dayMap.set(day,list)}
     const days=[...dayMap.entries()].sort((a,b)=>b[0].localeCompare(a[0])).slice(0,18).map(([day,sales])=>({day,sales:[...sales].sort((a,b)=>b.createdAt.localeCompare(a.createdAt)),total:sales.reduce((sum,s)=>sum+s.total,0)}));
     const chosen=selectedDay?days.find(row=>row.day===selectedDay):days[0];
     const productMap=new Map<string,{productId:string;name:string;qty:number;revenue:number;specialQty:number}>();
@@ -58,7 +57,7 @@ export function OperationalSalesInsights(){
     }
     const productRows=[...productMap.values()].sort((a,b)=>b.qty-a.qty||a.name.localeCompare(b.name,"es"));
     return{ctx,branchSales,monthSales,courtesyUnits,internalUnits,discountAmount,discountedSales,courtesy:[...courtesyMap.entries()].sort((a,b)=>b[1]-a[1]),internal:[...internalMap.entries()].sort((a,b)=>b[1]-a[1]),days,chosen,productRows};
-  },[db,month,selectedDay]);
+  },[db,activeMonth,selectedDay,timeZone]);
 
   if(!db||!data)return null;
   const canReset=Boolean(data.ctx.user?.platformAdmin||data.ctx.user?.role==="owner"||data.ctx.user?.role==="admin");
@@ -86,18 +85,18 @@ export function OperationalSalesInsights(){
     <article className={styles.card}>
       <div className={styles.head}><div><span>CONTROL DIARIO</span><h3>Ventas por día</h3><p>Elige un día para revisar exactamente qué se vendió.</p></div><div className={styles.headActions}><button className={styles.refresh} type="button" onClick={refresh}>Actualizar</button>{canReset&&<button className={styles.resetTrigger} type="button" onClick={()=>{setResetOpen(value=>!value);setResetMessage("")}}>{resetOpen?"Cerrar":"Reiniciar ventas"}</button>}</div></div>
       {canReset&&resetOpen&&<div className={styles.dangerBox}><div className={styles.resetTitleRow}><div><strong>Reiniciar solo las ventas</strong><p>Úsalo cuando terminen las pruebas y quieran empezar con ventas reales desde cero.</p></div><span>Solo ventas</span></div><div className={styles.resetSafety}><b>No se toca:</b> productos, inventario, recetas, sabores, mesas, clientes, caja ni configuraciones.</div>{!resetConfigured?<div className="history-code-unconfigured"><span>Aún no has configurado tu propio código de autorización.</span><a href="/operations#authorization-code">Configurar código</a></div>:<div className={styles.dangerForm}><input type="password" inputMode="numeric" value={resetCode} onChange={e=>setResetCode(e.target.value)} placeholder="Escribe tu PIN" autoComplete="off"/><button type="button" disabled={resetBusy||!data.branchSales.length} onClick={()=>void resetSales()}>{resetBusy?"Verificando…":"Confirmar reinicio"}</button></div>}{resetMessage&&<div className={styles.status}>{resetMessage}</div>}</div>}
-      <div className={styles.days}>{data.days.length?data.days.map(row=><button type="button" key={row.day} className={`${styles.day} ${(data.chosen?.day===row.day)?styles.active:""}`} onClick={()=>setSelectedDay(row.day)}><b>{new Date(`${row.day}T12:00:00`).toLocaleDateString("es-EC",{day:"2-digit",month:"short"})}</b><span>{row.sales.length} ventas · {money(row.total)}</span></button>):<div className={styles.empty}>Todavía no hay ventas.</div>}</div>
-      {data.chosen&&<div className={styles.detail}>{data.chosen.sales.map(sale=>{const flags=saleFlags(sale);return <article className={styles.sale} key={sale.id}><div className={styles.saleTop}><strong>{new Date(sale.createdAt).toLocaleTimeString("es-EC",{hour:"2-digit",minute:"2-digit"})} · {paymentLabel[sale.payment]}</strong><b>{money(sale.total)}</b></div><div className={styles.saleMeta}>{flags.courtesy>0&&<span className={`${styles.tag} ${styles.courtesy}`}>{flags.courtesy} cortesía</span>}{flags.internal>0&&<span className={`${styles.tag} ${styles.internal}`}>{flags.internal} consumo interno</span>}{flags.discount>0&&<span className={`${styles.tag} ${styles.discount}`}>descuento {money(flags.discount)}</span>}<span>#{sale.id.slice(-6).toUpperCase()}</span></div><div className={styles.items}>{flags.parsed.map((item,index)=><span key={`${item.productId}-${index}`}>{item.qty}× {item.meta.displayName}{item.meta.mode==="courtesy"?" · Cortesía $0":item.meta.mode==="internal"?" · Interno $0":item.meta.discountPercent>0?` · -${item.meta.discountPercent}%`:""}</span>)}</div></article>})}</div>}
+      <div className={styles.days}>{data.days.length?data.days.map(row=><button type="button" key={row.day} className={`${styles.day} ${(data.chosen?.day===row.day)?styles.active:""}`} onClick={()=>setSelectedDay(row.day)}><b>{businessDateLabel(`${row.day}T12:00:00Z`,"UTC",{day:"2-digit",month:"short"})}</b><span>{row.sales.length} ventas · {money(row.total)}</span></button>):<div className={styles.empty}>Todavía no hay ventas.</div>}</div>
+      {data.chosen&&<div className={styles.detail}>{data.chosen.sales.map(sale=>{const flags=saleFlags(sale);return <article className={styles.sale} key={sale.id}><div className={styles.saleTop}><strong>{businessTimeLabel(sale.createdAt,timeZone)} · {paymentLabel[sale.payment]}</strong><b>{money(sale.total)}</b></div><div className={styles.saleMeta}>{flags.courtesy>0&&<span className={`${styles.tag} ${styles.courtesy}`}>{flags.courtesy} cortesía</span>}{flags.internal>0&&<span className={`${styles.tag} ${styles.internal}`}>{flags.internal} consumo interno</span>}{flags.discount>0&&<span className={`${styles.tag} ${styles.discount}`}>descuento {money(flags.discount)}</span>}<span>#{sale.id.slice(-6).toUpperCase()}</span></div><div className={styles.items}>{flags.parsed.map((item,index)=><span key={`${item.productId}-${index}`}>{item.qty}× {item.meta.displayName}{item.meta.mode==="courtesy"?" · Cortesía $0":item.meta.mode==="internal"?" · Interno $0":item.meta.discountPercent>0?` · -${item.meta.discountPercent}%`:""}</span>)}</div></article>})}</div>}
     </article>
 
     <article className={styles.card}>
-      <div className={styles.head}><div><span>RESUMEN ESPECIAL</span><h3>Cortesías, descuentos y consumo interno</h3><p>Control mensual separado de las ventas cobradas.</p></div><input className={styles.month} type="month" value={month} onChange={e=>setMonth(e.target.value||currentMonth())}/></div>
+      <div className={styles.head}><div><span>RESUMEN ESPECIAL</span><h3>Cortesías, descuentos y consumo interno</h3><p>Control mensual separado de las ventas cobradas.</p></div><input className={styles.month} type="month" value={activeMonth} onChange={e=>setMonth(e.target.value||businessMonthKey(new Date(),timeZone))}/></div>
       <div className={styles.stats}><div className={styles.stat}><span>Cortesías</span><strong>{data.courtesyUnits}</strong></div><div className={styles.stat}><span>Ventas con descuento</span><strong>{data.discountedSales}</strong></div><div className={styles.stat}><span>Descuento aplicado</span><strong>{money(data.discountAmount)}</strong></div><div className={styles.stat}><span>Consumo interno</span><strong>{data.internalUnits}</strong></div></div>
       <div className={styles.columns}><div className={styles.mini}><div className={styles.miniHead}><strong>Productos de cortesía</strong><b>{data.courtesyUnits} u.</b></div>{data.courtesy.length?<div className={styles.list}>{data.courtesy.slice(0,12).map(([name,qty])=><div className={styles.row} key={name}><span>{name}</span><b>{qty} u.</b></div>)}</div>:<div className={styles.empty}>Sin cortesías este mes.</div>}</div><div className={styles.mini}><div className={styles.miniHead}><strong>Consumo del local</strong><b>{data.internalUnits} u.</b></div>{data.internal.length?<div className={styles.list}>{data.internal.slice(0,12).map(([name,qty])=><div className={styles.row} key={name}><span>{name}</span><b>{qty} u.</b></div>)}</div>:<div className={styles.empty}>Sin consumo interno este mes.</div>}</div></div>
     </article>
 
     <article className={styles.card}>
-      <div className={styles.head}><div><span>PRODUCTOS DEL DÍA</span><h3>Cuánto se vendió de cada producto</h3><p>Selecciona un día arriba para ver las unidades acumuladas de todos sus pedidos.</p></div>{data.chosen&&<div className={styles.productDayBadge}>{new Date(`${data.chosen.day}T12:00:00`).toLocaleDateString("es-EC",{day:"2-digit",month:"short",year:"numeric"})}</div>}</div>
+      <div className={styles.head}><div><span>PRODUCTOS DEL DÍA</span><h3>Cuánto se vendió de cada producto</h3><p>Selecciona un día arriba para ver las unidades acumuladas de todos sus pedidos.</p></div>{data.chosen&&<div className={styles.productDayBadge}>{businessDateLabel(`${data.chosen.day}T12:00:00Z`,"UTC",{day:"2-digit",month:"short",year:"numeric"})}</div>}</div>
       {data.chosen&&data.productRows.length?<div className={styles.productTable} role="table" aria-label="Ventas por producto del día"><div className={styles.productHead} role="row"><span>Producto</span><span>Unidades</span><span>Ingresos</span></div>{data.productRows.map(row=><div className={styles.productRow} role="row" key={row.productId||row.name}><div className={styles.productName}><strong>{row.name}</strong><small>{row.specialQty?`${row.specialQty} cortesía o consumo interno`:`Venta cobrada`}</small></div><b>{row.qty}</b><b>{money(row.revenue)}</b></div>)}</div>:<div className={styles.empty}>No hay ventas confirmadas para este día.</div>}
     </article>
   </section>;
