@@ -3,6 +3,7 @@ import {
   loadLocalSession,
   makeId,
   type CashMovementRecord,
+  type CreditPaymentRecord,
   type CreditRecord,
   type FoodOrderRecord,
   type KiuboLocalDatabase,
@@ -19,6 +20,8 @@ export type SaleTransactionPayload = {
   orderBefore?: FoodOrderRecord;
   orderAfter?: FoodOrderRecord;
   cashMovement?: CashMovementRecord;
+  initialCreditPayment?:CreditPaymentRecord;
+  initialCreditCashMovement?:CashMovementRecord;
 };
 
 export function enqueueSaleTransaction(db:KiuboLocalDatabase,payload:SaleTransactionPayload){

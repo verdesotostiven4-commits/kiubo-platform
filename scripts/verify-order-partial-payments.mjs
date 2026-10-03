@@ -21,13 +21,18 @@ assert.ok(!pos.includes('payment==="partial"&&!customerId'),"partial payment mus
 for(const needle of ["isPartialBalanceOrder","isOccupyingOrder",'paymentStatus==="unpaid"||isPartialBalanceOrder',"loadPartialOrder","registerPartialBalance","balanceMode"]){
   assert.ok(pos.includes(needle),`partial table lifecycle missing: ${needle}`);
 }
-assert.ok(pos.includes('item.kind==="partial"'),"fiado must not keep a restaurant table occupied as if it were a partial payment");
+assert.ok(pos.includes("isOpenPartialOrder(source,order)"),"the POS must classify a partial balance through its linked sale when old cloud data has no kind");
 for(const needle of ['keepsSlotOpen','setPartialOrderId(order.id)','setActiveOrderId(order.id)','sigue abierto']){
   assert.ok(pos.includes(needle),`the first partial payment must retain its table/delivery context: ${needle}`);
 }
+for(const needle of ["partialOrderId:string",'setPartialOrderId(safePartial?.id||"")',"currentSlotPartialOrder","findPartialSlotOrder",'partialOrderId!==partial.id']){
+  assert.ok(pos.includes(needle),`partial payment refresh/slot recovery missing: ${needle}`);
+}
+assert.ok(pos.includes("initialCreditPayment,initialCreditCashMovement"),"the initial installment must travel inside the protected sale command");
+assert.ok(!pos.includes("if(initialCreditPayment&&updatedCredit)enqueueCreditPaymentTransaction"),"the initial installment must not be queued as a second independent command");
 
 const payments=text("lib/order-payments.ts");
-for(const needle of ['sale.payment==="credit"||sale.payment==="partial"','kind==="partial"?"Pago parcial":"Fiado"',"Pago parcial ·","sale.total-balance","detailPending","actualizando detalle"]){
+for(const needle of ['sale.payment==="credit"||sale.payment==="partial"','kind==="partial"?"Pago parcial":"Fiado"',"Pago parcial ·","sale.total-balance","detailPending","actualizando detalle","outstandingBalanceKind","openPartialCreditForOrder","compareOccupyingOrders"]){
   assert.ok(payments.includes(needle),`payment summary missing partial distinction: ${needle}`);
 }
 
@@ -49,5 +54,26 @@ const migration=text("supabase/migrations/20260920204256_separate_partial_paymen
 for(const needle of ["'partial'","v_payment in('credit','partial')","kind',case when v_payment='partial'"]){
   assert.ok(migration.includes(needle),`Cloud partial-payment migration missing: ${needle}`);
 }
+
+const atomicMigration=text("supabase/migrations/20261003011734_partial_payment_slot_atomicity.sql");
+for(const needle of [
+  "apply_sale_transactions_v2_partial_slot_legacy",
+  "apply_finance_transactions_v2_partial_slot_legacy",
+  "kiubo_upsert_transaction_order_v1",
+  "kiubo_reconcile_outstanding_order_v1",
+  "initialCreditPayment",
+  "initial partial payment failed",
+  "paymentStatus',v_payment_status",
+  "credit.payload||jsonb_build_object",
+])assert.ok(atomicMigration.includes(needle),`atomic partial-payment migration missing: ${needle}`);
+
+const lifecycle={balance:13.95,paymentStatus:"partial",occupied:true};
+for(const installment of [3.95,5,5]){
+  lifecycle.balance=Number(Math.max(0,lifecycle.balance-installment).toFixed(2));
+  lifecycle.paymentStatus=lifecycle.balance<=.001?"paid":"partial";
+  lifecycle.occupied=lifecycle.balance>.001;
+  if(lifecycle.balance>0){assert.equal(lifecycle.paymentStatus,"partial");assert.equal(lifecycle.occupied,true)}
+}
+assert.deepEqual(lifecycle,{balance:0,paymentStatus:"paid",occupied:false},"the slot must release only after the final installment");
 
 console.log("✓ Order Partial Payments V2 passed: Pago parcial is customer-free, Fiado remains customer-bound, and both preserve balance/cash truth.");

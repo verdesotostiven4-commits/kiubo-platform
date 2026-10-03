@@ -4,7 +4,7 @@ import { useEffect,useState } from "react";
 import { useRouter } from "next/navigation";
 import { CashMovementRecord,CreditPaymentRecord,FoodOrderRecord,FoodOrderStatus,getOpenCashSession,getTenantSettings,getWorkspaceContext,loadLocalDatabase,makeId,saveLocalDatabase } from "@/lib/local-store";
 import { enqueueCreditPaymentTransaction } from "@/lib/finance-transaction";
-import { creditPaymentCashMovementReason,orderPaymentSummary } from "@/lib/order-payments";
+import { creditPaymentCashMovementReason,orderPaymentSummary,outstandingBalanceKind } from "@/lib/order-payments";
 import { orderVisibleAfterHistoryReset } from "@/lib/sale-adjustments";
 import { KIUBO_DATA_REFRESHED } from "./RealtimeSyncRuntime";
 import styles from "./FoodOrdersClient.module.css";
@@ -70,7 +70,7 @@ export function FoodOrdersClientPro(){
     const now=new Date().toISOString(),payment:CreditPaymentRecord={id:makeId("credit-payment"),tenantId:workspace.tenantId,branchId:workspace.branchId,creditId:credit.id,amount:applied,method:paymentMethod,createdAt:now};payment.clientOperationId=payment.id;
     const remaining=Number((credit.balance-applied).toFixed(2)),updatedCredit={...credit,balance:remaining,status:(remaining<=.001?"paid":"open") as "open"|"paid"},orderBefore={...current,items:current.items.map(item=>({...item}))},orderAfter:FoodOrderRecord={...current,paymentStatus:remaining<=.001?"paid":"partial",updatedAt:now};
     next.creditPayments.unshift(payment);next.credits=next.credits.map(item=>item.id===credit.id?updatedCredit:item);next.orders=next.orders.map(item=>item.id===current.id?orderAfter:item);
-    let cashMovement:CashMovementRecord|undefined;if(paymentMethod==="cash"&&cashSession){const movementId=makeId("movement");cashMovement={id:movementId,tenantId:workspace.tenantId,branchId:workspace.branchId,sessionId:cashSession.id,type:"in",amount:applied,reason:creditPaymentCashMovementReason(payment.id,credit.description,credit.kind==="partial"?"partial":"fiado"),clientOperationId:movementId,createdAt:now};next.cashMovements.unshift(cashMovement)}
+    let cashMovement:CashMovementRecord|undefined;if(paymentMethod==="cash"&&cashSession){const movementId=makeId("movement");cashMovement={id:movementId,tenantId:workspace.tenantId,branchId:workspace.branchId,sessionId:cashSession.id,type:"in",amount:applied,reason:creditPaymentCashMovementReason(payment.id,credit.description,outstandingBalanceKind(next,credit)),clientOperationId:movementId,createdAt:now};next.cashMovements.unshift(cashMovement)}
     enqueueCreditPaymentTransaction(next,{payment,creditSnapshot:updatedCredit,cashMovement,orderBefore,orderAfter});saveLocalDatabase(next,{trackChanges:false});setDb(next);setPaymentDraft("");setPaymentOrderId(remaining<=.001?"":order.id);setMessage(remaining<=.001?`Pedido #${String(order.number).padStart(4,"0")} pagado por completo.`:`Abono ${money(applied)} registrado · saldo ${money(remaining)}.`);
   };
 
