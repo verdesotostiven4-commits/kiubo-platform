@@ -1,8 +1,27 @@
-import type { FoodOrderRecord,KiuboLocalDatabase,SaleRecord } from "./local-store";
+import type { CreditRecord,FoodOrderRecord,KiuboLocalDatabase,SaleRecord } from "./local-store";
 import { paymentBreakdownForSale } from "./mixed-payment";
 
 const cents=(value:number)=>Number(value.toFixed(2));
 const isOutstandingSale=(sale:SaleRecord)=>sale.payment==="credit"||sale.payment==="partial";
+
+export function outstandingBalanceKind(db:KiuboLocalDatabase,credit:CreditRecord):"fiado"|"partial"{
+  if(credit.kind)return credit.kind;
+  const sale=credit.saleId?db.sales.find(item=>item.id===credit.saleId):undefined;
+  return sale?.payment==="partial"?"partial":"fiado";
+}
+
+export function openPartialCreditForOrder(db:KiuboLocalDatabase,order:FoodOrderRecord):CreditRecord|undefined{
+  if(order.paymentStatus!=="partial"||!order.saleId)return undefined;
+  const credit=db.credits.find(item=>item.saleId===order.saleId&&item.status==="open"&&item.balance>.001);
+  return credit&&outstandingBalanceKind(db,credit)==="partial"?credit:undefined;
+}
+
+export const isOpenPartialOrder=(db:KiuboLocalDatabase,order:FoodOrderRecord)=>Boolean(openPartialCreditForOrder(db,order));
+
+export function compareOccupyingOrders(db:KiuboLocalDatabase,a:FoodOrderRecord,b:FoodOrderRecord){
+  const partialPriority=Number(isOpenPartialOrder(db,b))-Number(isOpenPartialOrder(db,a));
+  return partialPriority||Date.parse(b.updatedAt||b.createdAt)-Date.parse(a.updatedAt||a.createdAt);
+}
 
 export type OrderPaymentSummary={
   sale?:SaleRecord;
@@ -25,7 +44,7 @@ function outstandingSummary(db:KiuboLocalDatabase,sale:SaleRecord):OrderPaymentS
   const paid=cents(Math.max(0,sale.total-balance));
   const detailPending=Math.abs(recordedPaid-paid)>.011;
   const cash=detailPending?0:recordedCash,transfer=detailPending?0:recordedTransfer;
-  const kind: "fiado"|"partial" = credit?.kind??(sale.payment==="partial"?"partial":"fiado");
+  const kind: "fiado"|"partial" = credit?outstandingBalanceKind(db,credit):(sale.payment==="partial"?"partial":"fiado");
   const base=kind==="partial"?"Pago parcial":"Fiado";
   const label=detailPending?`${base} · actualizando detalle`:cash>0&&transfer>0?`${base} · efectivo + transferencia`:cash>0?`${base} · efectivo`:transfer>0?`${base} · transferencia`:base;
   return{sale,paid,balance,cash,transfer,label,kind,detailPending};

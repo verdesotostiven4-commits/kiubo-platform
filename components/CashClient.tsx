@@ -15,8 +15,8 @@ import {
 } from "@/lib/local-store";
 import { cashReconciliationEntries,reconcileCashSession } from "@/lib/cash-reconciliation";
 import { enqueueCashTransaction,enqueueCreditPaymentTransaction } from "@/lib/finance-transaction";
+import { creditPaymentCashMovementReason,outstandingBalanceKind } from "@/lib/order-payments";
 import { saleLifecycle } from "@/lib/sale-reversal";
-import { creditPaymentCashMovementReason } from "@/lib/order-payments";
 import { paymentBreakdownForSale } from "@/lib/mixed-payment";
 import styles from "./CashClient.module.css";
 
@@ -36,7 +36,7 @@ export function CashClient(){
   const ctx=getWorkspaceContext(db);
   const customers=db.customers.filter(c=>c.tenantId===ctx.tenantId);
   const credits=db.credits.filter(c=>c.tenantId===ctx.tenantId&&c.branchId===ctx.branchId);
-  const fiadoCredits=credits.filter(c=>c.kind!=="partial");
+  const fiadoCredits=credits.filter(c=>outstandingBalanceKind(db,c)!=="partial");
   const openSession=getOpenCashSession(db,ctx.tenantId,ctx.branchId);
   const settings=getTenantSettings(db,ctx.tenantId);
   const persistCommand=(next:KiuboLocalDatabase)=>{saveLocalDatabase(next,{trackChanges:false});refresh()};
@@ -101,7 +101,7 @@ export function CashClient(){
   const payCredit=(creditId:string)=>{
     const next=loadLocalDatabase(),workspace=getWorkspaceContext(next),credit=next.credits.find(c=>c.id===creditId);
     const amount=Number(paymentDraft[creditId]),method=paymentMethodDraft[creditId]??"cash";
-    if(!credit||credit.kind==="partial"||credit.status!=="open"){setMessage("Ese fiado ya no está pendiente");return}
+    if(!credit||outstandingBalanceKind(next,credit)==="partial"||credit.status!=="open"){setMessage("Ese fiado ya no está pendiente");return}
     if(!Number.isFinite(amount)||amount<=0){setMessage("Ingresa un abono válido");return}
     const localSettings=getTenantSettings(next,workspace.tenantId),session=getOpenCashSession(next,workspace.tenantId,workspace.branchId);
     if(method==="cash"&&localSettings.requireCashSession&&!session){setMessage("Debes abrir caja para recibir un abono en efectivo");return}
