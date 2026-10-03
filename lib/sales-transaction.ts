@@ -27,6 +27,14 @@ export type SaleTransactionPayload = {
 export function enqueueSaleTransaction(db:KiuboLocalDatabase,payload:SaleTransactionPayload){
   const {sale}=payload;
   const now=new Date().toISOString();
+  if(payload.orderAfter){
+    db.syncQueue=db.syncQueue.filter(item=>!(
+      item.tenantId===sale.tenantId&&
+      item.entityType==="orders"&&
+      item.entityId===payload.orderAfter?.id&&
+      (item.status==="pending"||item.status==="failed")
+    ));
+  }
   const existing=db.syncQueue.find(item=>
     item.tenantId===sale.tenantId&&
     item.entityType==="saleTransactions"&&
