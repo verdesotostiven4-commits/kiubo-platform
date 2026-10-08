@@ -64,6 +64,6 @@ assert.ok(kitchen.includes('order.serviceMode==="takeaway"?"PEDIDO"'),"Kitchen t
 console.log("✓ Takeaway slots: isolated lookup, F5 draft, partial balance, autosave, labels and tickets are guarded");
 
 const stock=readFileSync("components/StockAlerts.tsx","utf8");
-assert.ok(stock.includes('product.stock>0&&product.stock<=row.threshold')||stock.includes('product.stock>0&&product.stock<=row.threshold'.replace('product.stock','row.product.stock')));
+assert.ok(stock.includes('row.product.stock>0&&row.product.stock<=row.threshold'),"Stock low indicator must use current physical stock");
 assert.ok(pos.includes('Stock bajo después del cobro'),"Projected low stock should not be mislabeled current stock");
 console.log("✓ Current stock and after-checkout low stock use distinct labels");
