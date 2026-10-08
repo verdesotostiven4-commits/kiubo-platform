@@ -1,5 +1,4 @@
-import { loadLocalDatabase,saveLocalDatabase } from "./local-store";
-import { decodeDatabaseStorage } from "./local-db-codec";
+import { decodeDatabaseStorage,loadLocalDatabase,saveLocalDatabase } from "./local-store";
 
 const PRIMARY_KEY="kiubo.foundation.v2";
 const SESSION_KEY="kiubo.local.session.v1";
