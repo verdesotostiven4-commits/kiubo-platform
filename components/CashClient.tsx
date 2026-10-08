@@ -17,7 +17,8 @@ import { cashReconciliationEntries,reconcileCashSession } from "@/lib/cash-recon
 import { enqueueCashTransaction,enqueueCreditPaymentTransaction } from "@/lib/finance-transaction";
 import { creditPaymentCashMovementReason,outstandingBalanceKind } from "@/lib/order-payments";
 import { saleLifecycle } from "@/lib/sale-reversal";
-import { paymentBreakdownForSale } from "@/lib/mixed-payment";
+import { transferPaymentEvents,totalValidTransfers } from "@/lib/transfer-events";
+import { businessDateKey,businessTimeZone,businessTodayKey,addBusinessDays,businessDateLabel } from "@/lib/business-time";
 import styles from "./CashClient.module.css";
 
 type CreditPaymentMethod="cash"|"transfer";
@@ -29,6 +30,8 @@ export function CashClient(){
   const[paymentMethodDraft,setPaymentMethodDraft]=useState<Record<string,CreditPaymentMethod>>({});
   const[message,setMessage]=useState("Caja lista");
   const[cashDetailOpen,setCashDetailOpen]=useState(false);
+  const[transferDate,setTransferDate]=useState("");
+  const[transferDetailOpen,setTransferDetailOpen]=useState(true);
   const refresh=()=>setDb(loadLocalDatabase());
   useEffect(refresh,[]);
   if(!db)return <div className="loading-card">Preparando caja…</div>;
@@ -49,9 +52,14 @@ export function CashClient(){
   const staleSession=Boolean(openSession&&sessionAgeHours>24);
   const turnSales=openSession?db.sales.filter(sale=>sale.tenantId===ctx.tenantId&&sale.branchId===ctx.branchId&&Date.parse(sale.createdAt)>=sessionStarted):[];
   const completedTurnSales=turnSales.filter(sale=>saleLifecycle(sale)==="completed");
-  const transferSales=completedTurnSales.reduce((sum,sale)=>sum+paymentBreakdownForSale(db,sale).transfer,0);
-  const transferCreditPayments=db.creditPayments.filter(payment=>payment.tenantId===ctx.tenantId&&payment.branchId===ctx.branchId&&payment.method==="transfer"&&Date.parse(payment.createdAt)>=sessionStarted).reduce((sum,payment)=>sum+payment.amount,0);
-  const transferTurn=transferSales+transferCreditPayments;
+  const timeZone=businessTimeZone(settings.timeZone);
+  const transfers=transferPaymentEvents(db,ctx.tenantId,ctx.branchId);
+  const sessionTransfers=openSession?transfers.filter(row=>Date.parse(row.at)>=sessionStarted):[];
+  const transferTurn=totalValidTransfers(sessionTransfers);
+  const selectedTransferDate=transferDate||businessTodayKey(timeZone);
+  const visibleTransfers=transfers.filter(row=>selectedTransferDate==="all"||businessDateKey(row.at,timeZone)===selectedTransferDate);
+  const selectedTransferTotal=totalValidTransfers(visibleTransfers);
+  const transferToReview=visibleTransfers.filter(row=>row.status==="revisar").length;
   const creditTurn=completedTurnSales.filter(sale=>sale.payment==="credit").reduce((sum,sale)=>sum+sale.total,0);
   const voidedTurn=turnSales.filter(sale=>saleLifecycle(sale)==="voided").length;
 
@@ -139,6 +147,25 @@ export function CashClient(){
     <section className="ops-grid">
       <article className="panel"><div className="panel-head"><div><span className="eyebrow">CAJA · {ctx.branch?.name}</span><h3>{openSession?"Turno en curso":"Abrir turno"}</h3></div><span className={openSession?"status status-active":"status status-suspended"}>{openSession?"ABIERTA":"CERRADA"}</span></div>{!openSession?<form className="ops-form" onSubmit={openCash}><label>Fondo inicial<input name="opening" type="number" min="0" step="0.01" defaultValue="0"/></label><button className="button primary" type="submit">Abrir caja</button></form>:<><div className="cash-metrics"><div><span>Inicial</span><strong>${cashSummary?.opening.toFixed(2)}</strong></div><div><span>Ventas efectivo</span><strong>${cashSummary?.cashSales.toFixed(2)}</strong></div><div><span>Abonos efectivo</span><strong>${cashSummary?.creditCollections.toFixed(2)}</strong></div><div><span>Otros ingresos</span><strong>${cashSummary?.manualIncome.toFixed(2)}</strong></div><div><span>Egresos</span><strong>${cashSummary?.cashOut.toFixed(2)}</strong></div><div><span>Esperado</span><strong>${cashSummary?.expected.toFixed(2)}</strong></div></div><form className="ops-form ops-form-3" onSubmit={addMovement}><select name="type"><option value="in">Ingreso</option><option value="out">Egreso</option></select><input name="amount" type="number" min="0.01" step="0.01" placeholder="Monto" required/><input name="reason" placeholder="Motivo" required/><button className="button secondary" type="submit">Registrar</button></form><section className={styles.closeBox}><div className={styles.closeHead}><div><span>CIERRE DE TURNO</span><strong>Compara y cierra</strong></div><small>Abierta desde {new Date(openSession.openedAt).toLocaleTimeString("es-EC",{hour:"2-digit",minute:"2-digit"})}</small></div><div className={styles.turnSummary}><div><span>Efectivo esperado</span><b>${cashSummary?.expected.toFixed(2)}</b></div><div><span>Transferencias</span><b>${transferTurn.toFixed(2)}</b></div><div><span>Fiados del turno</span><b>${creditTurn.toFixed(2)}</b></div><div><span>Anulaciones</span><b>{voidedTurn}</b></div></div><button className={styles.detailToggle} type="button" onClick={()=>setCashDetailOpen(value=>!value)}>{cashDetailOpen?"Ocultar detalle":"Ver cómo se calcula el efectivo esperado"}</button>{cashDetailOpen&&<div className={styles.cashDetail}>{cashEntries.map(entry=><div className={styles.cashDetailRow} key={entry.id}><div><strong>{entry.label}</strong><span>{new Date(entry.at).toLocaleString("es-EC")}{entry.detail?` · ${entry.detail}`:""}</span></div><b className={entry.amount<0?styles.negative:""}>{entry.amount<0?"−":"+"}${Math.abs(entry.amount).toFixed(2)}</b></div>)}<div className={styles.cashDetailTotal}><span>Efectivo esperado</span><strong>${cashSummary?.expected.toFixed(2)}</strong></div><small>Las transferencias no se suman al cajón. Solo aparecen aquí movimientos de efectivo físico.</small></div>}<div className={styles.countRow}><label><span>¿Cuánto efectivo hay realmente?</span><input value={closeAmount} onChange={e=>setCloseAmount(e.target.value)} type="number" min="0" step="0.01" placeholder="Efectivo contado"/></label>{closeDifference!==undefined&&<div className={`${styles.difference} ${Math.abs(closeDifference)>.005?styles.differenceBad:""}`}>{Math.abs(closeDifference)<=.005?"CUADRADA":`${closeDifference>0?"SOBRA":"FALTA"} $${Math.abs(closeDifference).toFixed(2)}`}</div>}</div><div className={styles.closeAction}><small>Cuenta solo el efectivo físico: fondo inicial + ventas en efectivo + abonos en efectivo + otros ingresos − egresos. Las transferencias no se cuentan en el cajón.</small><button className="button primary" disabled={!Number.isFinite(closeValue)||closeValue<0} onClick={closeCash}>Confirmar cierre</button></div></section></>}</article>
       <article className="panel"><div className="panel-head"><div><span className="eyebrow">FIADOS · {ctx.branch?.name}</span><h3>Cuentas por cobrar</h3></div><span className="pill">${fiadoCredits.filter(c=>c.status==="open").reduce((n,c)=>n+c.balance,0).toFixed(2)} pendiente</span></div><div className="ops-list">{fiadoCredits.length===0?<p className="empty-cart">Cuando cobres una venta como Fiado aparecerá aquí.</p>:fiadoCredits.map(c=>{const customer=customers.find(x=>x.id===c.customerId);return <div className="credit-row" key={c.id}><div><strong>{customer?.name??"Cliente"}</strong><span>{c.description} · Original ${c.originalAmount.toFixed(2)}</span></div><b>${c.balance.toFixed(2)}</b>{c.status==="open"?<><input value={paymentDraft[c.id]??""} onChange={e=>setPaymentDraft(v=>({...v,[c.id]:e.target.value}))} type="number" min="0.01" step="0.01" placeholder="Abono"/><select value={paymentMethodDraft[c.id]??"cash"} onChange={e=>setPaymentMethodDraft(v=>({...v,[c.id]:e.target.value as CreditPaymentMethod}))}><option value="cash">Efectivo</option><option value="transfer">Transferencia</option></select><button className="button secondary compact" onClick={()=>payCredit(c.id)}>Abonar</button></>:<span className="status status-active">PAGADO</span>}</div>})}</div></article>
+    </section>
+    <section className="panel">
+      <div className="panel-head"><div><span className="eyebrow">CONTROL DE TRANSFERENCIAS · {ctx.branch?.name}</span><h3>Detalle de transacciones por transferencia</h3></div><strong>${selectedTransferTotal.toFixed(2)} recibidos</strong></div>
+      <div className={styles.transferControls}>
+        <button type="button" onClick={()=>setTransferDate("")}>Hoy</button>
+        <button type="button" onClick={()=>setTransferDate(addBusinessDays(businessTodayKey(timeZone),-1))}>Ayer</button>
+        <button type="button" onClick={()=>setTransferDate("all")}>Todo el historial</button>
+        <label>Fecha <input type="date" value={selectedTransferDate==="all"?"":selectedTransferDate} onChange={event=>setTransferDate(event.target.value||"")} /></label>
+        <button type="button" onClick={()=>setTransferDetailOpen(open=>!open)}>{transferDetailOpen?"Ocultar movimientos":"Ver movimientos"}</button>
+      </div>
+      {transferToReview>0&&<p className={styles.transferWarning}>{transferToReview} operación(es) requieren revisión del desglose y no se incluyen en el total confirmado.</p>}
+      {transferDetailOpen&&<div className={styles.transferList}>
+        {visibleTransfers.length===0?<p className="empty-cart">No existen transferencias registradas para este filtro.</p>:visibleTransfers.map(row=><div className={styles.transferRow} key={row.id}>
+          <div><strong>{row.label} · {row.service||"Venta"}</strong><small>{businessDateLabel(row.at,timeZone,{dateStyle:"short",timeStyle:"short"})} · {row.saleId?`Venta ${row.saleId.slice(-8)}`:"Abono"}{row.customerName?` · ${row.customerName}`:""}{row.note?` · ${row.note}`:""}</small></div>
+          <div className={styles.transferAmount}><b>${row.amount.toFixed(2)}</b><span>{row.status==="registrada"?"Registrada":row.status==="anulada"?"Anulada":"Revisar"}</span>{row.saleId&&<a href={`/receipt?sale=${encodeURIComponent(row.saleId)}`} target="_blank" rel="noreferrer">Ver venta</a>}</div>
+        </div>)}
+        <div className={styles.cashDetailTotal}><span>Total válido mostrado (sin anuladas ni incidencias)</span><strong>${selectedTransferTotal.toFixed(2)}</strong></div>
+      </div>}
+      <p className={styles.transferFootnote}>Las transferencias no forman parte del efectivo físico. Una venta anulada no confirma por sí sola una devolución bancaria.</p>
     </section>
     <section className="panel"><div className="panel-head"><div><span className="eyebrow">REGLAS DE CAJA</span><h3>Comportamiento del negocio</h3></div></div><div className="cash-metrics"><div><span>Efectivo</span><strong>{settings.requireCashSession?"Exige caja abierta":"Caja opcional"}</strong></div><div><span>Fiados</span><strong>{settings.allowCredit?"Permitidos":"Desactivados"}</strong></div><div><span>Cloud</span><strong>Sincronización automática</strong></div></div></section>
   </>;
