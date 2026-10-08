@@ -35,7 +35,7 @@ assert.equal(rows.find(x=>x.saleId==="invalid")?.status,"revisar");
 assert.equal(rows.find(x=>x.saleId==="void")?.status,"anulada");
 assert.equal(rows.find(x=>x.saleId==="mixed-legacy")?.amount,6);
 assert.equal(rows.find(x=>x.saleId==="mixed")?.amount,20);
-assert.equal(rows.filter(x=>x.id.includes("payment:p3")).length,1,"duplicate payment must not double count");
+assert.equal(rows.filter(x=>x.id.endsWith(":p3")).length,1,"duplicate payment must not double count");
 assert.equal(totalValidTransfers(rows),64,"20 direct + 20 mixed + 6 legacy + 10 partial + 8 fiado");
 assert.equal(totalValidTransfers(rows.filter(r=>r.at==="2026-10-07T23:00:00Z")),64);
 const cash=readFileSync("components/CashClient.tsx","utf8"),reports=readFileSync("components/ReportsClientPro.tsx","utf8");
