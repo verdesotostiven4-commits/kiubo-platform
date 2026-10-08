@@ -49,4 +49,37 @@ assert.ok(durability.includes("JSON.parse(decodeDatabaseStorage(raw))"),"recover
 assert.ok(pos.includes("persistCurrentContext()"),"table changes must preserve existing cart");
 assert.ok(pos.includes("autoguardado de mesa falló"),"autosave failures must be visible");
 assert.ok(!pos.includes("setDb(loadLocalDatabase())}};"),"error handler must not overwrite the active table");
+
+const storage=new Map();
+const previousWindow=globalThis.window;
+const limit=1_000_000; // deliberately below the size of the plain JSON fixture
+let denyWrites=false;
+globalThis.window={
+  localStorage:{
+    getItem(key){return storage.get(key)??null},
+    setItem(key,value){
+      if(denyWrites)throw new Error("Simulated read-only localStorage");
+      const current=[...storage.entries()].filter(([storedKey])=>storedKey!==key).reduce((sum,[storedKey,storedValue])=>sum+storedKey.length+storedValue.length,0);
+      if(current+key.length+value.length>limit)throw new Error("QuotaExceededError");
+      storage.set(key,value);
+    },
+  },
+  dispatchEvent(){},
+};
+try{
+  const base=lib.exports.loadLocalDatabase();
+  base.stockMovements=records;
+  lib.exports.saveLocalDatabase(base,{trackChanges:false});
+  const stored=storage.get("kiubo.foundation.v2");
+  assert.ok(stored?.startsWith("kiubo:lz4:v1:"),"large database is persisted in compact format");
+  const restored=lib.exports.loadLocalDatabase();
+  assert.equal(restored.stockMovements.length,records.length,"all historical stock movements survive a real save/load");
+  denyWrites=true;
+  assert.equal(lib.exports.loadLocalDatabase().stockMovements.length,records.length,"opening a table must work without any localStorage write");
+  console.log("✓ Store API: quota-safe save, full operational reload and read-only table lookup");
+}finally{
+  if(previousWindow===undefined)delete globalThis.window;
+  else globalThis.window=previousWindow;
+}
+
 console.log("✓ POS, data store and offline shadow integration guards passed");
