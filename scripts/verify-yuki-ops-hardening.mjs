@@ -39,6 +39,37 @@ verifyImpact([{productId:"combo4",qty:1,optionSelections:["Mora","Mango","Mora"]
 verifyImpact([{productId:"combo2",qty:1,optionSelections:["Mango"]},{productId:"combo4",qty:1,optionSelections:["Mora","Mora","Mango"]}],{mango:2,milk:4,mora:2,pan:21});
 console.log("✓ YUKI combo recipes: pan, yogurt and selected pulps deducted with exact quantities");
 
+const reportModule={exports:{}};
+const reportJavaScript=ts.transpileModule(readFileSync("lib/report-inventory.ts","utf8"),{
+  compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}
+}).outputText;
+new Function("require","module","exports",reportJavaScript)((name)=>{
+  if(name==="./sale-adjustments")return{parseOperationalItemName:()=>({mode:"sale"})};
+  if(name==="./product-options")return{
+    getProductOptionConfig:product=>product.optionConfig,
+    parseProductOptionSelection:(_config,label)=>label?[label]:[]
+  };
+  if(name==="./recipe-inventory")return module.exports;
+  throw new Error("Unexpected report dependency: "+name);
+},reportModule,reportModule.exports);
+const tenantId="yuki-demo",branchId="main",fullProducts=products.map(p=>({...p,tenantId,branchId}));
+const sale=(id)=>({id,tenantId,branchId,items:[{productId:"combo2",name:"Combo 2 · Mango",qty:1,unitPrice:7.6,optionSelections:["Mango"]}]});
+const stockMovement=(productId,qty)=>({
+  id:"movement-"+productId,tenantId,branchId,reference:"sale-recorded",productId,quantity:-qty,type:"sale"
+});
+const inventoryRows=reportModule.exports.ingredientConsumptionRows(
+  [sale("sale-recorded"),sale("sale-historical")],
+  fullProducts,
+  [stockMovement("pan",6),stockMovement("milk",1),stockMovement("mango",1)]
+);
+const panRow=inventoryRows.find(r=>r.productId==="pan");
+assert.equal(panRow?.qty,6,"Confirmed Pan de Yuca must equal actual stock movement");
+assert.equal(panRow?.estimatedQty,6,"Historical missing movements must be shown separately, never as confirmed");
+assert.equal(panRow?.sourceCount,1);
+assert.equal(panRow?.estimatedSources,1);
+console.log("✓ Ingredient report separates real inventory debits from historical recipe-based estimates");
+
+
 const pos=readFileSync("components/PosClientPro.tsx","utf8");
 const orders=readFileSync("components/FoodOrdersClientPro.tsx","utf8");
 const receipt=readFileSync("components/ReceiptClient.tsx","utf8");
