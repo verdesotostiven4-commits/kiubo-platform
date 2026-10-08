@@ -1,4 +1,5 @@
 import type { AuditLogRecord, SyncEntity, SyncQueueRecord, SyncStatus } from "./sync-types";
+import { decodeDatabaseStorage, encodeDatabaseStorage } from "./local-db-codec";
 
 export type Plan = "Start" | "Pro" | "Custom" | "Internal";
 export type TenantStatus = "trial" | "active" | "grace" | "suspended";
@@ -246,7 +247,7 @@ function normalize(raw:Partial<KiuboLocalDatabase>|null|undefined):KiuboLocalDat
   };
 }
 
-function writeDatabase(db:KiuboLocalDatabase){if(typeof window!=="undefined")window.localStorage.setItem(STORAGE_KEY,JSON.stringify(db))}
+function writeDatabase(db:KiuboLocalDatabase){if(typeof window!=="undefined")window.localStorage.setItem(STORAGE_KEY,encodeDatabaseStorage(JSON.stringify(db)))}
 function recordKey(entity:SyncEntity,record:Record<string,unknown>){if(entity==="settings"||entity==="branding")return String(record.tenantId||"");return String(record.id||"")}
 function tenantFor(entity:SyncEntity,record:Record<string,unknown>){return entity==="tenants"?String(record.id||""):String(record.tenantId||"")}
 function trackingKey(entity:SyncEntity,record:Record<string,unknown>){return`${tenantFor(entity,record)}::${recordKey(entity,record)}`}
@@ -277,11 +278,24 @@ function trackChanges(previous:KiuboLocalDatabase,next:KiuboLocalDatabase){
   next.auditLogs=next.auditLogs.slice(-1500);
 }
 
-export function loadLocalDatabase():KiuboLocalDatabase{if(typeof window==="undefined")return cloneInitial();try{const stored=window.localStorage.getItem(STORAGE_KEY);if(!stored){const fresh=cloneInitial();writeDatabase(fresh);return fresh}const normalized=normalize(JSON.parse(stored) as Partial<KiuboLocalDatabase>);writeDatabase(normalized);return normalized}catch{return cloneInitial()}}
+export function loadLocalDatabase():KiuboLocalDatabase{
+  if(typeof window==="undefined")return cloneInitial();
+  const stored=window.localStorage.getItem(STORAGE_KEY);
+  if(!stored){const fresh=cloneInitial();writeDatabase(fresh);return fresh}
+  try{
+    // Reading must never rewrite the full database: the POS can open a table
+    // even if localStorage is nearly full, and old JSON migrates on next save.
+    return normalize(JSON.parse(decodeDatabaseStorage(stored)) as Partial<KiuboLocalDatabase>);
+  }catch{
+    // Never substitute an empty demo state for a damaged customer database.
+    // The original value and last durable shadow remain untouched for recovery.
+    throw new Error("KIUBO no pudo leer sus datos locales. No borres ni reinstales la aplicación; solicita soporte para recuperar la información.");
+  }
+}
 export function saveLocalDatabase(db:KiuboLocalDatabase,options?:{trackChanges?:boolean}){
   if(typeof window==="undefined")return;
-  let previous:KiuboLocalDatabase;
-  try{const raw=window.localStorage.getItem(STORAGE_KEY);previous=raw?normalize(JSON.parse(raw) as Partial<KiuboLocalDatabase>):cloneInitial()}catch{previous=cloneInitial()}
+  const raw=window.localStorage.getItem(STORAGE_KEY);
+  const previous=raw?normalize(JSON.parse(decodeDatabaseStorage(raw)) as Partial<KiuboLocalDatabase>):cloneInitial();
   const next=normalize(db);if(options?.trackChanges!==false)trackChanges(previous,next);
   const beforePending=new Map(previous.syncQueue.filter(item=>item.status==="pending").map(item=>[item.operationId,item.updatedAt]));
   const queued=next.syncQueue.some(item=>item.status==="pending"&&beforePending.get(item.operationId)!==item.updatedAt);
