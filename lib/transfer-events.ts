@@ -46,7 +46,7 @@ export function transferPaymentEvents(db:KiuboLocalDatabase,tenantId:string,bran
   for(const sale of sales.values()){
     if(sale.payment!=="transfer"&&sale.payment!=="mixed")continue;
     const split=sale.payment==="transfer"
-      ? {amount:round(sale.total),valid:finitePositive(sale.total),note:undefined as string|undefined}
+      ? {amount:finitePositive(sale.total)?round(sale.total):0,valid:finitePositive(sale.total),note:undefined as string|undefined}
       : mixedTransfer(db,sale);
     const voided=(sale as SaleRecord&{status?:string}).status==="voided";
     const order=sale.orderId?orders.get(`${sale.branchId}:${sale.orderId}`):undefined;
