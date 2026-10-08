@@ -6,13 +6,15 @@ const salesTransaction=fs.readFileSync("lib/sales-transaction.ts","utf8");
 const terminalGuard=fs.readFileSync("supabase/migrations/20261003014800_protect_terminal_food_orders.sql","utf8");
 const legacyActive="activeMatches=activeExisting&&(activeServiceMode===\"table\"?activeExisting.serviceMode===\"table\"&&activeExisting.tableLabel===tableLabel.trim():activeExisting.serviceMode===activeServiceMode)";
 const queuedActive="activeMatches=activeExisting&&((activeServiceMode===\"table\"||activeServiceMode===\"delivery\")?activeExisting.serviceMode===activeServiceMode&&activeExisting.tableLabel===tableLabel.trim():activeExisting.serviceMode===activeServiceMode)";
+const numberedActive='activeMatches=activeExisting&&((activeServiceMode==="table"||activeServiceMode==="delivery"||activeServiceMode==="takeaway")?activeExisting.serviceMode===activeServiceMode&&activeExisting.tableLabel===tableLabel.trim():activeExisting.serviceMode===activeServiceMode)';
+const numberedDraft='(draftMode==="table"||draftMode==="delivery"||draftMode==="takeaway")?(order.serviceMode===draftMode&&order.tableLabel===draftTable):order.serviceMode===draftMode';
 const legacyDraft="draftMode===\"table\"?(order.serviceMode===\"table\"&&order.tableLabel===draftTable):order.serviceMode===draftMode";
 const queuedDraft="(draftMode===\"table\"||draftMode===\"delivery\")?(order.serviceMode===draftMode&&order.tableLabel===draftTable):order.serviceMode===draftMode";
 const checks=[
   [pos.includes("findOpenTableOrder"),"POS resolves one open order by tenant, branch and table"],
-  [pos.includes(legacyActive)||pos.includes(queuedActive),"POS refuses stale active order ids from another table or service slot"],
-  [pos.includes(legacyDraft)||pos.includes(queuedDraft),"recovered drafts cannot attach an order from another context"],
-  [pos.includes("findOpenServiceOrder"),"takeaway keeps an independent open order"],
+  [pos.includes(legacyActive)||pos.includes(queuedActive)||pos.includes(numberedActive),"POS refuses stale active order ids from another table or service slot"],
+  [pos.includes(legacyDraft)||pos.includes(queuedDraft)||pos.includes(numberedDraft),"recovered drafts cannot attach an order from another context"],
+  [pos.includes("findOpenTakeawayOrder")&&pos.includes("findOpenServiceOrder"),"takeaway uses numbered isolated slots while legacy orders remain accessible"],
   [pos.includes("findOpenDeliveryOrder"),"delivery slots resolve independent open orders"],
   [pos.includes("persistCurrentContext")&&pos.includes("loadTableOrder(label,source)"),"switching tables persists the previous context before loading the next one"],
   [pos.includes("cancelOpenSlotOrders")&&pos.includes("cancelled.length"),"clearing a table cancels every duplicated open order in that slot in one action"],
