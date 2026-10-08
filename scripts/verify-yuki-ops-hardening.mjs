@@ -94,6 +94,39 @@ assert.ok(receipt.includes('order.serviceMode==="takeaway"?'+String.fromCharCode
 assert.ok(kitchen.includes('order.serviceMode==="takeaway"?"PEDIDO"'),"Kitchen ticket must identify takeaway slot");
 console.log("✓ Takeaway slots: isolated lookup, F5 draft, partial balance, autosave, labels and tickets are guarded");
 
+const orderCode=[
+  pos.match(/^  const isEditableOrder=.*;$/m)?.[0],
+  pos.match(/^  const findOpenTakeawayOrder=.*;$/m)?.[0],
+].join("\n");
+assert.ok(orderCode.includes("findOpenTakeawayOrder"),"Runtime order lookup must exist");
+const orderJs=ts.transpileModule(orderCode+"\nmodule.exports=findOpenTakeawayOrder;",{
+  compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}
+}).outputText;
+const orderModule={exports:{}};
+new Function("module","exports",orderJs)(orderModule,orderModule.exports);
+const findTakeaway=orderModule.exports;
+const clock="2026-10-08T12:00:00Z";
+const order=(id,tenantId,branchId,tableLabel,updatedAt=clock,more={})=>({
+  id,tenantId,branchId,serviceMode:"takeaway",tableLabel,updatedAt,createdAt:clock,
+  status:"new",paymentStatus:"unpaid",...more
+});
+const testDb={orders:[
+  order("takeaway-1","yuki","main","1"),
+  order("takeaway-2","yuki","main","2"),
+  order("other-tenant","another","main","1"),
+  order("other-branch","yuki","remote","1"),
+  order("finished","yuki","main","1","2026-10-08T13:00:00Z",{paymentStatus:"paid"}),
+  order("old-slot-1","yuki","main","1","2026-10-07T11:00:00Z"),
+  order("legacy-unnumbered","yuki","main",undefined),
+]};
+const yukiCtx={tenantId:"yuki",branchId:"main"};
+assert.equal(findTakeaway(testDb,yukiCtx,"1")?.id,"takeaway-1","Slot 1 must not load another tenant, branch, slot or paid order");
+assert.equal(findTakeaway(testDb,yukiCtx,"2")?.id,"takeaway-2","Slot 2 must preserve a separate order");
+assert.equal(findTakeaway(testDb,yukiCtx,"3"),undefined,"An empty slot must stay empty");
+assert.equal(findTakeaway(testDb,yukiCtx,"1")?.id,"takeaway-1","Legacy unnumbered orders must not be merged into numbered slots");
+console.log("✓ Actual POS takeaway resolver passes two active slots, isolation, paid-order and legacy order scenarios");
+
+
 const stock=readFileSync("components/StockAlerts.tsx","utf8");
 assert.ok(stock.includes('row.product.stock>0&&row.product.stock<=row.threshold'),"Stock low indicator must use current physical stock");
 assert.ok(pos.includes('Stock bajo después del cobro'),"Projected low stock should not be mislabeled current stock");
