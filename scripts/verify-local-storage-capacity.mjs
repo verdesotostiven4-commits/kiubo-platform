@@ -2,8 +2,8 @@ import assert from "node:assert/strict";
 import {readFileSync} from "node:fs";
 import ts from "typescript";
 
-// Execute the actual production codec, without a second copy of its logic.
-const source=readFileSync("lib/local-db-codec.ts","utf8");
+// Execute the actual production local-store codec, without a second copy of its logic.
+const source=readFileSync("lib/local-store.ts","utf8");
 const js=ts.transpileModule(source,{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText;
 const lib={exports:{}};
 new Function("module","exports",js)(lib,lib.exports);
