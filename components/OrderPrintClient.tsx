@@ -16,7 +16,7 @@ export function OrderPrintClient(){
     setData({order,business:branding.businessName||ctx.tenant?.name||"Negocio",logo:branding.logoUrl||"",branch:ctx.branch?`${ctx.branch.code} · ${ctx.branch.name}`:"Matriz",operator,payment:orderPaymentSummary(db,order)});
   },[]);
   if(!data)return <main style={{padding:32,fontFamily:"Arial,sans-serif"}}>No encontramos ese pedido en este dispositivo.</main>;
-  const {order}=data,created=new Date(order.createdAt),mode=`${modeLabel[order.serviceMode]}${order.tableLabel?` · MESA ${order.tableLabel}`:""}`;
+  const {order}=data,created=new Date(order.createdAt),mode=`${modeLabel[order.serviceMode]}${order.tableLabel?` · ${order.serviceMode==="table"?"MESA":order.serviceMode==="delivery"?"DOMICILIO":order.serviceMode==="takeaway"?"PEDIDO":"ESPACIO"} ${order.tableLabel}`:""}`;
   return <main className="command-page"><style>{`
     @page{size:76mm auto;margin:1.5mm}
     *{box-sizing:border-box}
