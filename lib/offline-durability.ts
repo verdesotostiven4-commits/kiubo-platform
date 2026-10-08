@@ -1,4 +1,5 @@
 import { loadLocalDatabase,saveLocalDatabase } from "./local-store";
+import { decodeDatabaseStorage } from "./local-db-codec";
 
 const PRIMARY_KEY="kiubo.foundation.v2";
 const SESSION_KEY="kiubo.local.session.v1";
@@ -37,7 +38,7 @@ function expectedTenantFromSession(){
 function validPrimary(raw:string|null,expectedTenant=""){
   if(!raw)return false;
   try{
-    const parsed=JSON.parse(raw) as {tenants?:Array<{id?:string}>;syncQueue?:unknown[]};
+    const parsed=JSON.parse(decodeDatabaseStorage(raw)) as {tenants?:Array<{id?:string}>;syncQueue?:unknown[]};
     if(!parsed||typeof parsed!=="object"||!Array.isArray(parsed.tenants)||!Array.isArray(parsed.syncQueue))return false;
     if(expectedTenant&&!parsed.tenants.some(tenant=>tenant?.id===expectedTenant))return false;
     return true;
