@@ -125,7 +125,7 @@ export function OperationalSessionGuard(){
           <strong>{conflict.activeDeviceLabel||"Otro dispositivo"}</strong>
           <small>{conflict.lastSeenAt?"Con actividad reciente en KIUBO":"Sesión Cloud activa"}</small>
         </div>
-        <p className={styles.hint}>Si cerraste KIUBO en el otro equipo o ahora necesitas continuar aquí, puedes transferir el control. El otro dispositivo quedará bloqueado para operar, pero sus cambios pendientes podrán terminar de sincronizarse.</p>
+        <p className={styles.hint}>Antes de cambiar de equipo, verifica en el dispositivo anterior que KIUBO indique sincronización completa y que no queden cobros ni pedidos pendientes de envío. Si hay operaciones sin sincronizar, primero recupéralas en ese equipo; cambiar de dispositivo no las copia automáticamente. Después puedes transferir el control aquí.</p>
       </>}
       <div className={styles.actions}>
         {!conflict.offline&&<button className={styles.primary} disabled={busy} onClick={()=>void takeOver()}>{busy?"Transfiriendo…":"Usar KIUBO en este dispositivo"}</button>}
