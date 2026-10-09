@@ -69,17 +69,17 @@ export function operationalDeviceLabel(){
 }
 
 export async function claimOperationalSession(tenantId:string,deviceId:string){
-  return rpc("claim_operational_session_v1",{p_tenant:tenantId,p_device_id:deviceId,p_device_label:operationalDeviceLabel()});
+  return rpc("claim_tenant_operational_session_v2",{p_tenant:tenantId,p_device_id:deviceId,p_device_label:operationalDeviceLabel()});
 }
 
 export async function transferOperationalSession(tenantId:string,deviceId:string){
-  return rpc("transfer_operational_session_v1",{p_tenant:tenantId,p_device_id:deviceId,p_device_label:operationalDeviceLabel()});
+  return rpc("transfer_tenant_operational_session_v2",{p_tenant:tenantId,p_device_id:deviceId,p_device_label:operationalDeviceLabel()});
 }
 
 export async function heartbeatOperationalSession(tenantId:string,deviceId:string){
-  return rpc("heartbeat_operational_session_v1",{p_tenant:tenantId,p_device_id:deviceId});
+  return rpc("heartbeat_tenant_operational_session_v2",{p_tenant:tenantId,p_device_id:deviceId});
 }
 
 export async function releaseOperationalSession(tenantId:string,deviceId:string){
-  return rpc("release_operational_session_v1",{p_tenant:tenantId,p_device_id:deviceId});
+  return rpc("release_tenant_operational_session_v2",{p_tenant:tenantId,p_device_id:deviceId});
 }
