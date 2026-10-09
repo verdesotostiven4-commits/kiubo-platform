@@ -3,7 +3,7 @@ export type Permission="control"|"leads"|"dashboard"|"onboarding"|"upgrade"|"pos
 const grants:Record<UserRole,Permission[]>={
   owner:["control","leads","dashboard","onboarding","upgrade","pos","cash","inventory","purchases","catalog","customers","invoices","reports","branding","operations"],
   admin:["dashboard","onboarding","upgrade","pos","cash","inventory","purchases","catalog","customers","invoices","reports","branding","operations"],
-  cashier:["dashboard","pos","cash","customers","invoices","reports"],
+  cashier:["dashboard","pos","cash","customers"],
   inventory:["dashboard","inventory","purchases","catalog","reports"],
   viewer:["dashboard","reports"]
 };
