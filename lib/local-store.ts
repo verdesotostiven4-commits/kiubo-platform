@@ -410,7 +410,9 @@ function trackChanges(previous:KiuboLocalDatabase,next:KiuboLocalDatabase){
   }
   const synced=next.syncQueue.filter(item=>item.status==="synced").slice(-250);
   const active=next.syncQueue.filter(item=>item.status!=="synced");
-  next.syncQueue=[...synced,...active].slice(-2000);
+  // The queue can exceed 2,000 entries after days offline. Never truncate
+  // unsynced cash, sale or inventory operations merely to save storage space.
+  next.syncQueue=[...synced,...active];
   next.auditLogs=next.auditLogs.slice(-1500);
 }
 
