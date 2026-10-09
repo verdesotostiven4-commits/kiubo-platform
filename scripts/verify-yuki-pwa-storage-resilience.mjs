@@ -123,6 +123,7 @@ assert.equal(cachedImage.body,"network:"+h.origin+"/image-74.png","Offline asset
 console.log("✓ Image/font caching is bounded and independent of successful online requests");
 
 h.state.failNetwork=false;
+await h.event("fetch",new h.Request(h.origin+"/app",{mode:"navigate"}));
 h.buckets.set("kiubo-data-durability-v1",new Map([["protected",new h.Response("local-orders")]]));
 h.buckets.set("kiubo-shell-v9",new Map());
 await h.lifecycle("activate");
@@ -133,6 +134,20 @@ h.state.failPut=true;
 await h.lifecycle("install");
 assert.equal(h.state.skipWaiting,1,"Cache quota failure must not prevent installation of the new worker");
 console.log("✓ SW upgrades survive full caches and preserve the KIUBO durability shadow");
+
+const rescued=workerHarness();
+rescued.buckets.set("kiubo-shell-v9",new Map([[rescued.origin+"/app",new rescued.Response("previous usable POS")]]));
+rescued.buckets.set("kiubo-data-durability-v1",new Map([["protected",new rescued.Response("queued sales")]]));
+rescued.state.failPut=true;
+rescued.state.failNetwork=true;
+await rescued.lifecycle("install");
+await rescued.lifecycle("activate");
+assert.ok(rescued.buckets.has("kiubo-shell-v9"),"Retain previous shell if new worker cannot cache core pages");
+const fallback=await rescued.event("fetch",new rescued.Request(rescued.origin+"/orders",{mode:"navigate"}));
+assert.equal(fallback.body,"previous usable POS","Offline navigation must recover previous working shell after failed cache install");
+assert.ok(rescued.buckets.has("kiubo-data-durability-v1"),"Durable sales shadow must survive failed PWA upgrade");
+console.log("✓ Worker update with storage full retains previous usable offline app");
+
 
 const transpiled=ts.transpileModule(store,{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText;
 const module={exports:{}};
