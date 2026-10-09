@@ -29,7 +29,7 @@ function normalize(value:unknown):OperationalSessionState{
 
 async function rpc(name:string,args:Record<string,unknown>){
   const client=getSupabaseBrowserClient();
-  if(!client)return{granted:true,bypassed:true} satisfies OperationalSessionState;
+  if(!client)throw new Error("KIUBO Cloud no está disponible para validar el dispositivo operativo.");
   const result=await client.rpc(name,args);
   if(result.error)throw new Error(result.error.message);
   return normalize(result.data);
