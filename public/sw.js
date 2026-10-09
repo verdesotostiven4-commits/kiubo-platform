@@ -96,6 +96,10 @@ async function networkFirst(request,isNavigation=false){
   }
 }
 
+async function networkFirstNavigation(request){
+  return networkFirst(request,true);
+}
+
 async function staleWhileRevalidate(request,event){
   const cache=await openCache(ASSET_CACHE);
   const cached=await matchCached(cache,request);
@@ -119,7 +123,7 @@ self.addEventListener("fetch",event=>{
   const url=new URL(request.url);
   if(url.origin!==self.location.origin)return;
   if(url.pathname.startsWith("/api/"))return;
-  if(request.mode==="navigate"){event.respondWith(networkFirst(request,true));return}
+  if(request.mode==="navigate"){event.respondWith(networkFirstNavigation(request));return}
   if(["script","style"].includes(request.destination)){event.respondWith(networkFirst(request));return}
   if(["image","font"].includes(request.destination))event.respondWith(staleWhileRevalidate(request,event));
 });
