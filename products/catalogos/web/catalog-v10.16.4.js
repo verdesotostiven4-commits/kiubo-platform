@@ -52,15 +52,19 @@ function waitImage(img){
   if(img.complete)return decode();
   return new Promise(resolve=>{let done=false;const finish=()=>{if(done)return;done=true;resolve()};img.addEventListener('load',finish,{once:true});img.addEventListener('error',finish,{once:true});setTimeout(finish,900)}).then(decode);
 }
+function releaseBootShell(){
+  if(released)return;
+  released=true;clearTimeout(bootDeadline);
+  root.classList.remove('hm1164-boot','hm1163-boot','hm1162-home-brands-pending','hm112-boot');
+  root.classList.add('hm1164-ready','hm1163-ready','hm1162-home-brands-ready','hm112-ready');
+  scheduleUi();
+}
 function releaseFirstPaint(payload){
   if(released)return;
   if(!normalizeHomeBrands(payload))return;
-  const imgs=$$('#homeView .hm-brand-block img,#homeView .v10-brand-block img,#homeView .hm-slide-main img,#homeView .hm109-image-slide img').slice(0,14);
+  const imgs=$('#homeView .hm-brand-block img,#homeView .v10-brand-block img,#homeView .hm-slide-main img,#homeView .hm109-image-slide img').slice(0,14);
   Promise.all(imgs.map(waitImage)).finally(()=>requestAnimationFrame(()=>requestAnimationFrame(()=>{
-    if(released)return;normalizeHomeBrands(readJSON(cacheKey(),payload));released=true;clearTimeout(bootDeadline);
-    root.classList.remove('hm1164-boot','hm1163-boot','hm1162-home-brands-pending');
-    root.classList.add('hm1164-ready','hm1163-ready','hm1162-home-brands-ready');
-    scheduleUi();
+    if(released)return;normalizeHomeBrands(readJSON(cacheKey(),payload));releaseBootShell();
   })));
 }
 function tryFirstPaint(force=false){
@@ -78,7 +82,7 @@ function pollFirstPaint(){
   if(!released)setTimeout(pollFirstPaint,70);
 }
 window.addEventListener('kiubo:brands-ready',()=>setTimeout(()=>tryFirstPaint(false),30));
-bootDeadline=setTimeout(()=>tryFirstPaint(true),5500);
+bootDeadline=setTimeout(()=>{tryFirstPaint(true);setTimeout(()=>{if(!released)releaseBootShell()},450)},5500);
 pollFirstPaint();
 
 /* Search results: every brand result keeps the same compact frame, whatever the source logo aspect ratio. */
