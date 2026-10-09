@@ -7,6 +7,10 @@ const guard=code("components/OperationalSessionGuard.tsx");
 const pos=code("components/PosClientPro.tsx");
 const sync=code("lib/sync-engine.ts");
 const session=code("lib/operational-session.ts");
+const cloudStatus=code("components/SyncStatus.tsx");
+assert.ok(cloudStatus.includes("setCloudVerified(result.ok)"),"Cloud label must require successful sync");
+assert.ok(cloudStatus.includes('cloudVerified?"Cloud conectado":"Comprobando Cloud…"'),"Do not present a stale connection as confirmed");
+assert.ok(cloudStatus.includes("Sin Internet · caja pausada"),"Offline status should tell cashier the register is paused");
 const gate=code("supabase/migrations/20261009220000_yuki_exclusive_write_gate_v3.sql");
 const yuki="8e2d0299-5680-4eec-8c57-e37fe29086aa";
 
