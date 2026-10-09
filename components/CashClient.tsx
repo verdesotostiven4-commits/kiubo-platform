@@ -18,6 +18,7 @@ import { enqueueCashTransaction,enqueueCreditPaymentTransaction } from "@/lib/fi
 import { creditPaymentCashMovementReason,outstandingBalanceKind } from "@/lib/order-payments";
 import { saleLifecycle } from "@/lib/sale-reversal";
 import { transferPaymentEvents,totalValidTransfers } from "@/lib/transfer-events";
+import { cashPaymentEvents,totalValidCash } from "@/lib/cash-payment-events";
 import { businessDateKey,businessTimeZone,businessTodayKey,addBusinessDays,businessDateLabel } from "@/lib/business-time";
 import styles from "./CashClient.module.css";
 
@@ -59,6 +60,10 @@ export function CashClient(){
   const selectedTransferDate=transferDate||businessTodayKey(timeZone);
   const visibleTransfers=transfers.filter(row=>selectedTransferDate==="all"||businessDateKey(row.at,timeZone)===selectedTransferDate);
   const selectedTransferTotal=totalValidTransfers(visibleTransfers);
+  const cashPayments=cashPaymentEvents(db,ctx.tenantId,ctx.branchId);
+  const visibleCashPayments=cashPayments.filter(row=>selectedTransferDate==="all"||businessDateKey(row.at,timeZone)===selectedTransferDate);
+  const selectedCashTotal=totalValidCash(visibleCashPayments);
+  const cashToReview=visibleCashPayments.filter(row=>row.status==="revisar").length;
   const transferToReview=visibleTransfers.filter(row=>row.status==="revisar").length;
   const creditTurn=completedTurnSales.filter(sale=>sale.payment==="credit").reduce((sum,sale)=>sum+sale.total,0);
   const voidedTurn=turnSales.filter(sale=>saleLifecycle(sale)==="voided").length;
@@ -149,7 +154,8 @@ export function CashClient(){
       <article className="panel"><div className="panel-head"><div><span className="eyebrow">FIADOS · {ctx.branch?.name}</span><h3>Cuentas por cobrar</h3></div><span className="pill">${fiadoCredits.filter(c=>c.status==="open").reduce((n,c)=>n+c.balance,0).toFixed(2)} pendiente</span></div><div className="ops-list">{fiadoCredits.length===0?<p className="empty-cart">Cuando cobres una venta como Fiado aparecerá aquí.</p>:fiadoCredits.map(c=>{const customer=customers.find(x=>x.id===c.customerId);return <div className="credit-row" key={c.id}><div><strong>{customer?.name??"Cliente"}</strong><span>{c.description} · Original ${c.originalAmount.toFixed(2)}</span></div><b>${c.balance.toFixed(2)}</b>{c.status==="open"?<><input value={paymentDraft[c.id]??""} onChange={e=>setPaymentDraft(v=>({...v,[c.id]:e.target.value}))} type="number" min="0.01" step="0.01" placeholder="Abono"/><select value={paymentMethodDraft[c.id]??"cash"} onChange={e=>setPaymentMethodDraft(v=>({...v,[c.id]:e.target.value as CreditPaymentMethod}))}><option value="cash">Efectivo</option><option value="transfer">Transferencia</option></select><button className="button secondary compact" onClick={()=>payCredit(c.id)}>Abonar</button></>:<span className="status status-active">PAGADO</span>}</div>})}</div></article>
     </section>
     <section className="panel">
-      <div className="panel-head"><div><span className="eyebrow">CONTROL DE TRANSFERENCIAS · {ctx.branch?.name}</span><h3>Detalle de transacciones por transferencia</h3></div><strong>${selectedTransferTotal.toFixed(2)} recibidos</strong></div>
+      <div className="panel-head"><div><span className="eyebrow">COBROS DEL PERÍODO · {ctx.branch?.name}</span><h3>Efectivo y transferencias</h3></div><strong>${(selectedCashTotal+selectedTransferTotal).toFixed(2)} recibido</strong></div>
+      <div className={styles.turnSummary}><div><span>Efectivo recibido</span><b>${selectedCashTotal.toFixed(2)}</b></div><div><span>Transferencia recibida</span><b>${selectedTransferTotal.toFixed(2)}</b></div></div><p className={styles.transferFootnote}>Estos son cobros válidos del período seleccionado; no incluyen fondo inicial, ingresos manuales ni egresos de la caja física.</p>
       <div className={styles.transferControls}>
         <button type="button" onClick={()=>setTransferDate("")}>Hoy</button>
         <button type="button" onClick={()=>setTransferDate(addBusinessDays(businessTodayKey(timeZone),-1))}>Ayer</button>
@@ -157,6 +163,13 @@ export function CashClient(){
         <label>Fecha <input type="date" value={selectedTransferDate==="all"?"":selectedTransferDate} onChange={event=>setTransferDate(event.target.value||"")} /></label>
         <button type="button" onClick={()=>setTransferDetailOpen(open=>!open)}>{transferDetailOpen?"Ocultar movimientos":"Ver movimientos"}</button>
       </div>
+      <div className={styles.transferList}>
+        <strong>Movimientos de efectivo</strong>
+        {visibleCashPayments.length===0?<p className="empty-cart">Sin pagos en efectivo para este período.</p>:visibleCashPayments.map(row=><div className={styles.transferRow} key={row.id}><div><strong>{row.label}</strong><small>{businessDateLabel(row.at,timeZone,{dateStyle:"short",timeStyle:"short"})}{row.saleId?` · Venta ${row.saleId.slice(-8)}`:""}</small></div><div className={styles.transferAmount}><b>${row.amount.toFixed(2)}</b><span>{row.status==="registrada"?"Registrada":row.status==="anulada"?"Anulada":"Revisar"}</span></div></div>)}
+        <div className={styles.cashDetailTotal}><span>Total efectivo válido</span><strong>${selectedCashTotal.toFixed(2)}</strong></div>
+      </div>
+      {cashToReview>0&&<p className={styles.transferWarning}>{cashToReview} cobro(s) en efectivo requieren revisión y no se incluyen en el total válido.</p>}
+      <h3 style={{margin:"14px 17px 0"}}>Movimientos por transferencia</h3>
       {transferToReview>0&&<p className={styles.transferWarning}>{transferToReview} operación(es) requieren revisión del desglose y no se incluyen en el total confirmado.</p>}
       {transferDetailOpen&&<div className={styles.transferList}>
         {visibleTransfers.length===0?<p className="empty-cart">No existen transferencias registradas para este filtro.</p>:visibleTransfers.map(row=><div className={styles.transferRow} key={row.id}>
