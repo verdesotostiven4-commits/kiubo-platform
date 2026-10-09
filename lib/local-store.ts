@@ -408,11 +408,6 @@ function trackChanges(previous:KiuboLocalDatabase,next:KiuboLocalDatabase){
     const keys=new Set([...before.keys(),...after.keys()]);
     for(const key of keys)enqueueChange(next,entity,before.get(key),after.get(key));
   }
-  const synced=next.syncQueue.filter(item=>item.status==="synced").slice(-250);
-  const active=next.syncQueue.filter(item=>item.status!=="synced");
-  // The queue can exceed 2,000 entries after days offline. Never truncate
-  // unsynced cash, sale or inventory operations merely to save storage space.
-  next.syncQueue=[...synced,...active];
   next.auditLogs=next.auditLogs.slice(-1500);
 }
 
@@ -430,11 +425,20 @@ export function loadLocalDatabase():KiuboLocalDatabase{
     throw new Error("KIUBO no pudo leer sus datos locales. No borres ni reinstales la aplicación; solicita soporte para recuperar la información.");
   }
 }
+function compactAcknowledgedQueue(next:KiuboLocalDatabase){
+  // Only acknowledged technical sync receipts may be trimmed. The server is
+  // already authoritative for these; never drop pending, retrying, syncing,
+  // or failed customer operations (even if thousands build up offline).
+  const confirmed=next.syncQueue.filter(item=>item.status==="synced").slice(-250);
+  const unsent=next.syncQueue.filter(item=>item.status!=="synced");
+  next.syncQueue=[...confirmed,...unsent];
+}
 export function saveLocalDatabase(db:KiuboLocalDatabase,options?:{trackChanges?:boolean}){
   if(typeof window==="undefined")return;
   const raw=window.localStorage.getItem(STORAGE_KEY);
   const previous=raw?normalize(JSON.parse(decodeDatabaseStorage(raw)) as Partial<KiuboLocalDatabase>):cloneInitial();
   const next=normalize(db);if(options?.trackChanges!==false)trackChanges(previous,next);
+  compactAcknowledgedQueue(next);
   const beforePending=new Map(previous.syncQueue.filter(item=>item.status==="pending").map(item=>[item.operationId,item.updatedAt]));
   const queued=next.syncQueue.some(item=>item.status==="pending"&&beforePending.get(item.operationId)!==item.updatedAt);
   writeDatabase(next);
