@@ -73,13 +73,13 @@ async function reconcileOperationalSnapshot(provider:KiuboDataProvider,tenantId:
   return{pulled:changes.length+catchup.changes.length,hasMore:Boolean(catchup.hasMore)};
 }
 function safeOperation(item:SyncQueueRecord):SyncQueueRecord&{deviceId?:string}{
-  const payload=item.payload&&typeof item.payload==="object"
-    ?{...(item.payload as Record<string,unknown>)}:item.payload;
+  const payload:Record<string,unknown>|undefined=item.payload&&typeof item.payload==="object"
+    ?{...(item.payload as Record<string,unknown>)}:undefined;
   if(payload&&typeof payload==="object"){
     delete payload.pin;delete payload.password;delete payload.service_role;
     delete payload.serviceRole;delete payload.platformAdmin;delete payload.platform_admin;
   }
-  const sanitized={...item,payload};
+  const sanitized=payload?{...item,payload}:item;
   // This is transport metadata, not part of the persistent queue. Existing
   // queued transactions acquire the currently authorized device identity at
   // retry time without changing their idempotent operation IDs.
