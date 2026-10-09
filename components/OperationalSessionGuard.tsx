@@ -36,6 +36,7 @@ export function OperationalSessionGuard(){
         }
       }
     }
+    // fail closed after both checks: unknown Cloud ownership must not enable a second cash register.
     const offline={granted:false,conflict:true,offline:true} satisfies OperationalSessionState;
     setConflict(offline);
     return offline;
