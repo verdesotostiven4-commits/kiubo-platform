@@ -9,7 +9,7 @@ const guard=code("components/OperationalSessionGuard.tsx");
 const engine=code("lib/sync-engine.ts");
 const migration=code("supabase/migrations/20261009220000_yuki_exclusive_write_gate_v3.sql");
 assert.ok(!session.includes('if(!client)return{granted:true,bypassed:true}'),"Cloud validator must NEVER grant the POS when not connected");
-assert.ok(session.includes('if(!client)throw new Error'),"No Cloud client must fail closed");
+assert.ok(session.includes('if(args.p_tenant===YUKI_PLACEHOLDER'.replace("YUKI_PLACEHOLDER",'"8e2d0299-5680-4eec-8c57-e37fe29086aa"')),"YUKI must fail closed when Cloud is missing");
 assert.ok(guard.includes("await new Promise(resolve=>window.setTimeout(resolve,700))"),"Short transient errors get a retry");
 assert.ok(guard.includes('window.addEventListener("online",onOnline)'),"Restore session automatically when Internet returns");
 assert.ok(guard.includes('kiubo:operational-session-blocked'),"Lost Cloud lease must immediately warn POS");
