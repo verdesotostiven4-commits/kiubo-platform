@@ -31,7 +31,7 @@
     "verify:golden": "node scripts/verify-golden-path.mjs",
     "verify:offline": "node scripts/verify-offline-durability.mjs",
     "verify:pilot": "node scripts/verify-pilot-readiness.mjs",
-    "verify:guards": "npm run verify:cloud && npm run verify:sri && npm run verify:product && npm run verify:sync && npm run verify:sales && npm run verify:reversals && npm run verify:finance && npm run verify:idempotency && npm run verify:purchases && npm run verify:inventory && npm run verify:catalog-inventory && npm run verify:catalog-inventory-rules && npm run verify:catalog-runtime && npm run verify:payments && npm run verify:cashrecon && npm run verify:partial-payments && npm run verify:client-preview && npm run verify:session && npm run verify:yuki-sync && npm run verify:yuki-menu && npm run verify:dashboard-sales && npm run verify:launch-splash && npm run verify:yuki-ops-v2 && npm run verify:yuki-report && npm run verify:food && npm run verify:tables && npm run verify:golden && npm run verify:offline && npm run verify:pilot && npm run verify:local-storage && npm run verify:yuki-transfer-ledger && npm run verify:yuki-ops-hardening && npm run verify:yuki-pwa-storage && npm run verify:yuki-stock-reservations && npm run verify:yuki-single-device-team",
+    "verify:guards": "npm run verify:cloud && npm run verify:sri && npm run verify:product && npm run verify:sync && npm run verify:sales && npm run verify:reversals && npm run verify:finance && npm run verify:idempotency && npm run verify:purchases && npm run verify:inventory && npm run verify:catalog-inventory && npm run verify:catalog-inventory-rules && npm run verify:catalog-runtime && npm run verify:payments && npm run verify:cashrecon && npm run verify:partial-payments && npm run verify:client-preview && npm run verify:session && npm run verify:yuki-sync && npm run verify:yuki-menu && npm run verify:dashboard-sales && npm run verify:launch-splash && npm run verify:yuki-ops-v2 && npm run verify:yuki-report && npm run verify:food && npm run verify:tables && npm run verify:golden && npm run verify:offline && npm run verify:pilot && npm run verify:local-storage && npm run verify:yuki-transfer-ledger && npm run verify:yuki-ops-hardening && npm run verify:yuki-pwa-storage && npm run verify:yuki-stock-reservations && npm run verify:yuki-single-device-team && npm run verify:yuki-session-resilience-v3",
     "verify": "npm run typecheck && npm run verify:guards",
     "verify:catalog-runtime": "node scripts/verify-catalog-runtime.mjs",
     "verify:session": "node scripts/verify-operational-session.mjs",
@@ -45,7 +45,8 @@
     "verify:yuki-ops-hardening": "node scripts/verify-yuki-ops-hardening.mjs",
     "verify:yuki-pwa-storage": "node scripts/verify-yuki-pwa-storage-resilience.mjs",
     "verify:yuki-stock-reservations": "node scripts/verify-yuki-stock-reservations-cash.mjs",
-    "verify:yuki-single-device-team": "node scripts/verify-yuki-single-device-team.mjs"
+    "verify:yuki-single-device-team": "node scripts/verify-yuki-single-device-team.mjs",
+    "verify:yuki-session-resilience-v3": "node scripts/verify-yuki-session-resilience-v3.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.57.4",
