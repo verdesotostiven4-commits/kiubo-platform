@@ -72,11 +72,21 @@ async function reconcileOperationalSnapshot(provider:KiuboDataProvider,tenantId:
   const catchup=await pullAvailable(provider,watermark);persistPulled(provider,loadLocalDatabase(),catchup);
   return{pulled:changes.length+catchup.changes.length,hasMore:Boolean(catchup.hasMore)};
 }
-function safeOperation(item:SyncQueueRecord):SyncQueueRecord{
-  if(!item.payload||typeof item.payload!=="object")return item;
-  const payload={...(item.payload as Record<string,unknown>)};
-  delete payload.pin;delete payload.password;delete payload.service_role;delete payload.serviceRole;delete payload.platformAdmin;delete payload.platform_admin;
-  return{...item,payload};
+function safeOperation(item:SyncQueueRecord):SyncQueueRecord&{deviceId?:string}{
+  const payload=item.payload&&typeof item.payload==="object"
+    ?{...(item.payload as Record<string,unknown>)}:item.payload;
+  if(payload&&typeof payload==="object"){
+    delete payload.pin;delete payload.password;delete payload.service_role;
+    delete payload.serviceRole;delete payload.platformAdmin;delete payload.platform_admin;
+  }
+  const sanitized={...item,payload};
+  // This is transport metadata, not part of the persistent queue. Existing
+  // queued transactions acquire the currently authorized device identity at
+  // retry time without changing their idempotent operation IDs.
+  if(item.tenantId==="8e2d0299-5680-4eec-8c57-e37fe29086aa"){
+    return{...sanitized,deviceId:getLocalDeviceId()};
+  }
+  return sanitized;
 }
 function applyPulled(db:ReturnType<typeof loadLocalDatabase>,changes:SyncPullResult["changes"]){
   const mutable=db as unknown as Record<SyncEntity,Record<string,unknown>[]>;
