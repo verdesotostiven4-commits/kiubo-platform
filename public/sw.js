@@ -30,6 +30,22 @@ async function prune(cache,maxEntries,preserveCore=false){
     // Cache maintenance is best-effort: never block sales or a valid network response.
   }
 }
+async function matchRecoverableShell(request){
+  const current=await openCache(SHELL_CACHE);
+  const inCurrent=await matchCached(current,request);
+  if(inCurrent)return inCurrent;
+  try{
+    const oldShells=(await caches.keys())
+      .filter(name=>/^kiubo-shell-v[0-9]+$/.test(name)&&name!==SHELL_CACHE)
+      .sort((a,b)=>Number(b.split("-v")[1])-Number(a.split("-v")[1]));
+    for(const name of oldShells){
+      const old=await openCache(name);
+      const cached=await matchCached(old,request);
+      if(cached)return cached;
+    }
+  }catch{}
+  return null;
+}
 async function putSafely(cache,request,response,limit,preserveCore=false){
   if(!cache||!response?.ok)return;
   try{
@@ -60,8 +76,13 @@ self.addEventListener("activate",event=>{
   event.waitUntil((async()=>{
     try{
       const keys=await caches.keys();
+      const current=await openCache(SHELL_CACHE);
+      // If installation could not cache even /app (e.g. storage full), keep
+      // the previous usable shell for offline rescue until a healthy update.
+      const hasNewShell=Boolean(await matchCached(current,"/app"));
       await Promise.allSettled(keys
-        .filter(key=>(key.startsWith("kiubo-shell-")||key.startsWith("kiubo-assets-"))&&key!==SHELL_CACHE&&key!==ASSET_CACHE)
+        .filter(key=>(key.startsWith("kiubo-assets-")&&key!==ASSET_CACHE)
+          ||(hasNewShell&&key.startsWith("kiubo-shell-")&&key!==SHELL_CACHE))
         .map(key=>caches.delete(key)));
     }catch{}
     // Never remove kiubo-data-*; it contains the recoverable offline database.
@@ -84,11 +105,11 @@ async function networkFirst(request,isNavigation=false){
     if(response?.ok)await putSafely(cache,request,response,MAX_SHELL_ENTRIES,true);
     return response;
   }catch{
-    const cached=await matchCached(cache,request);
+    const cached=await matchRecoverableShell(request);
     if(cached)return cached;
     if(isNavigation){
       for(const fallback of ["/app","/login","/"]){
-        const page=await matchCached(cache,fallback);
+        const page=await matchRecoverableShell(fallback);
         if(page)return page;
       }
     }
