@@ -2,7 +2,7 @@
 import { useEffect } from "react";
 
 const RECOVERY_KEY = "kiubo.bundle-recovery.v2";
-const SW_URL = "/sw.js?v=9";
+const SW_URL = "/sw.js?v=10";
 const CANONICAL_HOST = "kiubo-platform.vercel.app";
 
 function isKiuboPreviewHost(host: string) {
@@ -11,7 +11,9 @@ function isKiuboPreviewHost(host: string) {
 
 function isAssetFailure(value: unknown) {
   const message = value instanceof Error ? value.message : String(value ?? "");
-  return /ChunkLoadError|Loading chunk|dynamically imported module|CSS_CHUNK_LOAD_FAILED|page couldn't load|failed to fetch/i.test(message);
+  // A general fetch failure may be a temporary loss of connectivity. Keep
+  // the offline worker and database intact instead of unregistering it.
+  return /ChunkLoadError|Loading chunk|dynamically imported module|CSS_CHUNK_LOAD_FAILED|page couldn't load/i.test(message);
 }
 
 export function PwaRegister() {
@@ -47,6 +49,7 @@ export function PwaRegister() {
 
     const recoverFromStaleAssets = async () => {
       try {
+        if (!navigator.onLine) return;
         const alreadyRecovered = window.sessionStorage.getItem(RECOVERY_KEY) === "1";
         if (alreadyRecovered) return;
         window.sessionStorage.setItem(RECOVERY_KEY, "1");
