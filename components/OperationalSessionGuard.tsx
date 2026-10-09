@@ -19,21 +19,26 @@ export function OperationalSessionGuard(){
   const claimedKey=useRef("");
 
   const verify=useCallback(async(currentTenant:string,currentDevice:string)=>{
-    try{
-      const state=await heartbeatOperationalSession(currentTenant,currentDevice);
-      if(state.granted||state.bypassed)rememberOperationalLease(currentTenant,currentDevice);
-      if(!state.granted&&!state.bypassed)setConflict(state);
-      else setConflict(null);
-      return state;
-    }catch{
-      // Strict single-device mode cannot safely rely on a cached lease when
-      // network connectivity has been lost or another device may take over.
-      // Exclusivity cannot be established while offline: fail closed rather
-      // than allow a previous device to keep serving after a takeover.
-      const offline={granted:false,conflict:true,offline:true} satisfies OperationalSessionState;
-      setConflict(offline);
-      return offline;
+    // A single transient request timeout must not abruptly block a busy POS.
+    // Do not permit new transactions offline: operation push also has its own
+    // lease check, independent of this UI's heartbeat.
+    for(let attempt=0;attempt<2;attempt++){
+      try{
+        const state=await heartbeatOperationalSession(currentTenant,currentDevice);
+        if(state.granted||state.bypassed)rememberOperationalLease(currentTenant,currentDevice);
+        else forgetOperationalLease(currentTenant,currentDevice);
+        setConflict(state.granted||state.bypassed?null:state);
+        return state;
+      }catch{
+        if(attempt===0&&typeof navigator!=="undefined"&&navigator.onLine){
+          await new Promise(resolve=>window.setTimeout(resolve,700));
+          continue;
+        }
+      }
     }
+    const offline={granted:false,conflict:true,offline:true} satisfies OperationalSessionState;
+    setConflict(offline);
+    return offline;
   },[]);
 
   useEffect(()=>{
@@ -68,7 +73,11 @@ export function OperationalSessionGuard(){
     const timer=window.setInterval(()=>{if(!cancelled)void verify(tenant,device)},HEARTBEAT_MS);
     const onVisible=()=>{if(!cancelled&&document.visibilityState==="visible")void verify(tenant,device)};
     document.addEventListener("visibilitychange",onVisible);
-    return()=>{cancelled=true;window.clearInterval(timer);document.removeEventListener("visibilitychange",onVisible)};
+    const onOnline=()=>{if(!cancelled)void verify(tenant,device)};
+    const onLeaseBlocked=()=>{if(!cancelled)void verify(tenant,device)};
+    window.addEventListener("online",onOnline);
+    window.addEventListener("kiubo:operational-session-blocked",onLeaseBlocked);
+    return()=>{cancelled=true;window.clearInterval(timer);document.removeEventListener("visibilitychange",onVisible);window.removeEventListener("online",onOnline);window.removeEventListener("kiubo:operational-session-blocked",onLeaseBlocked)};
   },[path,verify]);
 
   useEffect(()=>{
@@ -116,7 +125,7 @@ export function OperationalSessionGuard(){
       {conflict.offline?<>
         <h2 id="kiubo-device-title">No se pudo validar este dispositivo</h2>
         <p>KIUBO necesita conexión para asegurar que esta caja no está activa en otro equipo. Sin conexión no puede garantizarse el bloqueo exclusivo.</p>
-        <p className={styles.hint}>Cuando vuelva la conexión, pulsa <strong>Reintentar</strong>. El sistema queda bloqueado hasta validar la sesión.</p>
+        <p className={styles.hint}>Los pedidos y cobros ya guardados se conservan. Al volver Internet, KIUBO intentará validar automáticamente esta caja; si continúa el aviso, pulsa <strong>Reintentar</strong>. No borres datos del navegador ni cambies de dispositivo con cobros sin sincronizar.</p>
       </>:<>
         <h2 id="kiubo-device-title">KIUBO ya está activo en otro dispositivo</h2>
         <p>Este negocio tiene <strong>un único dispositivo operativo</strong>, incluso si ingresan usuarios distintos. Para continuar aquí debes transferir el control; el equipo anterior quedará bloqueado al detectar el cambio.</p>
