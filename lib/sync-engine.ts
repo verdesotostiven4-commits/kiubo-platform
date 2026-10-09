@@ -1,7 +1,8 @@
 import { recoverRejectedCommand,shouldRecoverRejectedCommand } from "./command-recovery";
 import { getDataProvider,type KiuboDataProvider } from "./data-provider";
 import { enqueueCashTransaction } from "./finance-transaction";
-import { getSyncSummary,getWorkspaceContext,loadLocalDatabase,saveLocalDatabase,updateSyncOperation,type CashMovementRecord,type FoodOrderRecord } from "./local-store";
+import { getLocalDeviceId,getSyncSummary,getWorkspaceContext,loadLocalDatabase,saveLocalDatabase,updateSyncOperation,type CashMovementRecord,type FoodOrderRecord } from "./local-store";
+import { heartbeatOperationalSession } from "./operational-session";
 import { queueFoodOrder } from "./order-sync";
 import { getSupabaseBrowserClient } from "./supabase-browser";
 import type { SyncEntity,SyncPullResult,SyncPushResult,SyncQueueRecord } from "./sync-types";
@@ -173,6 +174,21 @@ async function runSyncCycleCore():Promise<SyncCycleResult>{
     const pulled=await pullAvailable(provider);persistPulled(provider,db,pulled);return{ok:waitingRetry.length===0&&!pulled.hasMore,mode:provider.mode,pushed:0,failed:waitingRetry.length,pulled:pulled.changes.length,hasMore:Boolean(pulled.hasMore),message:waitingRetry.length?`Hay ${waitingRetry.length} cambio${waitingRetry.length===1?"":"s"} protegido${waitingRetry.length===1?"":"s"}; KIUBO reintentará automáticamente`:pulled.hasMore?"KIUBO sigue poniéndose al día":pulled.changes.length?"Datos cloud actualizados":"Todo sincronizado"};
   }
 
+  // YUKI's register is licensed to one device. Before replaying ANY queued
+  // writes, make sure this browser still owns Cloud's operational lease.
+  // On lost connectivity or takeover we preserve every pending record; do
+  // not mark it failed/synced or push a stale sale into the other cashier's day.
+  if(activeTenantId==="8e2d0299-5680-4eec-8c57-e37fe29086aa"){
+    try{
+      const lease=await heartbeatOperationalSession(activeTenantId,getLocalDeviceId());
+      if(!lease.granted&&!lease.bypassed){
+        if(typeof window!=="undefined")window.dispatchEvent(new CustomEvent("kiubo:operational-session-blocked",{detail:{reason:"takeover"}}));
+        return{ok:false,mode:provider.mode,pushed:0,failed:0,pulled:0,message:"Este equipo perdió el control de YUKI. No se enviaron operaciones; revisa sus cambios pendientes antes de cambiar de caja."};
+      }
+    }catch{
+      return{ok:false,mode:provider.mode,pushed:0,failed:0,pulled:0,message:"No se pudo confirmar la caja autorizada. Los cobros pendientes están protegidos y se sincronizarán solo después de revalidar el dispositivo."};
+    }
+  }
   for(const item of pending)updateSyncOperation(item.operationId,"syncing");
   let results:SyncPushResult[];
   try{results=await provider.pushOperations(pending.map(safeOperation))}catch(error){const message=error instanceof Error?error.message:"No se pudo contactar al backend";for(const item of pending)updateSyncOperation(item.operationId,"failed",message);return{ok:false,mode:provider.mode,pushed:0,failed:pending.length,pulled:0,message}}
