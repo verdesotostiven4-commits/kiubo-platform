@@ -20,13 +20,19 @@ for(const needle of [
   assert.ok(migration.includes(needle),`operational lease migration missing: ${needle}`);
 }
 
+const nextMigration=text("supabase/migrations/20261009190000_tenant_operational_lease_v2.sql");
+for(const needle of ["tenant_operational_leases_v2","primary key references public.tenants(id)","claim_tenant_operational_session_v2","transfer_tenant_operational_session_v2","heartbeat_tenant_operational_session_v2","release_tenant_operational_session_v2","pg_advisory_xact_lock","on conflict(tenant_id)"]){
+  assert.ok(nextMigration.includes(needle),`tenant-wide lease migration missing: ${needle}`);
+}
+assert.ok(!nextMigration.includes("drop table"),"Tenant-wide lease must not delete legacy data");
+
 const client=text("lib/operational-session.ts");
-for(const needle of ["claim_operational_session_v1","transfer_operational_session_v1","heartbeat_operational_session_v1","release_operational_session_v1","operationalDeviceLabel"]){
+for(const needle of ["claim_tenant_operational_session_v2","transfer_tenant_operational_session_v2","heartbeat_tenant_operational_session_v2","release_tenant_operational_session_v2","operationalDeviceLabel"]){
   assert.ok(client.includes(needle),`operational session client missing: ${needle}`);
 }
 
 const guard=text("components/OperationalSessionGuard.tsx");
-for(const needle of ["ctx.user.platformAdmin","HEARTBEAT_MS=20_000","Usar KIUBO en este dispositivo","transferOperationalSession","heartbeatOperationalSession","tolerancia offline","claimedKey","if(checking&&!conflict)return null"]){
+for(const needle of ["ctx.user.platformAdmin","HEARTBEAT_MS=20_000","Usar KIUBO en este dispositivo","transferOperationalSession","heartbeatOperationalSession","mustClaim","setChecking(mustClaim)","Verificando dispositivo autorizado","fail closed"]){
   assert.ok(guard.includes(needle),`operational session guard missing: ${needle}`);
 }
 
@@ -36,4 +42,4 @@ assert.ok(chrome.includes("<OperationalSessionGuard/>"),"Operational device guar
 const auth=text("lib/auth-provider.ts");
 assert.ok(auth.includes("releaseOperationalSession"),"Explicit logout must release the current operational lease.");
 
-console.log("✓ Operational Session V1 passed: customer logins use one active operational device, explicit takeover is supported, and platform-admin preview is bypassed.");
+console.log("✓ Operational Session V2 passed: tenant-wide lease across accounts, heartbeat survives route changes, initial validation blocks writes.");
