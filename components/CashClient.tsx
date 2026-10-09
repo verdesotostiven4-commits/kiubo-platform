@@ -169,7 +169,7 @@ export function CashClient(){
         <div className={styles.cashDetailTotal}><span>Total efectivo válido</span><strong>${selectedCashTotal.toFixed(2)}</strong></div>
       </div>
       {cashToReview>0&&<p className={styles.transferWarning}>{cashToReview} cobro(s) en efectivo requieren revisión y no se incluyen en el total válido.</p>}
-      <h3 style={{margin:"14px 17px 0"}}>Movimientos por transferencia</h3>
+      <h3 style={{margin:"14px 17px 0"}}>Detalle de transacciones por transferencia</h3>
       {transferToReview>0&&<p className={styles.transferWarning}>{transferToReview} operación(es) requieren revisión del desglose y no se incluyen en el total confirmado.</p>}
       {transferDetailOpen&&<div className={styles.transferList}>
         {visibleTransfers.length===0?<p className="empty-cart">No existen transferencias registradas para este filtro.</p>:visibleTransfers.map(row=><div className={styles.transferRow} key={row.id}>
