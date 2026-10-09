@@ -9,7 +9,8 @@ const store=readFileSync("lib/local-store.ts","utf8");
 assert.match(original,/kiubo-shell-v10/);
 assert.match(pwa,/sw\.js\?v=10/);
 assert.ok(!/failed to fetch\/i\.test/.test(pwa),"Network drop must not clear a healthy offline worker");
-assert.ok(store.includes("next.syncQueue=[...synced,...active];"),"Pending operations cannot be truncated on busy offline days");
+assert.ok(store.includes("next.syncQueue=[...confirmed,...unsent];"),"Pending operations cannot be truncated on busy offline days");
+assert.ok(store.includes("compactAcknowledgedQueue(next);"),"Queue compaction must run even for Cloud sync saves without change tracking");
 
 function workerHarness(){
   const listeners={};
@@ -159,7 +160,17 @@ try{
   const restored=module.exports.loadLocalDatabase();
   assert.equal(restored.syncQueue.filter(x=>x.status==="pending").length,2150,"All unpaid/unsynced events must survive storage compaction");
   assert.equal(restored.syncQueue[0].operationId,"op-0","The oldest pending operation must survive");
-  console.log("✓ Offline queue: 2,150 unsynced operations retained, with no silent truncation");
+  // Cloud polling often persists with trackChanges:false. Acknowledged queue
+  // receipts must not accumulate forever, but unresolved writes always stay.
+  const large=module.exports.loadLocalDatabase();
+  large.syncQueue=[...Array.from({length:400},(_,i)=>({
+    ...large.syncQueue[0],id:"synced-"+i,operationId:"confirmed-"+i,status:"synced"
+  })),...large.syncQueue];
+  module.exports.saveLocalDatabase(large,{trackChanges:false});
+  const compact=module.exports.loadLocalDatabase();
+  assert.equal(compact.syncQueue.filter(x=>x.status==="synced").length,250,"Only the most recent Cloud-acknowledged receipts are needed locally");
+  assert.equal(compact.syncQueue.filter(x=>x.status==="pending").length,2150,"All unsent events survive Cloud polling compaction");
+  console.log("✓ Offline queue: 2,150 unsynced events retained; 400 confirmed receipts compact to 250");
 }finally{
   if(priorWindow===undefined)delete globalThis.window;
   else globalThis.window=priorWindow;
