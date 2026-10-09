@@ -55,12 +55,17 @@ declare
     'apply_purchase_transactions_v3',
     'apply_inventory_adjustments_v2'
   ];
+  -- Abort rather than blindly rewrite a newer, unreviewed production function.
+  v_expected jsonb:='{"apply_sync_operations":"89c401ebc665a258bad9c18fab6ca1fd","apply_sale_transactions_v2":"304542aabedb53616df4d3c6276cc399","apply_finance_transactions_v2":"de48e756f6538fad4ec385501feff422","apply_sale_reversals_v1":"842600b77ec9aa381ff66079b67ea664","apply_purchase_transactions_v3":"d2129d42518a7aa3ed49dd70efc49843","apply_inventory_adjustments_v2":"d9cd60ecdf4f4a857c99f82b87f84e61"}'::jsonb;
 begin
   foreach v_name in array v_targets loop
     v_fn:=to_regprocedure('public.'||v_name||'(jsonb)');
     if v_fn is null then raise exception 'Missing expected Cloud writer: %',v_name; end if;
     select pg_get_functiondef(v_fn) into v_definition;
     if position('kiubo_assert_yuki_device_batch_v3' in v_definition)>0 then continue; end if;
+    if md5(v_definition) is distinct from v_expected->>v_name then
+      raise exception 'Cloud writer % has changed; require a fresh review before enabling device gate',v_name;
+    end if;
     -- PostgreSQL plpgsql body has an outer BEGIN before any inner BEGIN.
     v_replaced:=regexp_replace(v_definition,E'\\mbegin\\M',
       E'begin\n  PERFORM public.kiubo_assert_yuki_device_batch_v3(p_operations);','i');
