@@ -19,6 +19,13 @@ export function OperationalSessionGuard(){
   const claimedKey=useRef("");
 
   const verify=useCallback(async(currentTenant:string,currentDevice:string)=>{
+    // The browser can become disconnected between heartbeat ticks. Immediately
+    // show a reconnecting barrier: no cashier actions during an unknown lease.
+    if(typeof navigator!=="undefined"&&!navigator.onLine){
+      const disconnected={granted:false,conflict:true,offline:true} satisfies OperationalSessionState;
+      setConflict(disconnected);
+      return disconnected;
+    }
     // A single transient request timeout must not abruptly block a busy POS.
     // Do not permit new transactions offline: operation push also has its own
     // lease check, independent of this UI's heartbeat.
@@ -75,10 +82,12 @@ export function OperationalSessionGuard(){
     const onVisible=()=>{if(!cancelled&&document.visibilityState==="visible")void verify(tenant,device)};
     document.addEventListener("visibilitychange",onVisible);
     const onOnline=()=>{if(!cancelled)void verify(tenant,device)};
+    const onOffline=()=>{if(!cancelled)setConflict({granted:false,conflict:true,offline:true})};
     const onLeaseBlocked=()=>{if(!cancelled)void verify(tenant,device)};
+    window.addEventListener("offline",onOffline);
     window.addEventListener("online",onOnline);
     window.addEventListener("kiubo:operational-session-blocked",onLeaseBlocked);
-    return()=>{cancelled=true;window.clearInterval(timer);document.removeEventListener("visibilitychange",onVisible);window.removeEventListener("online",onOnline);window.removeEventListener("kiubo:operational-session-blocked",onLeaseBlocked)};
+    return()=>{cancelled=true;window.clearInterval(timer);document.removeEventListener("visibilitychange",onVisible);window.removeEventListener("offline",onOffline);window.removeEventListener("online",onOnline);window.removeEventListener("kiubo:operational-session-blocked",onLeaseBlocked)};
   },[path,verify]);
 
   useEffect(()=>{
@@ -124,8 +133,8 @@ export function OperationalSessionGuard(){
       <div className={styles.icon}>K</div>
       <span className={styles.kicker}>SESIÓN OPERATIVA</span>
       {conflict.offline?<>
-        <h2 id="kiubo-device-title">No se pudo validar este dispositivo</h2>
-        <p>KIUBO necesita conexión para asegurar que esta caja no está activa en otro equipo. Sin conexión no puede garantizarse el bloqueo exclusivo.</p>
+        <h2 id="kiubo-device-title">Reconectando con KIUBO Cloud…</h2>
+        <p>Por seguridad, la caja funciona con Internet. No se pueden registrar nuevos cobros ni cambiar de dispositivo hasta verificar de nuevo la conexión.</p>
         <p className={styles.hint}>Los pedidos y cobros ya guardados se conservan. Al volver Internet, KIUBO intentará validar automáticamente esta caja; si continúa el aviso, pulsa <strong>Reintentar</strong>. No borres datos del navegador ni cambies de dispositivo con cobros sin sincronizar.</p>
       </>:<>
         <h2 id="kiubo-device-title">KIUBO ya está activo en otro dispositivo</h2>
