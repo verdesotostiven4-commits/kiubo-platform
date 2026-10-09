@@ -3,7 +3,7 @@
 import { useCallback,useEffect,useRef,useState } from "react";
 import { usePathname } from "next/navigation";
 import { getLocalDeviceId,getWorkspaceContext,loadLocalDatabase } from "@/lib/local-store";
-import { claimOperationalSession,heartbeatOperationalSession,rememberOperationalLease,hasRecentOfflineLease,transferOperationalSession,type OperationalSessionState } from "@/lib/operational-session";
+import { claimOperationalSession,heartbeatOperationalSession,rememberOperationalLease,forgetOperationalLease,transferOperationalSession,type OperationalSessionState } from "@/lib/operational-session";
 import styles from "./OperationalSessionGuard.module.css";
 
 const HEARTBEAT_MS=20_000;
@@ -26,15 +26,10 @@ export function OperationalSessionGuard(){
       else setConflict(null);
       return state;
     }catch{
-      // La tolerancia offline permite que un dispositivo que ya tenía la
-      // sesión Cloud validada termine su jornada durante una caída temporal.
-      // A device that already owned the Cloud lease may finish its current
-      // shift during a temporary outage. A new browser/device still fails
-      // closed until it can claim the lease online.
-      if(hasRecentOfflineLease(currentTenant,currentDevice)){
-        setConflict(null);
-        return{granted:true,offline:true} satisfies OperationalSessionState;
-      }
+      // Strict single-device mode cannot safely rely on a cached lease when
+      // network connectivity has been lost or another device may take over.
+      // Exclusivity cannot be established while offline: fail closed rather
+      // than allow a previous device to keep serving after a takeover.
       const offline={granted:false,conflict:true,offline:true} satisfies OperationalSessionState;
       setConflict(offline);
       return offline;
@@ -48,21 +43,23 @@ export function OperationalSessionGuard(){
     if(!ctx.user||ctx.user.platformAdmin||ctx.tenant?.plan==="Internal"){setChecking(false);setConflict(null);return}
 
     const tenant=ctx.tenantId,device=getLocalDeviceId();
-    const key=`${tenant}:${device}`;
-    // Route navigation must not reclaim the same operational session. The
-    // guard stays mounted while moving between Inicio, Ventas and Caja.
-    if(claimedKey.current===key){setChecking(false);return}
+    const key=`${tenant}:${ctx.user.id}:${device}`;
+    // Navigation must preserve the heartbeat. Previously this early return
+    // silently disabled cross-device enforcement after the first route change.
+    const mustClaim=claimedKey.current!==key;
     claimedKey.current=key;
-    setTenantId(tenant);setDeviceId(device);setChecking(true);
+    setTenantId(tenant);setDeviceId(device);
+    setChecking(mustClaim);
 
     void(async()=>{
       try{
-        const state=await claimOperationalSession(tenant,device);
+        const state=mustClaim?await claimOperationalSession(tenant,device):await heartbeatOperationalSession(tenant,device);
         if(cancelled)return;
         if(state.granted||state.bypassed)rememberOperationalLease(tenant,device);
+        else forgetOperationalLease(tenant,device);
         setConflict(!state.granted&&!state.bypassed?state:null);
       }catch{
-        if(!cancelled)setConflict(hasRecentOfflineLease(tenant,device)?null:{granted:false,conflict:true,offline:true});
+        if(!cancelled)setConflict({granted:false,conflict:true,offline:true});
       }finally{
         if(!cancelled)setChecking(false);
       }
@@ -106,7 +103,10 @@ export function OperationalSessionGuard(){
   // The initial claim runs in the background. Showing a full-screen loader on
   // every route change made the POS feel blocked even when validation was
   // already succeeding. A real conflict still renders the blocking dialog.
-  if(checking&&!conflict)return null;
+  if(checking&&!conflict)return <div className={styles.backdrop} role="status" aria-live="polite">
+    <section className={styles.card}><div className={styles.icon}>K</div><h2>Verificando dispositivo autorizado…</h2>
+      <p>Confirmando que esta caja no esté activa en otro dispositivo.</p></section>
+  </div>;
   if(!conflict)return null;
 
   return <div className={styles.backdrop} role="presentation">
@@ -115,11 +115,11 @@ export function OperationalSessionGuard(){
       <span className={styles.kicker}>SESIÓN OPERATIVA</span>
       {conflict.offline?<>
         <h2 id="kiubo-device-title">No se pudo validar este dispositivo</h2>
-        <p>KIUBO necesita conexión con el servidor para confirmar que esta cuenta no esté activa en otro equipo.</p>
+        <p>KIUBO necesita conexión para asegurar que esta caja no está activa en otro equipo. Sin conexión no puede garantizarse el bloqueo exclusivo.</p>
         <p className={styles.hint}>Cuando vuelva la conexión, pulsa <strong>Reintentar</strong>. El sistema queda bloqueado hasta validar la sesión.</p>
       </>:<>
         <h2 id="kiubo-device-title">KIUBO ya está activo en otro dispositivo</h2>
-        <p>Este acceso puede trabajar operativamente en <strong>un dispositivo a la vez</strong>. Así evitamos pedidos, caja o mesas duplicadas con la misma cuenta.</p>
+        <p>Este negocio tiene <strong>un único dispositivo operativo</strong>, incluso si ingresan usuarios distintos. Para continuar aquí debes transferir el control; el equipo anterior quedará bloqueado al detectar el cambio.</p>
         <div className={styles.device}>
           <span>Dispositivo activo</span>
           <strong>{conflict.activeDeviceLabel||"Otro dispositivo"}</strong>
