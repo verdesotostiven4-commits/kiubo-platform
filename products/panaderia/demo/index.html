@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#18233a">
+  <meta name="description" content="Demostración interactiva de KIUBO Panadería. No procesa dinero real.">
+  <title>KIUBO Panadería · Demostración</title>
+  <link rel="stylesheet" href="./styles.css">
+  <script src="./app.js" defer></script>
+</head>
+<body>
+  <div class="shell">
+    <aside class="sidebar">
+      <div class="brand">
+        <div class="brand-mark" aria-hidden="true">K<span>.</span></div>
+        <div class="brand-words"><strong>KIUBO</strong><small>EDICIÓN PANADERÍA</small></div>
+      </div>
+      <div class="store-identity">
+        <div class="store-illustration" aria-hidden="true">🥐</div>
+        <div><span class="micro-label">NEGOCIO DE MUESTRA</span><strong>Panadería Demo</strong><small>Una sucursal · una caja</small></div>
+      </div>
+      <div class="sidebar-heading">GESTIÓN DEL NEGOCIO</div>
+      <nav class="navigation" aria-label="Menú principal">
+        <button type="button" data-page="resumen" class="nav-link active"><span class="nav-icon">◫</span> Resumen</button>
+        <button type="button" data-page="ventas" class="nav-link"><span class="nav-icon">▦</span> Punto de venta</button>
+        <button type="button" data-page="productos" class="nav-link"><span class="nav-icon">◈</span> Productos</button>
+        <button type="button" data-page="caja" class="nav-link"><span class="nav-icon">◉</span> Caja y gastos</button>
+        <button type="button" data-page="reportes" class="nav-link"><span class="nav-icon">↗</span> Reportes</button>
+      </nav>
+      <div class="sidebar-bottom"><div class="secure-badge"><span class="status-dot"></span> Entorno de demostración</div><p>Los cobros aquí son ficticios. No hay conexión a banco, SRI ni base de datos real.</p></div>
+    </aside>
+    <main class="main">
+      <header class="topbar"><div class="breadcrumbs">KIUBO <span>/</span> Panadería <span>/</span> <b id="crumb">Resumen</b></div><div class="top-actions"><span class="pill-demo">● SOLO DEMO</span><span class="avatar">AD</span></div></header>
+      <div id="app-view" class="page-content" aria-live="polite"></div>
+      <footer class="footer">KIUBO Panadería · Prototipo sin datos reales · La información se reinicia al actualizar la página.</footer>
+    </main>
+  </div>
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+  <div id="modal-root"></div>
+</body>
+</html>
