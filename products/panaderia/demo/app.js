@@ -282,7 +282,8 @@
       '<div class="ticket-row"><span>Transferencia</span><span>' + fmt(sale.transferPaid) + '</span></div>' +
       '<div class="ticket-row"><span>Cambio entregado</span><span>' + fmt(sale.change) + '</span></div></div>' +
       '<p>Esta operación existe únicamente en la simulación actual.</p>' +
-      '<div class="form-actions">' + btn('Cerrar', 'close-modal') + btn('Imprimir DEMO', 'print', 'btn-primary') +
+      '<p class="fineprint">Resumen solo en pantalla. Por ahora no se necesita impresora de tickets.</p>' +
+      '<div class="form-actions">' + btn('Aceptar y seguir vendiendo', 'close-modal', 'btn-primary') +
       '</div></div></div>';
   }
   function checkout() {
@@ -407,7 +408,7 @@
   modalRoot.addEventListener('click', function (e) {
     const button = e.target.closest('[data-action]');
     if (button?.dataset.action === 'close-modal' || e.target.classList.contains('modal-overlay')) modalRoot.innerHTML = '';
-    if (button?.dataset.action === 'print') window.print();
+
   });
   document.addEventListener('keydown', function (e) {
     if (e.key === 'Escape') modalRoot.innerHTML = '';
