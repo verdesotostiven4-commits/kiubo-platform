@@ -59,12 +59,18 @@ function submit(id,values){
 }
 
 assert.match(view.innerHTML,/Bienvenida a tu panadería/,"Dashboard renders");
-assert.match(view.innerHTML,/demostración con datos inventados/,"Never imply real financial data");
+assert.match(view.innerHTML,/Catálogo y precios tomados de las fotos enviadas/,"Catalog grounded in client photos");
+assert.match(view.innerHTML,/Las existencias, ventas y pagos son ficticios/,"Never imply real financial data");
 
 navigate("ventas");
 assert.match(view.innerHTML,/Aplanchados/);
 assert.match(view.innerHTML,/Mini melvas/);
 assert.match(view.innerHTML,/Torta de chocolate \(\$1\.50\)/);
+assert.match(view.innerHTML,/Melvas \(envase\)/);
+assert.match(view.innerHTML,/Melvas \(unidad\)/);
+assert.match(view.innerHTML,/Suspiros \(envase\)/);
+assert.match(view.innerHTML,/Suspiros \(unidad\)/);
+assert.match(view.innerHTML,/Aplanchados/);
 click("add","p16");click("add","p16");
 assert.match(view.innerHTML,/0[,.]50/,"Integer-cent cart math: two 25-cent aplanchados = 50 cents");
 click("checkout");
