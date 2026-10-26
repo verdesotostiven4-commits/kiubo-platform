@@ -1,5 +1,5 @@
 /* Static DEMO shell only. Never cache actual money, credentials or API responses. */
-const CACHE = "kiubo-panaderia-demo-v2";
+const CACHE = "kiubo-panaderia-demo-v3";
 const FILES = ["./","./index.html","./styles.css","./app.js","./icon.svg","./manifest.webmanifest"];
 self.addEventListener("install", event => {
   event.waitUntil(caches.open(CACHE).then(cache => cache.addAll(FILES)).then(() => self.skipWaiting()));
