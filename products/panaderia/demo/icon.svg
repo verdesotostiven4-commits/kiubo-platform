@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-labelledby="t">
+  <title id="t">KIUBO Panadería</title>
+  <defs>
+    <linearGradient id="bg" x1="0" x2="1" y1="0" y2="1">
+      <stop offset="0" stop-color="#ffb575"/>
+      <stop offset="1" stop-color="#eb7c63"/>
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" rx="110" fill="#17243b"/>
+  <path d="M100 360 204 150h84L183 360zm150-101 88-109h80l-100 122 103 88h-100l-96-83z" fill="url(#bg)"/>
+  <circle cx="396" cy="358" r="29" fill="#ffbd82"/>
+</svg>
