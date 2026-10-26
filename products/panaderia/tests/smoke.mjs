@@ -76,6 +76,8 @@ assert.match(view.innerHTML,/0[,.]50/,"Integer-cent cart math: two 25-cent aplan
 click("checkout");
 assert.match(modal.innerHTML,/Venta #0001/,"Receipt generated");
 assert.match(modal.innerHTML,/No válido como factura/,"Not a fiscal invoice");
+assert.match(modal.innerHTML,/Por ahora no se necesita impresora/,"Print device is optional");
+assert.doesNotMatch(modal.innerHTML,/data-action="print"/,"No printer setup in the initial demo");
 assert.match(modal.innerHTML,/0[,.]50/,"Receipt total preserved");
 click("checkout");
 assert.match(toast.textContent,/Agrega productos/,"Double-click cannot duplicate a sale");
