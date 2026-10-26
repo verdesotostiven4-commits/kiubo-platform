@@ -19,7 +19,7 @@
 ## MVP dirigido a una panadería pequeña
 
 1. Catálogo: producto, unidad/presentación, precio en centavos, stock de producto terminado (opcional), estado.
-2. POS: carrito rápido, venta en efectivo, transferencia o mixta, recibo simple sin valor tributario, anulaciones controladas.
+2. POS: carrito rápido, venta en efectivo, transferencia o mixta, resumen en pantalla sin valor tributario, anulaciones controladas.
 3. Caja: apertura/cierre, efectivo esperado, transferencias recibidas, gastos/egresos.
 4. Reportes: ventas cobradas, medios de pago, productos vendidos, gastos y diferencias de caja. Utilidad solo cuando existan costos fiables.
 5. Configuración: identidad gráfica, nombre, contacto, zona horaria Ecuador continental.
