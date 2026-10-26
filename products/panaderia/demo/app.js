@@ -5,19 +5,29 @@
   const toastBox = document.getElementById('toast');
   const modalRoot = document.getElementById('modal-root');
   const money = new Intl.NumberFormat('es-EC', { style: 'currency', currency: 'USD' });
+  // Catálogo obtenido de las fotografías y precios compartidos por la clienta.
+  // Stock 50: solo disponibilidad FICTICIA de la demo, NO inventario real.
+  // Los mismos nombres con distinto precio son presentaciones PENDIENTES de confirmar.
   const seed = [
-    ['p01', 'Pan de agua', 'Panes', 25, 130, 'unidad', '🥖'],
-    ['p02', 'Pan dulce', 'Panes', 35, 70, 'unidad', '🥐'],
-    ['p03', 'Pan integral', 'Panes', 45, 44, 'unidad', '🍞'],
-    ['p04', 'Pan de yuca', 'Panes', 60, 86, 'unidad', '🫓'],
-    ['p05', 'Croissant', 'Pastelería', 125, 28, 'unidad', '🥐'],
-    ['p06', 'Porción de torta', 'Pastelería', 220, 12, 'porción', '🍰'],
-    ['p07', 'Galletas', 'Pastelería', 85, 52, 'unidad', '🍪'],
-    ['p08', 'Cupcake', 'Pastelería', 150, 19, 'unidad', '🧁'],
-    ['p09', 'Café americano', 'Bebidas', 120, 80, 'vaso', '☕'],
-    ['p10', 'Chocolate caliente', 'Bebidas', 170, 65, 'vaso', '🍫'],
-    ['p11', 'Jugo natural', 'Bebidas', 180, 35, 'vaso', '🧃'],
-    ['p12', 'Agua', 'Bebidas', 75, 50, 'botella', '💧']
+    ['p01','Biscochito','Envasados',200,50,'envase','🍪'],
+    ['p02','Roquistas','Envasados',100,50,'funda','🥯'],
+    ['p03','Melvas (envase)','Envasados',200,50,'envase','🥠'],
+    ['p04','Suspiros (envase)','Envasados',200,50,'envase','🧁'],
+    ['p05','Melvas (unidad)','Repostería',50,50,'unidad','🥠'],
+    ['p06','Cabezotes','Repostería',100,50,'unidad','🍰'],
+    ['p07','Mini melvas','Repostería',34,50,'unidad','🥠'],
+    ['p08','Suspiros (unidad)','Repostería',50,50,'unidad','🧁'],
+    ['p09','Chicharrones de piña','Hojaldres',50,50,'unidad','🥐'],
+    ['p10','Pañuelos minis','Hojaldres',50,50,'unidad','🥐'],
+    ['p11','Galletas','Repostería',50,50,'unidad','🍪'],
+    ['p12','Hoy dog de manjar','Hojaldres',100,50,'unidad','🥖'],
+    ['p13','Orejitas','Hojaldres',100,50,'unidad','🥨'],
+    ['p14','Torta de chocolate ($1)','Tortas y porciones',100,50,'porción','🍫'],
+    ['p15','Donas','Repostería',100,50,'unidad','🍩'],
+    ['p16','Aplanchados','Hojaldres',25,50,'unidad','🥮'],
+    ['p17','Brownie de chocolate','Tortas y porciones',50,50,'unidad','🍫'],
+    ['p18','Queso de leche','Tortas y porciones',300,50,'porción','🍮'],
+    ['p19','Torta de chocolate ($1.50)','Tortas y porciones',150,50,'porción','🍰']
   ];
   const state = {
     page: 'resumen', search: '', category: 'Todos', method: 'efectivo',
@@ -160,7 +170,7 @@
       return (state.category === 'Todos' || p.category === state.category) &&
         p.name.toLowerCase().includes(state.search.toLowerCase());
     });
-    return heading('Ventas rápidas', 'Punto de venta', 'Selecciona productos y realiza una venta ficticia en segundos.',
+    return heading('Ventas rápidas', 'Punto de venta', 'Catálogo recibido de la panadería · F2 para buscar productos · Las existencias son ficticias.',
       btn('Limpiar carrito', 'clear-cart', 'btn')) + demoWarning() +
       '<div class="pos-layout"><div><div class="product-tools"><input class="search-input" id="product-search" placeholder="Buscar pan, torta, café…" aria-label="Buscar productos" value="' +
       esc(state.search) + '"></div><div class="category-list">' + cats.map(function (cat) {
@@ -401,6 +411,12 @@
   });
   document.addEventListener('keydown', function (e) {
     if (e.key === 'Escape') modalRoot.innerHTML = '';
+    if (e.key === 'F2') {
+      e.preventDefault();
+      if (state.page !== 'ventas') actionOpenPage('ventas');
+      const field = document.getElementById('product-search');
+      if (field) field.focus();
+    }
   });
   render();
 })();
