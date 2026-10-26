@@ -62,9 +62,11 @@ assert.match(view.innerHTML,/Bienvenida a tu panadería/,"Dashboard renders");
 assert.match(view.innerHTML,/demostración con datos inventados/,"Never imply real financial data");
 
 navigate("ventas");
-assert.match(view.innerHTML,/Pan de agua/);
-click("add","p01");click("add","p01");
-assert.match(view.innerHTML,/0[,.]50/,"Integer-cent cart math: two 25-cent breads = 50 cents");
+assert.match(view.innerHTML,/Aplanchados/);
+assert.match(view.innerHTML,/Mini melvas/);
+assert.match(view.innerHTML,/Torta de chocolate \(\$1\.50\)/);
+click("add","p16");click("add","p16");
+assert.match(view.innerHTML,/0[,.]50/,"Integer-cent cart math: two 25-cent aplanchados = 50 cents");
 click("checkout");
 assert.match(modal.innerHTML,/Venta #0001/,"Receipt generated");
 assert.match(modal.innerHTML,/No válido como factura/,"Not a fiscal invoice");
@@ -75,7 +77,7 @@ assert.match(toast.textContent,/Agrega productos/,"Double-click cannot duplicate
 navigate("resumen");
 assert.match(view.innerHTML,/1 comprobantes de muestra/,"One sale only");
 navigate("productos");
-assert.match(view.innerHTML,/128/,"Stock is reduced exactly two units");
+assert.match(view.innerHTML,/Aplanchados<\/strong>.*?<td>48<\/td>/s,"Stock of aplanchados decreases exactly two units");
 
 submit("new-product",{name:"<script>alert(1)</script>",price:"0.50",stock:"3",category:"Panes"});
 assert.doesNotMatch(view.innerHTML,/<script>alert\(1\)<\/script>/,"Never render user HTML unescaped");
@@ -86,11 +88,25 @@ submit("new-expense",{reason:"Servilletas",amount:"1.00"});
 assert.match(view.innerHTML,/Servilletas/,"Expense recorded in demo");
 submit("close-cash",{counted:"29.50"});
 assert.match(view.innerHTML,/CERRADA/,"Cash close recorded");
-navigate("ventas");click("add","p01");
+navigate("ventas");click("add","p16");
 assert.match(toast.textContent,/Primero abre la caja/,"Checkout from closed register blocked");
 
 navigate("reportes");
 assert.match(view.innerHTML,/Servilletas|Egresos anotados/,"Dynamic reports render");
+
+// A second sale verifies that the unusual $0.34 price stays exact in cents.
+navigate("caja");click("open-cash");
+navigate("ventas");
+click("add","p07");click("add","p07");click("add","p07");
+assert.match(view.innerHTML,/1[,.]02/,"Three $0.34 mini melvas total exactly $1.02");
+fields.received.value="1.02";
+click("checkout");
+assert.match(modal.innerHTML,/Venta #0002/,"Second transaction created");
+assert.match(modal.innerHTML,/1[,.]02/,"Exact fractional cents preserved in receipt");
+
+navigate("productos");
+assert.match(view.innerHTML,/Mini melvas<\/strong>.*?<td>47<\/td>/s,"Stock of mini melvas decreases only for recorded sales");
+
 assert.doesNotMatch(source,/localStorage\.setItem|indexedDB\.open|service_role|supabase\.from\(/i,
   "Demo never writes real customer money to the browser or cloud");
 console.log("KIUBO Panadería: 15 simulation, HTML safety, financial-demo and isolation checks passed");
