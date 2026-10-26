@@ -19,7 +19,7 @@ El listado editable está en `../catalogo-recibido-2026-10-26.csv`.
 2. Extraer el ZIP; entrar a `products/panaderia/demo/`.
 3. Abrir `index.html` con Microsoft Edge o Google Chrome, en pantalla grande.
 4. Usar **Punto de venta** para simular la compra; presionar **F2** para buscar productos.
-5. Probar efectivo, transferencia y mixto, imprimir un **recibo de muestra**, revisar **Caja y gastos** y **Reportes**.
+5. Probar efectivo, transferencia y mixto, revisar el **resumen de venta en pantalla** (sin impresión), **Caja y gastos** y **Reportes**.
 6. Para reiniciar la demo, recargar la página: por diseño no guarda pagos ficticios.
 
 No usar la demo como caja comercial, factura válida del SRI ni base de datos. No guarda datos reales.
@@ -31,7 +31,7 @@ No usar la demo como caja comercial, factura válida del SRI ni base de datos. N
 3. Crear acceso directo en escritorio/barra de tareas si se desea.
 4. Al abrirla, se verá en su propia ventana sin barra de navegación.
 
-El manifiesto e icono SVG de la demo son preparatorios; la instalabilidad y la impresión en equipos reales quedan por probar **después de publicar en HTTPS**, preferiblemente con iconos PNG de 192/512 píxeles, validación de service worker y navegador objetivo.
+El manifiesto e icono SVG de la demo son preparatorios. La instalación en Windows requiere publicar en HTTPS y probar Chrome/Edge en la computadora real. **No incluimos impresora en esta etapa.**
 
 ## Diseño para venta real
 
