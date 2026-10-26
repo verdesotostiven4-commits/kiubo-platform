@@ -6,8 +6,19 @@
   <meta name="theme-color" content="#18233a">
   <meta name="description" content="Demostración interactiva de KIUBO Panadería. No procesa dinero real.">
   <title>KIUBO Panadería · Demostración</title>
+  <link rel="manifest" href="./manifest.webmanifest">
+  <link rel="icon" type="image/svg+xml" href="./icon.svg">
   <link rel="stylesheet" href="./styles.css">
   <script src="./app.js" defer></script>
+  <script>
+    // Installing as a desktop PWA requires HTTPS. Local file:// remains a simple preview.
+    if (location.protocol === "https:" && "serviceWorker" in navigator) {
+      addEventListener("load", () => {
+        navigator.serviceWorker.register("./sw.js")
+          .catch(error => console.warn("KIUBO Panadería demo worker:", error));
+      });
+    }
+  </script>
 </head>
 <body>
   <div class="shell">
@@ -33,7 +44,7 @@
     <main class="main">
       <header class="topbar"><div class="breadcrumbs">KIUBO <span>/</span> Panadería <span>/</span> <b id="crumb">Resumen</b></div><div class="top-actions"><span class="pill-demo">● SOLO DEMO</span><span class="avatar">AD</span></div></header>
       <div id="app-view" class="page-content" aria-live="polite"></div>
-      <footer class="footer">KIUBO Panadería · Prototipo sin datos reales · La información se reinicia al actualizar la página.</footer>
+      <footer class="footer">KIUBO Panadería · Precios de las fotos · Existencias y cobros de DEMO · No usar como caja real.</footer>
     </main>
   </div>
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
