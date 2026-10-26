@@ -88,7 +88,7 @@
     render();
   }
   function demoWarning() {
-    return '<div class="warning">Esta es una <b>demostración con datos inventados</b>. No procesa pagos reales, no emite facturas SRI y todos los cambios desaparecen al actualizar la página.</div>';
+    return '<div class="warning"><b>Catálogo y precios tomados de las fotos enviadas.</b> Las existencias, ventas y pagos son ficticios. No emite facturas SRI y los cambios desaparecen al actualizar la página. Presentaciones repetidas pendientes de confirmar.</div>';
   }
   function saleTable(rows) {
     if (!rows.length) return '<div class="empty">Todavía no hay ventas de muestra.<br>Registra una desde Punto de venta.</div>';
@@ -170,7 +170,7 @@
       return (state.category === 'Todos' || p.category === state.category) &&
         p.name.toLowerCase().includes(state.search.toLowerCase());
     });
-    return heading('Ventas rápidas', 'Punto de venta', 'Catálogo recibido de la panadería · F2 para buscar productos · Las existencias son ficticias.',
+    return heading('Ventas rápidas', 'Punto de venta', 'Usa F2 para buscar rápidamente · Los precios son los proporcionados · Las existencias son ficticias.',
       btn('Limpiar carrito', 'clear-cart', 'btn')) + demoWarning() +
       '<div class="pos-layout"><div><div class="product-tools"><input class="search-input" id="product-search" placeholder="Buscar pan, torta, café…" aria-label="Buscar productos" value="' +
       esc(state.search) + '"></div><div class="category-list">' + cats.map(function (cat) {
