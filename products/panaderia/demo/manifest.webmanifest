@@ -1,0 +1,19 @@
+{
+  "name": "KIUBO Panadería · DEMO",
+  "short_name": "KIUBO Panadería",
+  "description": "Demostración ficticia de caja, ventas, productos y reportes de una panadería",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#f6f7fa",
+  "theme_color": "#17243b",
+  "lang": "es-EC",
+  "icons": [
+    {
+      "src": "./icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ]
+}
