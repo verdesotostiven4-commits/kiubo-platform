@@ -3,9 +3,9 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="theme-color" content="#18233a">
-  <meta name="description" content="Demostración interactiva de KIUBO Panadería. No procesa dinero real.">
-  <title>KIUBO Panadería · Demostración</title>
+  <meta name="theme-color" content="#4c2d21">
+  <meta name="description" content="Demostración interactiva para DeliScias Galapagueñas con la tecnología de KIUBO. No procesa dinero real.">
+  <title>DeliScias Galapagueñas · KIUBO DEMO</title>
   <link rel="manifest" href="./manifest.webmanifest">
   <link rel="icon" type="image/svg+xml" href="./icon.svg">
   <link rel="stylesheet" href="./styles.css">
@@ -27,9 +27,13 @@
         <div class="brand-mark" aria-hidden="true">K<span>.</span></div>
         <div class="brand-words"><strong>KIUBO</strong><small>EDICIÓN PANADERÍA</small></div>
       </div>
-      <div class="store-identity">
-        <div class="store-illustration" aria-hidden="true">🥐</div>
-        <div><span class="micro-label">NEGOCIO DE MUESTRA</span><strong>Panadería Demo</strong><small>Una sucursal · una caja</small></div>
+      <div class="store-identity store-identity--deliscias">
+        <div class="store-visual">
+          <img class="store-logo" src="https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEhHSMJEnPCGaZ-iRzZo3QBuwuL_uck43LhuoObatgimafYIVHljjxCQEZVxQ5sCCgGPoMuYmZHUgn8-8o8rzc9msVbUP2oZm6m0_NDVcNUgKD0RzMExXdLtUXdb1rxuZkDBE85yR_9qpNDYputW7SKy6BwciqOg-ZJlZSxsVdm3t49SPMxYA0YKyo_iTHk/s1600/image.png" alt="Logotipo de DeliScias Galapagueñas" loading="eager" decoding="async"
+               onerror="this.hidden=true; this.nextElementSibling.hidden=false;">
+          <span class="store-logo-fallback" hidden>DeliScias<br><small>GALAPAGUEÑAS</small></span>
+        </div>
+        <div class="store-identity-copy"><span class="micro-label">PANADERÍA Y PASTELERÍA</span><strong>DeliScias Galapagueñas</strong><small>Una sucursal · una caja de demostración</small></div>
       </div>
       <div class="sidebar-heading">GESTIÓN DEL NEGOCIO</div>
       <nav class="navigation" aria-label="Menú principal">
@@ -42,9 +46,9 @@
       <div class="sidebar-bottom"><div class="secure-badge"><span class="status-dot"></span> Entorno de demostración</div><p>Los cobros aquí son ficticios. No hay conexión a banco, SRI ni base de datos real.</p></div>
     </aside>
     <main class="main">
-      <header class="topbar"><div class="breadcrumbs">KIUBO <span>/</span> Panadería <span>/</span> <b id="crumb">Resumen</b></div><div class="top-actions"><span class="pill-demo">● SOLO DEMO</span><span class="avatar">AD</span></div></header>
+      <header class="topbar"><div class="breadcrumbs">KIUBO <span>/</span> DeliScias <span>/</span> <b id="crumb">Resumen</b></div><div class="top-actions"><span class="pill-demo">● SOLO DEMO</span><span class="avatar">AD</span></div></header>
       <div id="app-view" class="page-content" aria-live="polite"></div>
-      <footer class="footer">KIUBO Panadería · Precios de las fotos · Existencias y cobros de DEMO · No usar como caja real.</footer>
+      <footer class="footer">DeliScias Galapagueñas · Tecnología KIUBO · Precios reales, operaciones ficticias · No usar como caja real.</footer>
     </main>
   </div>
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
