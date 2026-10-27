@@ -89,3 +89,17 @@ body{background:#fbf7f1}
 .modal h2{color:#56362a}
 .footer{color:#9c8575}
 @media(max-width:850px){.store-identity--deliscias{display:none}}
+
+
+/* DeliScias hero - desktop-friendly branded welcome panel */
+.hero-deliscias{display:grid;grid-template-columns:minmax(0,1fr) minmax(160px,245px);align-items:center;gap:22px;min-height:222px}
+.hero-deliscias::after{right:-85px;top:-90px;pointer-events:none}
+.hero-deliscias .hero-copy{position:relative;z-index:1}
+.hero-deliscias .hero-copy h2{max-width:550px;line-height:1.2}
+.hero-deliscias .hero-copy p{max-width:530px}
+.hero-deliscias .hero-copy .btn{margin-top:13px}
+.hero-brand{position:relative;z-index:1;width:100%;max-width:248px;min-height:154px;display:flex;align-items:center;justify-content:center;border-radius:22px;background:radial-gradient(circle at 48% 45%,#fffaf3 0%,#f7e7d1 75%,#e7c6a2 100%);padding:10px;box-shadow:0 15px 30px #21110940}
+.hero-brand img{width:100%;height:170px;object-fit:contain;filter:drop-shadow(0 8px 9px #3c201226)}
+.hero-brand-fallback{color:#6c4128;font-weight:800;text-align:center;font-size:22px;font-family:Georgia,serif;line-height:1.3}
+@media(max-width:1050px){.hero-deliscias{grid-template-columns:minmax(0,1fr) 172px}.hero-brand img{height:132px}.hero-brand{min-height:142px}}
+@media(max-width:520px){.hero-deliscias{display:flex;flex-direction:column;align-items:stretch}.hero-brand{width:100%;max-width:none}.hero-brand img{height:135px}}
