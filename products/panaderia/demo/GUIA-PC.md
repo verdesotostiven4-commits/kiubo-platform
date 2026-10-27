@@ -11,7 +11,7 @@ El listado editable está en `../catalogo-recibido-2026-10-26.csv`.
 - Torta de chocolate: USD 1,00 y USD 1,50 (mismo nombre, diferencia por confirmar).
 - Texto «Hoy dog de manjar»: conservar como lo escribió la clienta hasta aclarar el nombre.
 
-**Pendiente:** nombre comercial real, logo en alta calidad, fotografías originales sin marco de WhatsApp, existencia inicial por artículo, datos tributarios si contrataran facturación SRI. Los 50 artículos de stock de la demo **son inventados**, no cifras enviadas por la clienta.
+**Recibido:** marca «DeliScias Galapagueñas» y URL del logo proporcionada por el usuario, aplicada a la demostración con paleta crema, caramelo y chocolate. **Pendiente:** confirmar que la imagen cargue correctamente desde la PC del negocio, recibir fotografías originales de productos sin marco de WhatsApp, existencia inicial por artículo y datos tributarios si se contrata facturación SRI. Los 50 artículos de stock de la demo **son inventados**, no cifras enviadas por la clienta.
 
 ## Probar en Windows / laptop SIN instalación técnica
 
@@ -22,7 +22,7 @@ El listado editable está en `../catalogo-recibido-2026-10-26.csv`.
 5. Probar efectivo, transferencia y mixto, revisar el **resumen de venta en pantalla** (sin impresión), **Caja y gastos** y **Reportes**.
 6. Para reiniciar la demo, recargar la página: por diseño no guarda pagos ficticios.
 
-No usar la demo como caja comercial, factura válida del SRI ni base de datos. No guarda datos reales.
+No usar la demo como caja comercial, factura válida del SRI ni base de datos. No guarda datos reales. El logo se carga desde un enlace externo de Blogger; si no abre, aparece un respaldo de texto.
 
 ## Instalación como aplicación de Windows (cuando tenga URL propia con HTTPS)
 
