@@ -5,6 +5,7 @@
   const toastBox = document.getElementById('toast');
   const modalRoot = document.getElementById('modal-root');
   const money = new Intl.NumberFormat('es-EC', { style: 'currency', currency: 'USD' });
+  const BRAND_LOGO_URL = 'https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEhHSMJEnPCGaZ-iRzZo3QBuwuL_uck43LhuoObatgimafYIVHljjxCQEZVxQ5sCCgGPoMuYmZHUgn8-8o8rzc9msVbUP2oZm6m0_NDVcNUgKD0RzMExXdLtUXdb1rxuZkDBE85yR_9qpNDYputW7SKy6BwciqOg-ZJlZSxsVdm3t49SPMxYA0YKyo_iTHk/s1600/image.png';
   // Catálogo obtenido de las fotografías y precios compartidos por la clienta.
   // Stock 50: solo disponibilidad FICTICIA de la demo, NO inventario real.
   // Los mismos nombres con distinto precio son presentaciones PENDIENTES de confirmar.
@@ -105,18 +106,19 @@
       best[item.name] = (best[item.name] || 0) + item.qty;
     }); });
     const top = Object.entries(best).sort(function (a,b) { return b[1]-a[1]; }).slice(0,4);
-    return heading('Tu negocio en orden', 'Bienvenida a tu panadería',
-      'Un panel sencillo para saber qué vendiste, cuánto cobraste y qué productos tienes disponibles.',
+    return heading('DeliScias Galapagueñas', 'Bienvenida a DeliScias',
+      'Tu panadería y pastelería, organizada en un solo lugar. Sistema desarrollado por KIUBO.',
       btn('＋ Nueva venta', 'go-ventas', 'btn-primary')) +
       demoWarning() +
-      '<div class="hero"><div><div class="hero-kicker">UNA FORMA MÁS SIMPLE DE VENDER</div><h2>Todo listo para el siguiente cliente.</h2>' +
-      '<p>Selecciona los productos, registra el pago y revisa tu caja. Esta experiencia está preparada para personalizarse con el nombre y el logo reales del negocio.</p></div>' +
+      '<div class="hero hero-deliscias"><div class="hero-copy"><div class="hero-kicker">PANADERÍA Y PASTELERÍA · GALÁPAGOS</div><h2>Delicias que se disfrutan. Ventas que se controlan.</h2>' +
+      '<p>Los 19 productos y sus precios ya están cargados para la demostración. Registra una venta ficticia y conoce cómo se organiza la caja de DeliScias.</p>' +
       btn('Abrir punto de venta  →', 'go-ventas', 'btn-primary') + '</div>' +
+      '<div class="hero-brand"><img src="' + esc(BRAND_LOGO_URL) + '" alt="Logotipo DeliScias Galapagueñas" loading="lazy" decoding="async" onerror="this.hidden=true;this.nextElementSibling.hidden=false;"><span class="hero-brand-fallback" hidden>DeliScias<br>GALAPAGUEÑAS</span></div></div>' +
       '<section class="metrics">' +
       metric('Ventas en demo', fmt(salesTotal()), '↗', state.sales.length + ' comprobantes de muestra') +
       metric('Efectivo cobrado', fmt(cashSales()), '＄', 'No incluye fondo inicial') +
       metric('Transferencias', fmt(transferSales()), '⇄', 'Dinero recibido en demo') +
-      metric('Productos', String(state.products.length), '◈', 'Catálogo inicial de ejemplo') + '</section>' +
+      metric('Productos', String(state.products.length), '◈', 'Precios proporcionados por la clienta') + '</section>' +
       '<div class="split"><section class="card card-pad"><div class="card-title"><h2>Últimas ventas</h2><span>Comprobantes de muestra</span></div>' +
       saleTable(state.sales.slice(0,6)) + '</section>' +
       '<section class="card card-pad"><div class="card-title"><h2>Accesos rápidos</h2><span>Trabajo diario</span></div><div class="quick-actions">' +
