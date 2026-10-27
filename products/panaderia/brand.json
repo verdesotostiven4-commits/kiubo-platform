@@ -1,0 +1,16 @@
+{
+  "name": "DeliScias Galapagueñas",
+  "type": "Panadería y pastelería",
+  "brand_owner": "Cliente de KIUBO Panadería",
+  "logo_url": "https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEhHSMJEnPCGaZ-iRzZo3QBuwuL_uck43LhuoObatgimafYIVHljjxCQEZVxQ5sCCgGPoMuYmZHUgn8-8o8rzc9msVbUP2oZm6m0_NDVcNUgKD0RzMExXdLtUXdb1rxuZkDBE85yR_9qpNDYputW7SKy6BwciqOg-ZJlZSxsVdm3t49SPMxYA0YKyo_iTHk/s1600/image.png",
+  "logo_note": "Enlace de Blogger entregado directamente por el cliente; comprobar carga desde Windows antes de la demostración presencial. El navegador usa un texto de respaldo si falla.",
+  "palette": {
+    "chocolate": "#4c2d21",
+    "caramel": "#bd7546",
+    "cream": "#fbf7f1",
+    "honey": "#f7c48c"
+  },
+  "product_count": 19,
+  "system_state": "DEMO — ventas simuladas, sin base de datos conectada",
+  "sri": "PENDIENTE — no incluir facturación electrónica hasta completar requisitos del proveedor y del negocio"
+}
