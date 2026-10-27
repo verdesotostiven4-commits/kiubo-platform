@@ -4,7 +4,7 @@
 
 ## Decisiones arquitectónicas
 
-- Identidad provisional: «Panadería Demo». Cuando la clienta envíe logotipo, nombre y productos, se personaliza sin modificar ninguna tabla ni cliente de YUKI.
+- Identidad visual recibida: **DeliScias Galapagueñas** (Panadería y pastelería). El nombre, enlace del logo y paleta están documentados en `brand.json`; visualmente está integrado en el demo sin modificar ninguna tabla ni cliente de YUKI.
 - Producto aislado en `products/panaderia/`; no importa datos ni almacenamiento del POS de YUKI.
 - PWA instalable, **online-first** para confirmar ventas. Supabase/PostgreSQL será autoridad para ventas, pagos, movimientos de caja, inventario y auditoría. IndexedDB **solo** para catálogo limitado, preferencias y borradores seguros, no para el historial contable completo.
 - Primera entrega: **una tienda, una caja, una propietaria**. La administración desde celular puede ser solo lectura. No se activan múltiples cajeros simultáneos ni operación offline de ventas sin pruebas adicionales.
