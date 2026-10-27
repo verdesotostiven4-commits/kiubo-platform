@@ -21,3 +21,71 @@
 .toast{position:fixed;right:20px;bottom:23px;background:#22324f;color:#fff;padding:14px 19px;border-radius:12px;box-shadow:0 10px 38px #18233944;font-size:12px;max-width:min(92vw,370px);opacity:0;pointer-events:none;transform:translateY(9px);transition:.22s;z-index:20}.toast.visible{opacity:1;transform:translateY(0)}.toast.error{background:#a84148}.modal-overlay{position:fixed;inset:0;background:#111b2b99;display:grid;place-items:center;z-index:15;padding:16px}.modal{width:min(100%,440px);max-height:90vh;overflow:auto;background:#fff;border-radius:20px;padding:26px;box-shadow:0 30px 80px #0b162a33}.modal h2{font-size:20px;margin:0 0 7px;color:#1e2e46}.modal p{font-size:12px;line-height:1.6;color:#748197}.ticket{padding:15px 0;border-top:1px dashed #c7cfda;border-bottom:1px dashed #c7cfda;margin:16px 0}.ticket-row{display:flex;justify-content:space-between;gap:12px;font-size:12px;margin:9px 0}.ticket-row span:last-child{white-space:nowrap}
 @media(max-width:1150px){.metrics{grid-template-columns:repeat(2,1fr)}.pos-layout{grid-template-columns:minmax(0,1fr) 310px}.page-content{padding:28px 24px}.topbar{padding:0 24px}}@media(max-width:850px){.shell{grid-template-columns:1fr}.sidebar{min-height:auto;gap:12px;padding:12px 16px}.brand{padding:0}.brand-words{display:none}.store-identity,.sidebar-heading,.sidebar-bottom{display:none}.sidebar{flex-direction:row;align-items:center}.navigation{flex:1;display:flex;gap:4px;justify-content:flex-end;overflow:auto}.nav-link{width:auto;white-space:nowrap;padding:10px 12px;font-size:11px}.nav-icon{display:none}.topbar{height:56px}.pos-layout,.split{grid-template-columns:1fr}.cart-panel{position:static}.two-panels{grid-template-columns:1fr}}@media(max-width:520px){.sidebar{padding:12px}.brand-mark{width:35px;height:35px;font-size:23px}.navigation{justify-content:flex-start}.nav-link{padding:9px 8px}.page-content{padding:19px 14px}.topbar{padding:0 14px}.breadcrumbs{font-size:10px}.breadcrumbs span{padding:0 4px}.avatar{display:none}.page-head h1{font-size:25px}.page-head{flex-direction:column}.metrics{gap:10px}.metric{min-height:115px;padding:15px}.metric strong{font-size:22px}.metric-icon{display:none}.hero{flex-direction:column;align-items:flex-start;padding:24px}.hero h2{font-size:22px}.form-grid,.field-grid{grid-template-columns:1fr}.footer{padding:14px}}
 @media print{.sidebar,.topbar,.footer,.btn,.toast{display:none!important}.shell{display:block}.page-content{padding:0}.modal-overlay{position:static;background:#fff}.modal{box-shadow:none}}
+
+
+/* DeliScias Galapagueñas — client brand. Isolated to products/panaderia/demo. */
+:root{color:#4c3128;background:#fbf7f1}
+body{background:#fbf7f1}
+[hidden]{display:none!important}
+.sidebar{background:linear-gradient(167deg,#543629 0%,#3b241d 57%,#2b1b17 100%);color:#fff9ee}
+.brand-mark{background:linear-gradient(135deg,#f7c48c,#c8753f);color:#3d2317;box-shadow:0 9px 25px #2411085c}
+.brand-mark span{color:#744020}
+.brand-words small{color:#e5be9f}
+.store-identity--deliscias{display:flex;flex-direction:column;align-items:stretch;gap:14px;padding:13px;background:linear-gradient(170deg,#fff8e9,#efd7b7);border:1px solid #e8be90;border-radius:19px;color:#4b291b;box-shadow:0 10px 24px #22120c23}
+.store-visual{width:100%;height:153px;border-radius:14px;background:radial-gradient(circle at 47% 43%,#fffdf9 0%,#fcefd8 62%,#e8c6a0 100%);display:flex;align-items:center;justify-content:center;overflow:hidden}
+.store-logo{display:block;width:100%;height:100%;object-fit:contain;filter:drop-shadow(0 5px 8px #78442824)}
+.store-logo-fallback{text-align:center;font-size:24px;line-height:1.12;color:#6f3d24;font-family:Georgia,serif;font-style:italic;font-weight:800}
+.store-logo-fallback small{font-family:inherit;font-size:12px;letter-spacing:.15em;font-style:normal}
+.store-identity-copy{display:flex;flex-direction:column;gap:6px;min-width:0;padding:0 5px 6px}
+.store-identity-copy .micro-label{color:#ab6b40;font-size:9px;letter-spacing:.11em}
+.store-identity-copy strong{font-size:15px;color:#4c2c1f;line-height:1.25}
+.store-identity-copy small{color:#946e58;line-height:1.4}
+.sidebar-heading{color:#d2a98b}
+.nav-link{color:#d3bfb0}
+.nav-link:hover{background:#ffffff1a;color:#fff}
+.nav-link.active{background:linear-gradient(100deg,#e1a06c,#c97949);color:#301e16;box-shadow:0 10px 25px #1f0e0633}
+.sidebar-bottom{border-top-color:#e4b99042}
+.sidebar-bottom p{color:#d7bda9}
+.topbar{background:#fffdf8;border-bottom-color:#ebddd0}
+.breadcrumbs{color:#987f70}.breadcrumbs b{color:#5b3827}
+.breadcrumbs span{color:#c5ab95}
+.pill-demo{background:#fff1d9;border:1px solid #e8c99c;color:#965a31}
+.avatar{background:#f4dcc1;color:#704329}
+.page-head h1{color:#4d3124}.page-head p{color:#8c7668}
+.eyebrow{color:#be7948}
+.card{border-color:#efe3d5;box-shadow:0 12px 35px #67452607}
+.metric-label{color:#9a8272}
+.metric strong{color:#4c3228}
+.metric-icon{background:#fff0de;color:#ad6e3c}
+.btn{border-color:#eadbc9;color:#694937}
+.btn-primary{background:#bd7546;border-color:#bd7546;color:#fff;box-shadow:0 6px 16px #a8643f2b}
+.btn-primary:hover:not(:disabled){background:#a95f37}
+.btn-soft{background:#fff2e4;border-color:#f2d8ba;color:#a35e31}
+.hero{background:linear-gradient(118deg,#67412c 0%,#4b3024 58%,#36231c 100%);border:1px solid #755038}
+.hero-kicker{color:#f4c89a}
+.hero p{color:#f5dac3}
+.hero:after{border-color:#fce4c11b}
+.hint{background:#fff5e3;color:#9c7042}
+.warning{border-color:#f3d5aa;background:#fff8ea;color:#936536}
+.product-card{border-color:#efdfd0}
+.product-card:hover:not(:disabled){border-color:#e4ad7b;box-shadow:0 10px 28px #b475431b}
+.product-card b{color:#55382d}
+.product-card strong{color:#ab623a}
+.product-img{background:linear-gradient(138deg,#fbe5c5,#fff7e8)}
+.category-chip{border-color:#e8dccc;color:#917660}
+.category-chip.active{background:#6d452f;color:#fff;border-color:#6d452f}
+.pay-tab.active{border-color:#dca170;background:#fff2e3;color:#ad673d}
+.search-input:focus,.input:focus,.select:focus{border-color:#c98b5a;box-shadow:0 0 0 3px #dba77735}
+.quick-action:hover{border-color:#daa877;background:#fffaf3}
+.quick-action span:last-child{color:#bb7a4c}
+.bar-fill{background:linear-gradient(90deg,#e4b17a,#b56d43)}
+.total-line b{color:#54362a}
+.table th{color:#a28b77;border-bottom-color:#f0e4d6}
+.table td{border-bottom-color:#f6eee5;color:#674b3b}
+.table strong{color:#4c3226}
+.kpi-row{border-bottom-color:#f2e7da}
+.kpi-row b{color:#56392a}
+.toast{background:#4d3125}
+.modal h2{color:#56362a}
+.footer{color:#9c8575}
+@media(max-width:850px){.store-identity--deliscias{display:none}}
