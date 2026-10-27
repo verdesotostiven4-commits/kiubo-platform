@@ -1,12 +1,12 @@
 {
-  "name": "KIUBO Panadería · DEMO",
-  "short_name": "KIUBO Panadería",
-  "description": "Demostración ficticia de caja, ventas, productos y reportes de una panadería",
+  "name": "DeliScias Galapagueñas · KIUBO DEMO",
+  "short_name": "DeliScias",
+  "description": "Demo de ventas y caja para la Panadería y Pastelería DeliScias Galapagueñas. Sin transacciones reales.",
   "start_url": "./index.html",
   "scope": "./",
   "display": "standalone",
-  "background_color": "#f6f7fa",
-  "theme_color": "#17243b",
+  "background_color": "#fbf7f1",
+  "theme_color": "#4c2d21",
   "lang": "es-EC",
   "icons": [
     {
