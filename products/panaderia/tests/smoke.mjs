@@ -58,9 +58,21 @@ function submit(id,values){
   view.listeners.submit({preventDefault(){},target:{id,values}});
 }
 
-assert.match(view.innerHTML,/Bienvenida a tu panadería/,"Dashboard renders");
+assert.match(view.innerHTML,/Bienvenida a DeliScias/,"Client-branded dashboard renders");
 assert.match(view.innerHTML,/Catálogo y precios tomados de las fotos enviadas/,"Catalog grounded in client photos");
 assert.match(view.innerHTML,/Las existencias, ventas y pagos son ficticios/,"Never imply real financial data");
+const html = readFileSync(new URL("../demo/index.html", import.meta.url), "utf8");
+const css = readFileSync(new URL("../demo/styles.css", import.meta.url), "utf8");
+const manifest = JSON.parse(readFileSync(new URL("../demo/manifest.webmanifest", import.meta.url), "utf8"));
+assert.match(html,/DeliScias Galapagueñas/,"Shop name shown in desktop shell");
+assert.match(html,/blogger\.googleusercontent\.com/,"Owner-provided logo URL wired into desktop shell");
+assert.match(source,/blogger\.googleusercontent\.com/,"Owner-provided logo URL wired into dashboard");
+assert.match(css,/DeliScias Galapagueñas — client brand/,"Bakery-specific theme is applied");
+assert.match(css,/\.hero-brand img/,"Logo has a responsive visual container");
+assert.match(html,/this\.nextElementSibling\.hidden=false/,"A readable fallback exists if image hosting is unavailable");
+assert.equal(manifest.short_name,"DeliScias","Installed-app manifest is branded");
+assert.equal(manifest.theme_color,"#4c2d21","Installed-app theme uses bakery palette");
+
 
 navigate("ventas");
 assert.match(view.innerHTML,/Aplanchados/);
