@@ -271,12 +271,22 @@ async function handleJson(req: Request, body: Json) {
     if (rateError) throw rateError;
     if (!allowed) throw Object.assign(new Error("too_many_orders"), { status: 429 });
     const customer: Json = { ...((body.customer || {}) as Json), payment_method: body.payment_method || null };
+    const withLat = customer.delivery_lat != null && customer.delivery_lat !== "";
+    const withLng = customer.delivery_lng != null && customer.delivery_lng !== "";
+    const rawLat = withLat ? Number(customer.delivery_lat) : NaN;
+    const rawLng = withLng ? Number(customer.delivery_lng) : NaN;
+    const hasLocation = customer.delivery_method !== "pickup" && withLat && withLng &&
+      Number.isFinite(rawLat) && Number.isFinite(rawLng) &&
+      rawLat >= -90 && rawLat <= 90 && rawLng >= -180 && rawLng <= 180 &&
+      !(rawLat === 0 && rawLng === 0);
+    // Validar ANTES de registrar el pedido. Un error posterior no debe crear
+    // una orden real y luego responder como si hubiese fallado toda la venta.
+    if (customer.delivery_method !== "pickup" && (withLat || withLng) && !hasLocation) {
+      throw Object.assign(new Error("invalid_location"), { status: 400 });
+    }
     const { data, error } = await db.rpc("catalog_create_order", { p_slug: slug, p_idempotency_key: idempotency, p_customer: customer, p_items: body.items || [] });
     if (error) throw error;
     const order = data as Json;
-    const rawLat=Number(customer.delivery_lat),rawLng=Number(customer.delivery_lng);
-    const hasLocation=customer.delivery_method!=="pickup"&&Number.isFinite(rawLat)&&Number.isFinite(rawLng)&&rawLat>=-90&&rawLat<=90&&rawLng>=-180&&rawLng<=180;
-    if(customer.delivery_method!=="pickup"&&(customer.delivery_lat!=null||customer.delivery_lng!=null)&&!hasLocation) throw Object.assign(new Error("invalid_location"),{status:400});
     if(hasLocation){
       const { error: locationError }=await db.from("catalog_orders").update({delivery_lat:Number(rawLat.toFixed(6)),delivery_lng:Number(rawLng.toFixed(6)),delivery_location_label:cleanText(customer.delivery_location_label,160)||"Ubicación seleccionada en el mapa"}).eq("id",order.id);
       if(locationError) console.error("catalog-api location persistence",{order_id:order.id,message:locationError.message});

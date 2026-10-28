@@ -530,7 +530,7 @@ function openOrder(id) {
   $("#orderModalTitle").textContent = order.order_number;
   const progressIndex = Math.max(0, orderStatuses.findIndex(([value]) => value === order.status));
   const phone = phoneDigits(order.customer_phone);
-  const lat=Number(order.delivery_lat),lng=Number(order.delivery_lng),hasMap=Number.isFinite(lat)&&Number.isFinite(lng)&&lat>=-90&&lat<=90&&lng>=-180&&lng<=180;
+  const hasCoords=order.delivery_lat!=null&&order.delivery_lng!=null&&order.delivery_lat!==''&&order.delivery_lng!=='';const lat=hasCoords?Number(order.delivery_lat):NaN,lng=hasCoords?Number(order.delivery_lng):NaN,hasMap=hasCoords&&Number.isFinite(lat)&&Number.isFinite(lng)&&!(lat===0&&lng===0)&&lat>=-90&&lat<=90&&lng>=-180&&lng<=180;
   const mapUrl=hasMap?`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${lat},${lng}`)}`:"";
   const deliveryCard=order.delivery_method==="pickup"
     ? `<div class="review-card" style="margin-top:12px"><h3>Entrega</h3><p style="margin:0;color:var(--muted);font-size:10px;line-height:1.5">Retiro acordado.</p></div>`

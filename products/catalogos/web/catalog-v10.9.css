@@ -11,3 +11,42 @@ html.hm105-boot .v10-app,html.hm105-ready .v10-app,html .v10-app{opacity:1!impor
 #hm109BootFallback.hm109-boot-error i{display:none}
 @keyframes hm109load{from{transform:translateX(-110%)}to{transform:translateX(330%)}}
 @media(prefers-reduced-motion:reduce){#hm109BootFallback i:after{animation:none;width:100%}}
+/* Hakuna — mapa de entrega tipo app, adaptado a la identidad verde. */
+.v10-sheet:has(.hm-loc-v2){width:min(740px,100%);height:100dvh;max-height:100dvh;border-radius:0;overflow:hidden}
+.v10-sheet:has(.hm-loc-v2) .v10-grab{display:none}
+.v10-sheet:has(.hm-loc-v2) .v10-sheet-scroll{height:100%;max-height:100%;padding:0;overflow:hidden}
+.v10-sheet:has(.hm-loc-v2) .v10-sheet-close{top:max(10px,env(safe-area-inset-top));right:12px;width:43px;height:43px;border-radius:14px;z-index:850;background:rgba(255,255,255,.95);box-shadow:0 5px 16px #123c2520}
+.hm-loc-v2{height:100%;display:flex;flex-direction:column;background:#f4f8f5;color:#18372a}
+.hm-loc-head{flex:0 0 auto;background:#fff;padding:calc(env(safe-area-inset-top) + 20px) 68px 15px 20px}
+.hm-loc-head>span{font-size:10px;font-weight:900;letter-spacing:.12em;color:#4b9270}
+.hm-loc-head h2{font-size:clamp(20px,4vw,27px);line-height:1.15;letter-spacing:-.035em;margin:6px 0}
+.hm-loc-head p{font-size:12px;line-height:1.4;margin:0;color:#778a7e}
+.hm-loc-stage{position:relative;flex:1 1 35vh;min-height:170px;background:#dce9df;overflow:hidden}
+.hm-loc-map{position:absolute;inset:0;z-index:1}
+.hm-loc-pin{position:absolute;left:50%;top:50%;z-index:500;transform:translate(-50%,-100%);width:52px;height:58px;display:grid;place-items:center;font-size:33px;filter:drop-shadow(0 6px 8px #16432b44);pointer-events:none;transition:transform .12s}
+.hm-loc-stage:active .hm-loc-pin{transform:translate(-50%,-109%)}
+.hm-loc-loading{position:absolute;inset:0;z-index:650;background:#eef5ef;display:grid;place-items:center;text-align:center;font-size:13px;font-weight:750;color:#345b45;padding:20px}
+.hm-loc-gps{position:absolute;right:14px;top:14px;z-index:600;background:#fff;border:1px solid #d0e1d7;box-shadow:0 5px 15px #0b402327;border-radius:13px;min-height:46px;padding:0 14px;font-size:13px;color:#174830;font-weight:850}
+.hm-loc-gps:disabled{opacity:.5}
+.hm-loc-controls{flex:0 0 auto;max-height:52dvh;overflow:auto;padding:12px 18px calc(14px + env(safe-area-inset-bottom));background:#fff;border-radius:23px 23px 0 0;box-shadow:0 -10px 30px #113b2614;z-index:601;display:grid;gap:11px}
+.hm-loc-status{margin:0;background:#fff8ed;border:1px solid #f2e3c7;border-radius:13px;padding:11px;color:#886824;font-size:12px;font-weight:800}
+.hm-loc-status.is-ready{background:#e9f7ee;border-color:#c7e5d1;color:#17603b}
+.hm-loc-label{display:grid;gap:6px;font-size:12px;font-weight:800;color:#345643}
+.hm-loc-label small{font-size:11px;color:#849286;font-weight:500}
+.hm-loc-label input,.hm-loc-label select{width:100%;box-sizing:border-box;border:1px solid #d8e5db;border-radius:12px;min-height:45px;padding:10px 12px;background:#f9fbf9;color:#1b3728;font:inherit;font-size:14px}
+.hm-loc-types{margin:0;padding:0;border:0;min-width:0}
+.hm-loc-types legend{font-size:12px;font-weight:850;color:#345643;margin-bottom:7px}
+.hm-loc-types>div{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:7px}
+.hm-loc-types button{min-height:44px;border:1px solid #d7e5da;background:#fff;color:#44614d;border-radius:12px;font-size:12px;font-weight:700;cursor:pointer}
+.hm-loc-types button.active{background:#174f37;border-color:#174f37;color:#fff}
+.hm-loc-remember{display:flex;gap:8px;align-items:center;color:#536b5d;font-size:12px}
+.hm-loc-remember input{width:17px;height:17px;accent-color:#196044}
+.hm-loc-actions{display:flex;gap:8px;align-items:center}
+.hm-loc-actions button{min-height:50px;border-radius:13px;padding:8px 13px;font-size:13px;font-weight:850;cursor:pointer}
+#hmLocClear{border:1px solid #e4d4d1;background:#fff;color:#915049}
+#hmLocConfirm{flex:1;background:#155239;color:#fff;border:0}
+#hmLocConfirm:disabled{opacity:.5;cursor:not-allowed}
+.hm-loc-note{color:#789081;font-size:10px;line-height:1.45;text-align:center}
+@media(min-width:790px){.v10-sheet:has(.hm-loc-v2){height:min(870px,96dvh);max-height:96dvh;bottom:2dvh;border-radius:24px;box-shadow:0 15px 70px #07190e44}.hm-loc-head{padding-top:24px}}
+@media(max-height:680px){.hm-loc-head{padding-bottom:10px}.hm-loc-controls{max-height:57dvh;padding-top:9px;gap:7px}.hm-loc-stage{min-height:135px}.hm-loc-types button{min-height:38px}}
+@media(prefers-reduced-motion:reduce){.hm-loc-pin{transition:none}}
