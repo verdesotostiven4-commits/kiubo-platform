@@ -285,14 +285,90 @@ function orderItemSummary(order) {
   return (order.items || []).slice(0, 3).map(item => `${item.quantity}× ${item.product_name}`).join(" · ") + ((order.items || []).length > 3 ? ` · +${order.items.length - 3} más` : "");
 }
 
+const allowedOrderSteps = Object.freeze({
+  new: ["confirmed", "cancelled"],
+  confirmed: ["preparing", "cancelled"],
+  preparing: ["dispatched", "cancelled"],
+  dispatched: ["delivered", "cancelled"],
+  delivered: [],
+  cancelled: ["new"]
+});
 function statusOptions(active) {
-  return orderStatuses.map(([value, label]) => `<option value="${value}" ${value === active ? "selected" : ""}>${label}</option>`).join("");
+  const allowed = allowedOrderSteps[active] || [];
+  return orderStatuses.filter(([value]) => value === active || allowed.includes(value))
+    .map(([value, label]) => `<option value="${value}" ${value === active ? "selected" : ""}>${label}</option>`).join("");
+}
+function orderStatusError(error) {
+  const msg = String(error?.message || error?.code || "").toLowerCase();
+  if (msg.includes("invalid_status_transition")) return "Este cambio no está permitido. Sigue el orden de preparación del pedido.";
+  if (msg.includes("insufficient_stock")) return "No hay suficientes unidades para reabrir el pedido. Revisa el inventario.";
+  if (msg.includes("session") || error?.status === 401) return "La sesión caducó. Ingresa nuevamente al panel.";
+  if (msg.includes("timeout") || !navigator.onLine) return "Sin conexión. Comprueba internet y vuelve a intentar.";
+  return "No se pudo guardar el estado. Revisa la conexión e inténtalo de nuevo.";
+}
+function brandKey(name) {
+  return String(name || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim().replace(/\s+/g, " ");
+}
+function availableBrands() {
+  const items = new Map();
+  for (const product of state.products) {
+    const label = String(product.brand || "").trim();
+    if (label && !items.has(brandKey(label))) items.set(brandKey(label), label);
+  }
+  return [...items.values()].sort((a, b) => a.localeCompare(b, "es"));
+}
+function setupBrandPicker(value = "") {
+  const field = $("#productBrand")?.closest(".field");
+  const input = $("#productBrand");
+  if (!field || !input) return;
+  let select = $("#hmBrandChoose");
+  if (!select) {
+    select = document.createElement("select");
+    select.id = "hmBrandChoose";
+    select.setAttribute("aria-label", "Seleccionar marca registrada");
+    field.insertBefore(select, input);
+    const hint = document.createElement("small");
+    hint.id = "hmBrandHint";
+    hint.textContent = "Selecciona una marca existente o elige «Nueva marca» para escribir otra.";
+    field.append(hint);
+    select.addEventListener("change", () => {
+      if (select.value === "__new__") {
+        input.hidden = false;
+        input.value = "";
+        input.placeholder = "Escribe la nueva marca";
+        input.focus();
+      } else {
+        input.value = select.value;
+        input.hidden = true;
+      }
+    });
+  }
+  const brands = availableBrands(), current = String(value || "").trim();
+  select.replaceChildren();
+  const option = (label, name) => {
+    const item = document.createElement("option");
+    item.value = label;
+    item.textContent = name;
+    select.append(item);
+  };
+  option("", "Sin marca");
+  for (const brand of brands) option(brand, brand);
+  option("__new__", "+ Nueva marca");
+  const match = brands.find(item => brandKey(item) === brandKey(current));
+  select.value = current ? (match || "__new__") : "";
+  input.hidden = select.value !== "__new__";
+  input.value = match || current;
+  input.placeholder = "Nombre de la nueva marca";
+}
+function canonicalBrand(name) {
+  const clean = String(name || "").trim();
+  return availableBrands().find(item => brandKey(item) === brandKey(clean)) || clean;
 }
 
 function renderOrders() {
   const items = filteredOrders();
-  $("#adminOrderList").innerHTML = items.length ? items.map(order => `<article class="order-card"><div class="order-card__top"><div><span class="order-card__number">${escapeHTML(order.order_number)}</span><h3>${escapeHTML(order.customer_business || order.customer_name)}</h3></div><strong class="order-card__amount">${money(order.total)}</strong></div><div class="order-card__meta"><span>${formatDate(order.created_at)}</span><span>·</span><span>${(order.items || []).reduce((sum, item) => sum + Number(item.quantity), 0)} unidades</span></div><div class="order-card__items">${escapeHTML(orderItemSummary(order) || "Sin detalle")}</div><div class="order-card__foot"><select class="status-select" data-order-status="${order.id}">${statusOptions(order.status)}</select><button class="order-open-btn" data-open-order="${order.id}">Ver detalle</button></div></article>`).join("") : `<div class="empty-admin" style="grid-column:1/-1"><svg class="icon"><use href="#i-receipt"/></svg><b>No hay pedidos en esta vista</b><span>Los pedidos nuevos aparecerán automáticamente.</span></div>`;
-  $$('[data-order-status]').forEach(select => select.onchange = () => updateOrderStatus(select.dataset.orderStatus, select.value));
+  $("#adminOrderList").innerHTML = items.length ? items.map(order => `<article class="order-card"><div class="order-card__top"><div><span class="order-card__number">${escapeHTML(order.order_number)}</span><h3>${escapeHTML(order.customer_business || order.customer_name)}</h3></div><strong class="order-card__amount">${money(order.total)}</strong></div><div class="order-card__meta"><span>${formatDate(order.created_at)}</span><span>·</span><span>${(order.items || []).reduce((sum, item) => sum + Number(item.quantity), 0)} unidades</span></div><div class="order-card__items">${escapeHTML(orderItemSummary(order) || "Sin detalle")}</div><div class="order-card__foot"><select class="status-select" data-order-status="${order.id}" ${allowedOrderSteps[order.status]?.length ? "" : "disabled title=\"Pedido finalizado\""}>${statusOptions(order.status)}</select><button class="order-open-btn" data-open-order="${order.id}">Ver detalle</button></div></article>`).join("") : `<div class="empty-admin" style="grid-column:1/-1"><svg class="icon"><use href="#i-receipt"/></svg><b>No hay pedidos en esta vista</b><span>Los pedidos nuevos aparecerán automáticamente.</span></div>`;
+  $$('[data-order-status]').forEach(select => select.onchange = async () => { const ok = await updateOrderStatus(select.dataset.orderStatus, select.value); if (!ok) renderOrders(); });
   bindOrderOpeners($("#adminOrderList"));
 }
 
@@ -360,6 +436,7 @@ function openProductModal(id = "") {
   $("#productModalTitle").textContent = product ? "Editar producto" : "Nuevo producto";
   $("#productName").value = product?.name || ""; $("#productCategory").value = product?.category_id || ""; $("#productBrand").value = product?.brand || ""; $("#productPrice").value = product?.price ?? ""; $("#productComparePrice").value = product?.compare_at_price ?? ""; $("#productUnit").value = product?.unit || ""; $("#productSku").value = product?.sku || ""; $("#productDescription").value = product?.description || ""; $("#productStatus").value = product?.status || "available"; $("#productSort").value = product?.sort_order || 0; $("#productVisible").checked = product?.visible !== false; $("#productFeatured").checked = Boolean(product?.featured); $("#productImage").value = "";
   $("#productImagePreview").innerHTML = product?.image_url ? `<img src="${escapeHTML(product.image_url)}" alt="">` : `<svg class="icon"><use href="#i-image"/></svg>`;
+  setupBrandPicker(product?.brand || "");
   $("#archiveProductBtn").hidden = !product;
   $("#archiveProductBtn").textContent = product?.archived_at ? "Restaurar" : "Archivar";
   openModal($("#productModal"));
@@ -375,7 +452,7 @@ async function saveProduct() {
     let imageUrl = state.editingProduct?.image_url || "";
     const file = $("#productImage").files[0];
     if (file) { const uploaded = await uploadFile(file, "product", imagePath); imagePath = uploaded.path; imageUrl = uploaded.public_url; }
-    const product = { id: state.editingProduct?.id || null, name, category_id: $("#productCategory").value || null, brand: $("#productBrand").value.trim() || null, price, compare_at_price: $("#productComparePrice").value ? Number($("#productComparePrice").value) : null, unit: $("#productUnit").value.trim() || null, sku: $("#productSku").value.trim() || null, description: $("#productDescription").value.trim() || null, status: $("#productStatus").value, sort_order: Number($("#productSort").value || 0), visible: $("#productVisible").checked, featured: $("#productFeatured").checked, image_path: imagePath || null, image_url: imageUrl || null };
+    const product = { id: state.editingProduct?.id || null, name, category_id: $("#productCategory").value || null, brand: canonicalBrand($("#productBrand").value) || null, price, compare_at_price: $("#productComparePrice").value ? Number($("#productComparePrice").value) : null, unit: $("#productUnit").value.trim() || null, sku: $("#productSku").value.trim() || null, description: $("#productDescription").value.trim() || null, status: $("#productStatus").value, sort_order: Number($("#productSort").value || 0), visible: $("#productVisible").checked, featured: $("#productFeatured").checked, image_path: imagePath || null, image_url: imageUrl || null };
     await callApi("save_product", { slug: state.account.slug, product });
     closeModals(); toast("Producto guardado", "success"); await refreshData();
   } catch (error) { toast(error.message === "file_too_large" ? "La imagen supera 5 MB" : "No pudimos guardar el producto", "error"); }
@@ -422,14 +499,30 @@ function openOrder(id) {
   const deliveryCard=order.delivery_method==="pickup"
     ? `<div class="review-card" style="margin-top:12px"><h3>Entrega</h3><p style="margin:0;color:var(--muted);font-size:10px;line-height:1.5">Retiro acordado.</p></div>`
     : `<div class="review-card" style="margin-top:12px"><h3>Entrega</h3><p style="margin:0 0 ${hasMap?"10px":"0"};color:var(--muted);font-size:10px;line-height:1.5">${escapeHTML(order.delivery_address||(hasMap?"Ubicación marcada por el cliente.":"Dirección por coordinar."))}</p>${hasMap?`<a class="button button--secondary" href="${mapUrl}" target="_blank" rel="noopener">Abrir ubicación en mapa</a>`:""}</div>`;
-  $("#orderModalContent").innerHTML = `<div class="order-detail-top"><h3>${escapeHTML(order.customer_business || order.customer_name)}</h3><p>${escapeHTML(order.customer_name || "Contacto")} · +${escapeHTML(phone)} · ${formatDate(order.created_at)}</p><div class="status-timeline">${orderStatuses.slice(0,5).map((_,index) => `<i class="${index <= progressIndex && order.status !== "cancelled" ? "done" : ""}"></i>`).join("")}</div></div><div class="order-detail-items">${(order.items || []).map(item => `<div class="order-detail-item"><b>${item.quantity}×</b><span>${escapeHTML(item.product_name)}<small style="display:block;color:var(--muted);margin-top:3px">${escapeHTML(item.unit || "")}</small></span><strong>${money(item.line_total)}</strong></div>`).join("")}</div><div class="order-detail-total"><span>Total estimado</span><strong>${money(order.total)}</strong></div>${deliveryCard}${order.notes ? `<div class="review-card" style="margin-top:12px"><h3>Observaciones</h3><p style="margin:0;color:var(--muted);font-size:10px;line-height:1.5">${escapeHTML(order.notes)}</p></div>` : ""}<div class="order-detail-actions"><select class="status-select" id="modalOrderStatus">${statusOptions(order.status)}</select><a class="button button--primary" href="https://wa.me/${phone}" target="_blank" rel="noopener"><svg class="icon"><use href="#i-message"/></svg>WhatsApp</a></div>`;
-  $("#modalOrderStatus").onchange = async event => { await updateOrderStatus(order.id, event.target.value); closeModals(); };
+  $("#orderModalContent").innerHTML = `<div class="order-detail-top"><h3>${escapeHTML(order.customer_business || order.customer_name)}</h3><p>${escapeHTML(order.customer_name || "Contacto")} · +${escapeHTML(phone)} · ${formatDate(order.created_at)}</p><div class="status-timeline">${orderStatuses.slice(0,5).map((_,index) => `<i class="${index <= progressIndex && order.status !== "cancelled" ? "done" : ""}"></i>`).join("")}</div></div><div class="order-detail-items">${(order.items || []).map(item => `<div class="order-detail-item"><b>${item.quantity}×</b><span>${escapeHTML(item.product_name)}<small style="display:block;color:var(--muted);margin-top:3px">${escapeHTML(item.unit || "")}</small></span><strong>${money(item.line_total)}</strong></div>`).join("")}</div><div class="order-detail-total"><span>Total estimado</span><strong>${money(order.total)}</strong></div>${deliveryCard}${order.notes ? `<div class="review-card" style="margin-top:12px"><h3>Observaciones</h3><p style="margin:0;color:var(--muted);font-size:10px;line-height:1.5">${escapeHTML(order.notes)}</p></div>` : ""}<div class="order-detail-actions"><select class="status-select" id="modalOrderStatus" ${allowedOrderSteps[order.status]?.length ? "" : "disabled title=\"Pedido finalizado\""}>${statusOptions(order.status)}</select><a class="button button--primary" href="https://wa.me/${phone}" target="_blank" rel="noopener"><svg class="icon"><use href="#i-message"/></svg>WhatsApp</a></div>`;
+  $("#modalOrderStatus").onchange = async event => { const ok = await updateOrderStatus(order.id, event.target.value); if (ok) closeModals(); else event.target.value = order.status; };
   openModal($("#orderModal"));
 }
 
 async function updateOrderStatus(id, status) {
-  try { await callApi("update_order_status", { slug: state.account.slug, order_id: id, status }); const order = state.orders.find(item => item.id === id); if (order) order.status = status; renderStats(); renderOrders(); renderDashboard(); toast("Pedido actualizado", "success"); }
-  catch { toast("No se pudo actualizar el pedido", "error"); }
+  const order = state.orders.find(item => item.id === id);
+  if (!order) return false;
+  if (order.status === status) return true;
+  if (!(allowedOrderSteps[order.status] || []).includes(status)) {
+    toast("Ese cambio no está permitido. Elige el siguiente paso.", "error");
+    return false;
+  }
+  try {
+    await callApi("update_order_status", { slug: state.account.slug, order_id: id, status });
+    order.status = status;
+    renderStats(); renderOrders(); renderDashboard();
+    toast(status === "delivered" ? "Pedido entregado correctamente" : status === "cancelled" ? "Pedido cancelado · stock devuelto" : "Estado del pedido actualizado", "success");
+    try { await refreshData({ silent: true }); } catch { /* el estado ya fue confirmado por el servidor */ }
+    return true;
+  } catch (error) {
+    toast(orderStatusError(error), "error");
+    return false;
+  }
 }
 
 async function saveIdentity(event) {

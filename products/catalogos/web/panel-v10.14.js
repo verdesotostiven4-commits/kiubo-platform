@@ -119,6 +119,11 @@ function decorateStock(mode){
   if(fields[1])setLabel(fields[1],mode==='unit'?'Unidades disponibles':`${rowName(target)} disponibles`);
   if(fields[2]){fields[2].classList.toggle('hm114-field-hidden',mode!=='both');if(mode==='both')setLabel(fields[2],'Unidades sueltas')}
   stock.classList.toggle('hm114-stock-single',mode!=='both');
+  let totals=$('#hmStockBreakdown',stock);
+  if(!totals){totals=document.createElement('output');totals.id='hmStockBreakdown';totals.style.cssText='display:block;margin:8px 0 12px;padding:12px 14px;border-radius:14px;background:#eef6f0;color:#174534;font-size:13px;font-weight:700;line-height:1.5';stock.append(totals)}
+  const packSize=mode==='unit'?1:units;
+  const full=Math.floor(q/packSize),remaining=q%packSize;
+  totals.textContent=mode==='unit'?`Disponibles: ${q} unidades`:`${full} ${full===1?'caja o paquete':'cajas o paquetes'} × ${packSize} + ${remaining} ${remaining===1?'unidad suelta':'unidades sueltas'} = ${q} unidades en total`;
 
   let track=$('#hm114Track',stock);if(!track){
     track=document.createElement('label');track.id='hm114Track';track.className='hm114-track';track.innerHTML='<span><b>Controlar inventario</b><small>Actívalo para evitar vender más de lo que tienes.</small></span><input type="checkbox"><i></i>';title?.after(track);
