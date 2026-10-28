@@ -1,6 +1,9 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 const pos=readFileSync("components/PosClientPro.tsx","utf8");
+const pwa=readFileSync("components/PwaRegister.tsx","utf8");
+assert.ok(pwa.includes('const CANONICAL_HOST = "kiubo-platform-ebon.vercel.app"'),"PWA must use the correct new YUKI domain");
+assert.ok(!pwa.includes('const CANONICAL_HOST = "kiubo-platform.vercel.app"'),"Do not redirect to suspended Vercel account");
 const need=[
   "linkedDraftWasClosed",
   'linkedDraftOrder.paymentStatus==="paid"',
