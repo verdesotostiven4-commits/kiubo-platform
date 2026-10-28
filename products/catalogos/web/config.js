@@ -30,7 +30,7 @@ document.addEventListener('error',event=>{
   visual.style.setProperty('--hm-brand-fg','#294a37');
 },true);
 (()=>{
-  const path=location.pathname,v='10.16.13',logo=window.KIUBO_CATALOG_CONFIG.brandLogoUrl;
+  const path=location.pathname,v='10.16.16',logo=window.KIUBO_CATALOG_CONFIG.brandLogoUrl;
   document.documentElement.dataset.hmBuild=v;
   const setIcon=(rel,href)=>{let l=document.querySelector(`link[rel="${rel}"]`);if(!l){l=document.createElement('link');l.rel=rel;document.head.append(l)}l.href=href};
   if(logo){setIcon('icon',logo);setIcon('apple-touch-icon',logo)}

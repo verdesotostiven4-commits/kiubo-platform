@@ -6,21 +6,43 @@
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
-  "display_override": ["standalone", "minimal-ui"],
+  "display_override": [
+    "standalone",
+    "minimal-ui"
+  ],
   "background_color": "#ffffff",
   "theme_color": "#ffffff",
   "orientation": "portrait-primary",
   "prefer_related_applications": false,
   "icons": [
     {
+      "src": "https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEir16n1bNYOmluwXB4NgFhKGCSm-g3-h1JVbKMvFAS6dYSzwhdj_K6aHlIqEH19XItSIB0dQ7WMRHNiVGfVfPYUdHWBx4kHfEkQkEA0h3XuGEVVQgc_ksv1a2GhVkCjt9HTK9ks4_ZP600JgxV4wxFKSMq_foUWOVBv9Ds4tdLayG6Q8zf2KlsRtr9KbVg/s1600/image.png",
+      "sizes": "any",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
       "src": "/assets/brand-mark.svg",
-      "sizes":"any","type":"image/svg+xml",
+      "sizes": "any",
+      "type": "image/svg+xml",
       "purpose": "any"
     }
   ],
   "shortcuts": [
-    { "name": "Catálogo", "short_name": "Catálogo", "url": "/#catalog" },
-    { "name": "Carrito", "short_name": "Carrito", "url": "/#cart" },
-    { "name": "Mis pedidos", "short_name": "Pedidos", "url": "/#orders" }
+    {
+      "name": "Catálogo",
+      "short_name": "Catálogo",
+      "url": "/#catalog"
+    },
+    {
+      "name": "Carrito",
+      "short_name": "Carrito",
+      "url": "/#cart"
+    },
+    {
+      "name": "Mis pedidos",
+      "short_name": "Pedidos",
+      "url": "/#orders"
+    }
   ]
 }
