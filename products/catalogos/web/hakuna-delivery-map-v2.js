@@ -1,50 +1,169 @@
-/* Hakuna Matata: mapa móvil, inspirado en buenas prácticas de Pollazo, sin copiar su cobertura. */
-const cleanPoint=v=>{if(!v||v.lat==null||v.lng==null||v.lat===""||v.lng==="")return null;const lat=Number(v.lat),lng=Number(v.lng);if(!Number.isFinite(lat)||!Number.isFinite(lng)||lat < -90||lat > 90||lng < -180||lng > 180||(lat===0&&lng===0))return null;return{lat:+lat.toFixed(6),lng:+lng.toFixed(6),label:String(v.label||"Punto de entrega").slice(0,160)}};
+/* Hakuna Matata delivery map v3. Blue = user's live GPS, orange = delivery destination. */
 const types=["Casa","Trabajo","Local","Otro"];
-const escape=v=>String(v||"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
-const readSaved=key=>{try{return JSON.parse(localStorage.getItem(key)||"[]").filter(x=>cleanPoint(x)&&types.includes(x.type)).slice(0,5)}catch{return []}};
+const svg={
+ Casa:'<path d="m3 10 9-7 9 7v11H3zM9 21v-8h6v8"/>',
+ Trabajo:'<rect x="3" y="7" width="18" height="14" rx="2"/><path d="M9 7V4h6v3M3 13h18"/>',
+ Local:'<path d="M3 10 5 4h14l2 6v2H3zM5 12v8h14v-8M9 20v-6h6v6"/>',
+ Otro:'<path d="M20 10c0 5-8 11-8 11S4 15 4 10a8 8 0 1 1 16 0z"/><circle cx="12" cy="10" r="2.5"/>'
+};
+const typeIcon=type=>'<svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">'+svg[type]+'</svg>';
+const escape=value=>String(value??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const cleanPoint=value=>{
+ if(!value||value.lat==null||value.lng==null||value.lat===""||value.lng==="")return null;
+ const lat=Number(value.lat),lng=Number(value.lng);
+ if(!Number.isFinite(lat)||!Number.isFinite(lng)||lat < -90||lat > 90||lng < -180||lng > 180||(lat===0&&lng===0))return null;
+ return{lat:+lat.toFixed(6),lng:+lng.toFixed(6),label:String(value.label||"Punto de entrega").slice(0,160)};
+};
+const savedAddresses=key=>{
+ try{const arr=JSON.parse(localStorage.getItem(key)||"[]");return Array.isArray(arr)?arr.filter(x=>cleanPoint(x)&&types.includes(x.type)).slice(0,5):[]}
+ catch{return[]}
+};
 export function openDeliveryMap({openSheet,closeSheet,ensureLeaflet,current,onSelect,onClear,toast,storageKey,customer}){
- const point=cleanPoint(current),saved=readSaved(storageKey);
- const html=['<div class="hm-loc-v2">',
-  '<header class="hm-loc-head"><span>HAKUNA MATATA · ENTREGA</span><h2>¿Dónde recibes tu pedido?</h2><p>Coloca el pin verde exactamente donde quieres recibirlo.</p></header>',
-  '<div class="hm-loc-stage"><div id="hmLocMap" class="hm-loc-map" aria-label="Mapa de entrega"></div><div class="hm-loc-pin" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 5-8 11-8 11S4 15 4 10a8 8 0 1 1 16 0z"/><circle cx="12" cy="10" r="2.5"/></svg></div><div id="hmLocLoading" class="hm-loc-loading" role="status">Cargando mapa…</div><button id="hmLocGPS" type="button" class="hm-loc-gps">◎ Mi ubicación</button></div>',
-  '<div class="hm-loc-controls"><p id="hmLocStatus" class="hm-loc-status" aria-live="polite">Elige un punto moviendo el mapa o usando el GPS.</p>',
-  saved.length?'<label class="hm-loc-label">Tus direcciones guardadas en este dispositivo<select id="hmLocSaved"><option value="">Elegir dirección guardada</option></select></label>':'',
-  '<fieldset class="hm-loc-types"><legend>Guardar como</legend><div>',
-  types.map((t,i)=>'<button type="button" data-hm-type="'+t+'" aria-pressed="'+(i===0)+'" class="'+(i===0?'active':'')+'">'+t+'</button>').join(''),
-  '</div></fieldset><label class="hm-loc-label">Referencia para la entrega <small>(recomendada)</small><input id="hmLocRef" maxlength="160" placeholder="Ej. casa blanca, portón negro, cerca de..." value="'+escape(customer?.address||"")+'"></label>',
-  '<label class="hm-loc-remember"><input type="checkbox" id="hmLocRemember"> Recordar esta dirección en este dispositivo</label>',
-  '<div class="hm-loc-actions">',point?'<button id="hmLocClear" type="button">Quitar punto</button>':'',
-  '<button id="hmLocConfirm" type="button" disabled>Confirmar ubicación →</button></div>',
-  '<small class="hm-loc-note">Si prefieres no compartir GPS, también puedes escribir la dirección en el formulario.</small></div></div>'].join("");
+ const original=cleanPoint(current),saved=savedAddresses(storageKey);
+ const previousType=types.find(x=>original?.label?.startsWith(x+" ·"))||"Casa";
+ const html=[
+  '<div class="hm-loc-v2" role="region" aria-label="Selecciona el destino de tu pedido">',
+  '<header class="hm-loc-head"><span>CONFIRMAR DIRECCIÓN</span><h2>Marca tu punto exacto</h2></header>',
+  '<div class="hm-loc-stage"><div id="hmLocMap" class="hm-loc-map" aria-label="Mapa de entrega"></div>',
+  '<div class="hm-loc-pin" aria-hidden="true"><svg viewBox="0 0 24 24" width="32" height="32" fill="white"><path d="M12 2a7 7 0 0 0-7 7c0 4.8 7 12.8 7 12.8S19 13.8 19 9a7 7 0 0 0-7-7Zm0 9.5a2.5 2.5 0 1 1 0-5 2.5 2.5 0 0 1 0 5Z"/></svg></div>',
+  '<div class="hm-loc-legend"><span><i class="hm-dot-blue"></i> Tú</span><span><i class="hm-dot-orange"></i> Entrega</span></div>',
+  '<div class="hm-loc-loading" id="hmLocLoading" role="status">Preparando mapa…</div>',
+  '<button type="button" class="hm-loc-gps" id="hmLocGPS" aria-label="Centrar en mi ubicación"><svg viewBox="0 0 24 24" width="23" height="23" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="12" cy="12" r="7"/><path d="M12 1v4m0 14v4M1 12h4m14 0h4"/><circle cx="12" cy="12" r="2" fill="currentColor"/></svg></button></div>',
+  '<div class="hm-loc-controls"><div class="hm-loc-handle" aria-hidden="true"></div>',
+  '<p id="hmLocStatus" class="hm-loc-status" aria-live="polite">Mueve el mapa o toca una calle para elegir el destino.</p>',
+  '<div class="hm-loc-gps-row"><button type="button" id="hmLocUseGPS" disabled>Usar mi ubicación como entrega</button><small>Azul: dónde estás · Naranja: dónde entregar</small></div>',
+  saved.length?'<label class="hm-loc-label">Tus direcciones guardadas<select id="hmLocSaved"><option value="">Elegir dirección guardada</option></select></label>':'',
+  '<fieldset class="hm-loc-types"><legend>GUARDAR COMO</legend><div>',
+  types.map(t=>'<button type="button" data-hm-type="'+t+'" aria-pressed="'+(t===previousType)+'" class="'+(t===previousType?'active':'')+'">'+typeIcon(t)+'<span>'+t+'</span></button>').join(''),
+  '</div></fieldset>',
+  '<label class="hm-loc-label">REFERENCIA <small>(opcional)</small><input id="hmLocRef" maxlength="160" autocomplete="street-address" placeholder="Ej. Casa blanca, junto a la farmacia…" value="'+escape(customer?.address||"")+'"></label>',
+  '<label class="hm-loc-remember"><input type="checkbox" id="hmLocRemember"> Recordar dirección en este dispositivo</label>',
+  '<div class="hm-loc-actions">',original?'<button type="button" id="hmLocClear">Quitar</button>':'',
+  '<button type="button" id="hmLocConfirm" disabled>Confirmar punto →</button></div>',
+  '<small class="hm-loc-note">También puedes escribir una dirección sin compartir el GPS.</small></div></div>'
+ ].join("");
  openSheet(html,async sheet=>{
   const root=sheet.querySelector(".hm-loc-v2");if(!root)return;
-  const $=s=>root.querySelector(s),confirm=$("#hmLocConfirm"),message=$("#hmLocStatus"),loading=$("#hmLocLoading"),gps=$("#hmLocGPS"),reference=$("#hmLocRef");
-  let draft=point,chosen=Boolean(point),type="Casa",map=null,disposed=false,ready=false;
-  const refresh=()=>{const valid=chosen&&cleanPoint(draft);confirm.disabled=!valid;message.classList.toggle("is-ready",Boolean(valid));message.textContent=valid?"✓ Punto seleccionado · "+draft.lat.toFixed(5)+", "+draft.lng.toFixed(5):"Mueve el mapa o toca una calle para marcar el punto."};
-  const center=()=>{if(!map)return;const c=map.getCenter();draft=cleanPoint({lat:c.lat,lng:c.lng});refresh()};
-  const chooseType=t=>{type=t;root.querySelectorAll("[data-hm-type]").forEach(btn=>{const yes=btn.dataset.hmType===t;btn.classList.toggle("active",yes);btn.setAttribute("aria-pressed",String(yes))})};
-  root.querySelectorAll("[data-hm-type]").forEach(btn=>btn.onclick=()=>chooseType(btn.dataset.hmType));
-  const locate=silent=>{if(!navigator.geolocation){if(!silent)toast("GPS no disponible. Mueve el mapa manualmente.","error");return}gps.disabled=true;navigator.geolocation.getCurrentPosition(pos=>{gps.disabled=false;if(disposed||!map||!root.isConnected)return;chosen=true;map.setView([pos.coords.latitude,pos.coords.longitude],18,{animate:false});center()},()=>{gps.disabled=false;if(!silent)toast("No se pudo obtener tu ubicación. Usa el mapa manualmente.","error")},{enableHighAccuracy:true,timeout:10000,maximumAge:60000})};
+  const $=selector=>root.querySelector(selector),confirm=$("#hmLocConfirm"),status=$("#hmLocStatus"),gps=$("#hmLocGPS"),useGPS=$("#hmLocUseGPS"),ref=$("#hmLocRef"),loading=$("#hmLocLoading");
+  const back=sheet.querySelector(".v10-sheet-close");if(back){back.textContent="‹";back.title="Volver";back.setAttribute("aria-label","Volver al pedido");}
+  let map=null,draft=original,chosen=Boolean(original),type=previousType,position=null,blueMarker=null,accuracyCircle=null;
+  let watchId=null,observer=null,disposed=false,ready=false,programmatic=false,firstGpsView=!original;
+  const refresh=()=>{
+    const valid=Boolean(chosen&&cleanPoint(draft));confirm.disabled=!valid;useGPS.disabled=!position;
+    status.classList.toggle("is-ready",valid);
+    status.textContent=valid?"✓ PUNTO DE ENTREGA · "+draft.lat.toFixed(5)+", "+draft.lng.toFixed(5):"Marca dónde deseas recibirlo. El punto azul eres tú.";
+  };
+  const fromCenter=selected=>{
+    if(!map||disposed)return;
+    if(selected)chosen=true;
+    if(!chosen)return refresh();
+    const p=map.getCenter();draft=cleanPoint({lat:p.lat,lng:p.lng});refresh();
+  };
+  const pan=(point,zoom,selected=false)=>{
+    if(!map||disposed)return;
+    programmatic=true;
+    if(selected)chosen=true;
+    map.setView([point.lat,point.lng],zoom,{animate:false});
+    programmatic=false;
+    if(selected)fromCenter(false);
+  };
+  const stop=()=>{
+    if(disposed)return;disposed=true;
+    if(watchId!==null&&navigator.geolocation){navigator.geolocation.clearWatch(watchId);watchId=null;}
+    observer?.disconnect();if(map){map.remove();map=null;}
+  };
+  const chooseType=t=>{
+    type=t;
+    root.querySelectorAll("[data-hm-type]").forEach(button=>{
+      const active=button.dataset.hmType===t;button.classList.toggle("active",active);
+      button.setAttribute("aria-pressed",String(active));
+    });
+  };
+  root.querySelectorAll("[data-hm-type]").forEach(button=>button.onclick=()=>chooseType(button.dataset.hmType));
+  const gpsUpdate=geo=>{
+    if(disposed||!map||!root.isConnected)return;
+    const p=cleanPoint({lat:geo.coords.latitude,lng:geo.coords.longitude});if(!p)return;
+    position=p;
+    const xy=[p.lat,p.lng],radius=Math.max(8,Math.min(Number(geo.coords.accuracy)||25,1200));
+    if(!accuracyCircle)accuracyCircle=window.L.circle(xy,{radius,interactive:false,color:"#2784e9",weight:1,opacity:.27,fillColor:"#76bcff",fillOpacity:.1}).addTo(map);
+    else accuracyCircle.setLatLng(xy).setRadius(radius);
+    if(!blueMarker){
+      const dot=window.L.divIcon({className:"hm-gps-blue",html:'<span class="hm-gps-blue-halo"></span><span class="hm-gps-blue-core"></span>',iconSize:[32,32],iconAnchor:[16,16]});
+      blueMarker=window.L.marker(xy,{icon:dot,keyboard:false,interactive:false,zIndexOffset:450}).addTo(map);
+    }else blueMarker.setLatLng(xy);
+    gps.classList.add("located");
+    if(firstGpsView&&!chosen){
+      firstGpsView=false;pan(p,17);
+      programmatic=true;map.panBy([0,-60],{animate:false});programmatic=false;
+    }
+    refresh();
+  };
+  const locate=silent=>{
+    if(!navigator.geolocation){if(!silent)toast("El GPS no está disponible; mueve el mapa.","error");return}
+    if(position){pan(position,Math.max(16,map?.getZoom()||16));programmatic=true;map.panBy([0,-60],{animate:false});programmatic=false;return}
+    if(watchId!==null)return;
+    gps.classList.add("locating");
+    watchId=navigator.geolocation.watchPosition(geo=>{gps.classList.remove("locating");gpsUpdate(geo)},error=>{
+      gps.classList.remove("locating");
+      if(!silent&&!disposed)toast(error?.code===1?"Activa el permiso de ubicación en el navegador.":"No se encontró tu GPS. Mueve el mapa manualmente.","error");
+    },{enableHighAccuracy:true,timeout:15000,maximumAge:10000});
+  };
   gps.onclick=()=>locate(false);
-  const savedSelect=$("#hmLocSaved");if(savedSelect){saved.forEach((x,i)=>{const opt=document.createElement("option");opt.value=String(i);opt.textContent=x.type+" · "+(x.reference||x.lat.toFixed(4)+", "+x.lng.toFixed(4));savedSelect.append(opt)});savedSelect.onchange=()=>{if(savedSelect.value==="")return;const x=saved[Number(savedSelect.value)],p=cleanPoint(x);if(!p||!map)return;chosen=true;draft=p;chooseType(x.type);reference.value=x.reference||"";map.setView([p.lat,p.lng],17,{animate:false});refresh()}}
-  $("#hmLocClear")?.addEventListener("click",()=>{onClear();if(map)map.remove();disposed=true;closeSheet(true)});
-  confirm.onclick=()=>{const p=cleanPoint(draft);if(!chosen||!p)return toast("Primero elige un punto en el mapa.","error");const ref=reference.value.trim().slice(0,160);if($("#hmLocRemember").checked){try{const next=[{...p,type,reference:ref},...readSaved(storageKey).filter(x=>x.type!==type||Math.abs(x.lat-p.lat)>.0001||Math.abs(x.lng-p.lng)>.0001)].slice(0,5);localStorage.setItem(storageKey,JSON.stringify(next))}catch{}}onSelect({...p,label:type+" · Ubicación marcada",reference:ref});if(map)map.remove();disposed=true;closeSheet(true)};
+  useGPS.onclick=()=>{if(!position)return;pan(position,18,true);refresh()};
+  const savedSelect=$("#hmLocSaved");
+  if(savedSelect){
+    saved.forEach((entry,i)=>{
+      const option=document.createElement("option");option.value=String(i);
+      option.textContent=entry.type+" · "+(entry.reference||entry.lat.toFixed(4)+", "+entry.lng.toFixed(4));savedSelect.append(option);
+    });
+    savedSelect.onchange=()=>{
+      if(savedSelect.value==="")return;
+      const entry=saved[Number(savedSelect.value)],p=cleanPoint(entry);if(!p||!map)return;
+      draft=p;chooseType(entry.type);ref.value=entry.reference||"";pan(p,17,true);refresh();
+    };
+  }
+  $("#hmLocClear")?.addEventListener("click",()=>{stop();onClear();closeSheet(true)});
+  confirm.onclick=()=>{
+    const p=cleanPoint(draft);if(!chosen||!p)return toast("Marca primero un destino.","error");
+    const reference=ref.value.trim().slice(0,160);
+    if($("#hmLocRemember").checked){
+      try{
+        const old=savedAddresses(storageKey);
+        const others=old.filter(x=>x.type!==type||Math.abs(x.lat-p.lat)>.0001||Math.abs(x.lng-p.lng)>.0001);
+        localStorage.setItem(storageKey,JSON.stringify([{...p,type,reference},...others].slice(0,5)));
+      }catch{/* Optional; never block order creation. */}
+    }
+    stop();onSelect({...p,label:type+" · Ubicación marcada",reference});closeSheet(true);
+  };
   refresh();
   try{
-   const L=await ensureLeaflet();if(disposed||!root.isConnected)return;
-   // Centro neutro en Ecuador; NO se guarda hasta una selección explícita del cliente.
-   const start=point||{lat:-1.55,lng:-78.5};
-   map=L.map($("#hmLocMap"),{zoomControl:false,attributionControl:true,scrollWheelZoom:false}).setView([start.lat,start.lng],point?17:6,{animate:false});
-   L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",{maxZoom:19,attribution:"&copy; OpenStreetMap contributors"}).addTo(map);
-   L.control.zoom({position:"bottomright"}).addTo(map);
-   map.on("dragstart",()=>{chosen=true});
-   map.on("click",e=>{chosen=true;map.panTo(e.latlng);center()});
-   map.on("moveend",()=>{if(ready)center()});
-   setTimeout(()=>{if(disposed||!root.isConnected)return;map.invalidateSize();ready=true},200);
-   loading.remove();refresh();
-   if(!point)locate(true);
-   const obs=new MutationObserver(()=>{if(!root.isConnected){obs.disconnect();if(!disposed){disposed=true;map?.remove()}}});obs.observe(document.body,{childList:true,subtree:true});
-  }catch{loading.textContent="No pudimos cargar el mapa. Puedes escribir tu dirección manualmente.";gps.disabled=true;confirm.disabled=true;toast("Mapa no disponible; escribe la dirección en el formulario.","error")}
+    const L=await ensureLeaflet();if(disposed||!root.isConnected)return;
+    const start=original||{lat:-1.55,lng:-78.5}; // Neutral Ecuador view, not a delivery coverage limit.
+    map=L.map($("#hmLocMap"),{zoomControl:false,attributionControl:true,scrollWheelZoom:false,preferCanvas:true}).setView([start.lat,start.lng],original?17:6,{animate:false});
+    const tiles=L.tileLayer("https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png",{maxZoom:19,subdomains:"abcd",attribution:"&copy; OpenStreetMap contributors &copy; CARTO"});
+    let loaded=false,fallbackUsed=false,tileErrors=0;
+    const fallback=()=>{
+      if(fallbackUsed||disposed||!map)return;
+      fallbackUsed=true;map.removeLayer(tiles);
+      L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",{maxZoom:19,attribution:"&copy; OpenStreetMap contributors"}).on("load",()=>loading?.remove()).addTo(map);
+    };
+    tiles.on("load",()=>{loaded=true;loading?.remove()});
+    tiles.on("tileerror",()=>{if(++tileErrors>2&&!loaded)fallback()});
+    tiles.addTo(map);
+    setTimeout(()=>{if(!loaded&&!disposed)fallback()},6500);
+    L.control.zoom({position:"bottomleft"}).addTo(map);
+    map.on("dragstart",()=>root.classList.add("dragging"));
+    map.on("dragend",()=>{root.classList.remove("dragging");fromCenter(true)});
+    map.on("click",event=>pan(event.latlng,map.getZoom(),true));
+    map.on("moveend",()=>{if(ready&&!programmatic&&chosen)fromCenter(false)});
+    setTimeout(()=>{if(disposed||!root.isConnected)return;map.invalidateSize();ready=true},200);
+    locate(true);
+    observer=new MutationObserver(()=>{if(!root.isConnected)stop()});
+    observer.observe(document.body,{childList:true,subtree:true});
+  }catch{
+    if(loading)loading.textContent="El mapa no está disponible. Escribe tu dirección en el formulario.";
+    gps.disabled=true;confirm.disabled=true;stop();
+    toast("No se pudo cargar el mapa. Puedes continuar con una dirección escrita.","error");
+  }
  });
 }
