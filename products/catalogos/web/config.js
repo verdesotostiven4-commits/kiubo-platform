@@ -30,10 +30,10 @@ document.addEventListener('error',event=>{
   visual.style.setProperty('--hm-brand-fg','#294a37');
 },true);
 (()=>{
-  const path=location.pathname,v='10.16.16',logo=window.KIUBO_CATALOG_CONFIG.brandLogoUrl;
+  const path=location.pathname,v='10.16.17',logo=window.KIUBO_CATALOG_CONFIG.brandLogoUrl;
   document.documentElement.dataset.hmBuild=v;
   const setIcon=(rel,href)=>{let l=document.querySelector(`link[rel="${rel}"]`);if(!l){l=document.createElement('link');l.rel=rel;document.head.append(l)}l.href=href};
-  if(logo){setIcon('icon',logo);setIcon('apple-touch-icon',logo)}
+  if(logo){setIcon('icon',logo);setIcon('apple-touch-icon',"https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEh2p8zt5jjdmqcRm128QZV494LO_6JN3YfqRTTfoLcSTI_1FJbjoQSSX_mhtG5BCsgmNCq8EXEDuME4zDB2ZW2nAuz8o_Aldwf9oeoiihyphenhyphenLcv2IsVSFdN90dBjZuu5BLI5AsO4JWJVyb12_RtotNuvdVczZAnFFEqIMGOsfKymmpG5oJZKeh5_aNSaItas/s1600/image.png")}
   const addStyle=href=>{if(document.querySelector(`link[href^="${href}"]`))return;const l=document.createElement('link');l.rel='stylesheet';l.href=`${href}?v=${v}`;document.head.append(l)};
   const addManifest=href=>{let l=document.querySelector('link[rel="manifest"]');if(!l){l=document.createElement('link');l.rel='manifest';document.head.append(l)}l.href=`${href}?v=${v}`};
   if(/^\/(panel|master)(?:\/|$)/.test(path)){

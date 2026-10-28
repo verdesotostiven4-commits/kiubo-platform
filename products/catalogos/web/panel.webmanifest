@@ -11,10 +11,10 @@
   "orientation": "portrait-primary",
   "icons": [
     {
-      "src": "https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEir16n1bNYOmluwXB4NgFhKGCSm-g3-h1JVbKMvFAS6dYSzwhdj_K6aHlIqEH19XItSIB0dQ7WMRHNiVGfVfPYUdHWBx4kHfEkQkEA0h3XuGEVVQgc_ksv1a2GhVkCjt9HTK9ks4_ZP600JgxV4wxFKSMq_foUWOVBv9Ds4tdLayG6Q8zf2KlsRtr9KbVg/s1600/image.png",
+      "src": "https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEh2p8zt5jjdmqcRm128QZV494LO_6JN3YfqRTTfoLcSTI_1FJbjoQSSX_mhtG5BCsgmNCq8EXEDuME4zDB2ZW2nAuz8o_Aldwf9oeoiihyphenhyphenLcv2IsVSFdN90dBjZuu5BLI5AsO4JWJVyb12_RtotNuvdVczZAnFFEqIMGOsfKymmpG5oJZKeh5_aNSaItas/s1600/image.png",
       "sizes": "any",
       "type": "image/png",
-      "purpose": "any maskable"
+      "purpose": "any"
     },
     {
       "src": "/assets/brand-mark.svg",
