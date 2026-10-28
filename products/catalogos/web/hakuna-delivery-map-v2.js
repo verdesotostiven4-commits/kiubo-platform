@@ -105,6 +105,7 @@ export function openDeliveryMap({openSheet,closeSheet,ensureLeaflet,current,onSe
     gps.classList.add("locating");
     watchId=navigator.geolocation.watchPosition(geo=>{gps.classList.remove("locating");gpsUpdate(geo)},error=>{
       gps.classList.remove("locating");
+      if(watchId!==null){navigator.geolocation.clearWatch(watchId);watchId=null;}
       if(!silent&&!disposed)toast(error?.code===1?"Activa el permiso de ubicación en el navegador.":"No se encontró tu GPS. Mueve el mapa manualmente.","error");
     },{enableHighAccuracy:true,timeout:15000,maximumAge:10000});
   };
