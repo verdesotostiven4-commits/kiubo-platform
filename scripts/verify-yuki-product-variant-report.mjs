@@ -10,7 +10,7 @@ const load=(file,deps={})=>{
 };
 const adjustments=load("lib/sale-adjustments.ts");
 const classification=load("lib/product-classification.ts");
-const {soldProductReport}=load("lib/report-sold-products.ts",{
+const {soldProductReport,yukiYogurtFlavorReport}=load("lib/report-sold-products.ts",{
  "./sale-adjustments":adjustments,
  "./product-classification":classification
 });
@@ -57,5 +57,15 @@ for(const r of result.summary){
 }
 const ui=readFileSync("components/ReportsClientPro.tsx","utf8");
 assert.ok(ui.includes("soldProductReport(sales,db.tenantProducts"),"Report must call tested canonical grouping helper");
-assert.ok(ui.includes("Desglose por sabor:"),"Show users the actual selected options, not just the first variant");
+assert.ok(ui.includes("item.variants.map"),"Show real option counts below the associated combo");
+assert.ok(ui.includes("rowsByProduct.set(key"),"Every active sellable catalog item must appear, even when sales are zero");
+assert.ok(ui.includes("Solo vendidos")&&ui.includes("Toda la carta"),"Richard must be able to choose full or sold-only product lists");
+assert.ok(ui.includes("yukiYogurtFlavorReport(sales)"),"YUKI should display separately the real yogurt portions, including combos");
+const flavors=yukiYogurtFlavorReport([...sales,sales[0]]);
+const flavor=name=>flavors.find(row=>row.name.toLocaleLowerCase("es")===name.toLocaleLowerCase("es"))?.qty||0;
+assert.equal(flavor("Fresa"),11,"Yogurt fresa portions include the ten combo servings plus one standalone");
+assert.equal(flavor("Mora"),21,"Two-yogurt and three-yogurt combos must count each selected portion");
+assert.equal(flavor("Mango"),13,"Combo quantities must multiply flavor portions");
+assert.equal(flavor("Coco"),7,"Flavors from combo options are included");
+assert.equal(flavor("Piña"),2,"All flavors are listed, not only the six favorites");
 console.log("✓ Combo 1 = 14, Combo 2 = 12, fresa combinations = 10 plus 1 standalone, actual historical sales stay untouched");
