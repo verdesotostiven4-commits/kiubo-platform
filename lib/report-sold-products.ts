@@ -56,3 +56,37 @@ export function soldProductReport(sales:SaleRecord[],products:TenantProduct[]){
   const summary=[...rows.values()].sort((a,b)=>b.qty-a.qty||b.revenue-a.revenue||a.name.localeCompare(b.name,"es"));
   return{summary,excluded,totalUnits:summary.reduce((sum,item)=>sum+item.qty,0)};
 }
+
+/** Count yogurt flavours as portions, including portions inside combos.
+ * Different from product units: one Combo 3 can contain two yogurts.
+ * Caller must pass only valid (non-voided) sales in the chosen period. */
+export function yukiYogurtFlavorReport(sales:SaleRecord[]){
+  const totals=new Map<string,{name:string;qty:number}>();
+  const counted=new Set<string>();
+  const normalize=(value:string)=>value.trim().replace(/\s+/g," ");
+  for(const sale of sales){
+    const saleKey=String(sale.branchId)+":"+String(sale.id);
+    if(counted.has(saleKey))continue;
+    counted.add(saleKey);
+    for(const item of sale.items){
+      const meta=parseOperationalItemName(item.name);
+      if(meta.mode!=="sale")continue;
+      // Selections are represented historically by optionLabel, and in some
+      // recent sales only by the displayed line name.
+      const label=String(item.optionLabel||meta.displayName||"");
+      const matches=[...label.matchAll(/Yogur(?:t)?(?:\s+\d+\s*:)?\s*([^·/×]+?)(?=\s*·|\s*\/|\s*$)/gi)];
+      const selected=matches.length?matches:label===meta.displayName?[]:[...meta.displayName.matchAll(/Yogur(?:t)?(?:\s+\d+\s*:)?\s*([^·/×]+?)(?=\s*·|\s*\/|\s*$)/gi)];
+      const count=Number(item.qty);
+      if(!Number.isFinite(count)||count<=0)continue;
+      for(const match of selected){
+        const flavor=normalize(match[1]||"");
+        if(!flavor||/^sin especificar$/i.test(flavor))continue;
+        const key=flavor.toLocaleLowerCase("es");
+        const row=totals.get(key)||{name:flavor,qty:0};
+        row.qty+=count;
+        totals.set(key,row);
+      }
+    }
+  }
+  return [...totals.values()].sort((a,b)=>b.qty-a.qty||a.name.localeCompare(b.name,"es"));
+}
