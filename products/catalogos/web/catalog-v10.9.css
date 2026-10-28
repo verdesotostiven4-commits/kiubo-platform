@@ -148,3 +148,26 @@ html.hm105-boot .v10-app,html.hm105-ready .v10-app,html .v10-app{opacity:1!impor
 @media(max-height:700px){.hm-loc-stage{bottom:clamp(225px,41dvh,310px)}.hm-loc-controls{max-height:clamp(225px,41dvh,310px);gap:6px;padding-top:8px}.hm-loc-types button{min-height:43px}.hm-loc-label input{min-height:39px}.hm-loc-actions button{min-height:45px}}
 @media(max-width:345px){.hm-loc-controls{padding-left:11px;padding-right:11px}.hm-loc-types>div{gap:4px}.hm-loc-types button{font-size:10px}.hm-loc-status{max-width:calc(100% - 85px)}}
 @media(prefers-reduced-motion:reduce){.hm-loc-controls{animation:none!important}}
+
+/* HAKUNA — OpenFreeMap Positron / MapLibre, compact mobile delivery selector. */
+.hm-map-v3 .hm-loc-map{background:#f0f2f2!important}
+.hm-map-v3 .maplibregl-canvas,.hm-map-v3 .maplibregl-map{outline:0}
+.hm-map-v3 .maplibregl-ctrl-bottom-left{z-index:4;bottom:4px}
+.hm-map-v3 .maplibregl-ctrl-bottom-left .maplibregl-ctrl{margin:0 0 16px 14px}
+.hm-map-v3 .maplibregl-ctrl-group{border:1px solid #e0e6e3;box-shadow:0 4px 16px #1a372d1d;border-radius:13px;overflow:hidden}
+.hm-map-v3 .maplibregl-ctrl-group button{width:36px;height:36px}
+.hm-map-v3 .maplibregl-ctrl-attrib{background:#ffffffd9!important;color:#718078!important;font-size:9px!important}
+.hm-map-v3 .maplibregl-ctrl-attrib a{color:#627a69!important}
+.hm-map-v3 .hm-loc-stage{background:#eff2f2}
+.hm-map-v3 .hm-loc-loading{background:#eff2f2e8;color:#54715f;backdrop-filter:blur(3px)}
+.hm-map-v3 .hm-loc-loading.is-error{pointer-events:auto;color:#285d43}
+.hm-map-v3 .hm-loc-pin{background:#e88a3a;border-color:#fff;box-shadow:0 10px 26px #d4884660}
+.hm-map-v3 .hm-loc-pin::after{background:#e88a3a}
+.hm-map-v3 .hmv3-gps-location{position:relative;width:30px;height:30px;pointer-events:none}
+.hm-map-v3 .hmv3-gps-radius{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);background:#3a9bf321;border:1px solid #3186e94d;border-radius:50%;min-width:30px;min-height:30px}
+.hm-map-v3 .hmv3-gps-pulse{position:absolute;inset:1px;border-radius:50%;border:1px solid #3f9de378;animation:hmv3gpsPulse 2.5s ease-out infinite}
+.hm-map-v3 .hmv3-gps-center{position:absolute;left:6px;top:6px;width:18px;height:18px;background:#2582ed;border:4px solid #fff;border-radius:50%;box-sizing:border-box;box-shadow:0 0 0 1px #2584e1,0 2px 8px #2584e14a}
+.hm-map-v3 .hm-loc-status{bottom:11px;background:#ffffffee}
+.hm-map-v3 .hm-loc-controls{gap:8px}
+@keyframes hmv3gpsPulse{0%{opacity:.7;transform:scale(.66)}85%,100%{opacity:0;transform:scale(1.8)}}
+@media(prefers-reduced-motion:reduce){.hm-map-v3 .hmv3-gps-pulse{animation:none!important}}
