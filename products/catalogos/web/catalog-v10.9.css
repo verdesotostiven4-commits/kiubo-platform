@@ -113,3 +113,38 @@ html.hm105-boot .v10-app,html.hm105-ready .v10-app,html .v10-app{opacity:1!impor
 @media(min-width:790px){.v10-sheet:has(.hm-loc-v2){left:50%;width:min(760px,100%);height:96dvh;max-height:96dvh;bottom:2dvh;border-radius:22px;transform:translate(-50%,105%)}.v10-sheet.show:has(.hm-loc-v2){transform:translate(-50%,0)}}
 @media(max-height:700px){.hm-loc-stage{bottom:clamp(325px,52dvh,405px)}.hm-loc-controls{max-height:clamp(325px,52dvh,405px);gap:8px}.hm-loc-status{min-height:46px;padding:10px}.hm-loc-types button{min-height:48px}.hm-loc-head{min-height:46px}.hm-loc-legend{top:calc(env(safe-area-inset-top) + 84px)}}
 @media(prefers-reduced-motion:reduce){.hm-loc-controls,.hm-gps-blue-halo,.hm-loc-gps svg{animation:none!important}.hm-loc-pin{transition:none!important}}
+
+/* Hakuna compact delivery map v4 – removes the old stacked controls. */
+.hm-loc-v2{background:#f2f4f3}
+.hm-loc-head{top:calc(env(safe-area-inset-top) + 9px);min-height:48px;padding:8px 6px!important;border-radius:17px}
+.hm-loc-head h2{font-size:clamp(12px,3.8vw,16px)}
+.hm-loc-head>span{font-size:9px}
+.v10-sheet:has(.hm-loc-v2) .v10-sheet-close{top:calc(env(safe-area-inset-top) + 9px);width:49px;height:49px;border-radius:17px}
+.hm-loc-gps{top:calc(env(safe-area-inset-top) + 9px);width:49px;min-width:49px;height:49px;min-height:49px;border-radius:17px}
+.hm-loc-stage{bottom:clamp(235px,36dvh,340px);overflow:hidden}
+.hm-loc-map .leaflet-tile{filter:saturate(.69) contrast(.94) brightness(1.035)}
+.hm-loc-loading{z-index:630}
+.hm-loc-loading.is-error{background:#f2f4f3e8;font-weight:750;padding:26px;line-height:1.6}
+.hm-loc-status{position:absolute;left:50%;bottom:12px;z-index:635;transform:translateX(-50%);width:max-content;max-width:calc(100% - 110px);box-sizing:border-box;min-height:auto;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;border-radius:999px;border:1px solid #e5eae6;background:#fffffff5;color:#52695a;font-size:11px;font-weight:760;line-height:1.2;padding:8px 12px;margin:0;text-align:center;box-shadow:0 3px 16px #1837281d;pointer-events:none}
+.hm-loc-status.is-ready{background:#fffffff5;color:#2e5c43;border-color:#dbe6dd}
+.hm-loc-legend,.hm-loc-gps-row,.hm-loc-note{display:none!important}
+.hm-loc-controls{height:auto;max-height:clamp(235px,36dvh,340px);padding:10px 16px calc(10px + env(safe-area-inset-bottom));gap:8px;border-radius:23px 23px 0 0;overflow-y:auto}
+.hm-loc-handle{width:39px;height:4px;margin:0 auto 0}
+.hm-loc-types{margin:0}
+.hm-loc-types legend{font-size:10px;margin-bottom:5px;line-height:1.15;letter-spacing:.05em;color:#84948a}
+.hm-loc-types>div{gap:6px}
+.hm-loc-types button{min-height:48px;border-radius:12px;padding:5px 2px;font-size:11px;gap:2px}
+.hm-loc-types button svg{width:17px;height:17px}
+.hm-loc-label{gap:4px;letter-spacing:.02em;font-size:10px}
+.hm-loc-label small{font-size:10px;color:#97a49c}
+.hm-loc-label input,.hm-loc-label select{min-height:42px;padding:9px 12px;font-size:13px;border-radius:12px}
+.hm-loc-remember{font-size:11px;line-height:1.2;min-height:22px;gap:7px}
+.hm-loc-remember input{width:17px;height:17px;flex:none}
+.hm-loc-actions{position:sticky;bottom:calc(-10px - env(safe-area-inset-bottom));z-index:800;background:#fff;box-shadow:0 -5px 8px #ffffffd9;padding:4px 0 calc(2px + env(safe-area-inset-bottom));gap:8px}
+.hm-loc-actions button{min-height:48px;border-radius:13px;font-size:14px}
+#hmLocConfirm{box-shadow:0 4px 10px #285e4229}
+.hm-loc-pin{width:57px;height:61px;border-radius:23px 23px 24px 24px}
+.hm-loc-pin svg{width:28px;height:28px}
+@media(max-height:700px){.hm-loc-stage{bottom:clamp(225px,41dvh,310px)}.hm-loc-controls{max-height:clamp(225px,41dvh,310px);gap:6px;padding-top:8px}.hm-loc-types button{min-height:43px}.hm-loc-label input{min-height:39px}.hm-loc-actions button{min-height:45px}}
+@media(max-width:345px){.hm-loc-controls{padding-left:11px;padding-right:11px}.hm-loc-types>div{gap:4px}.hm-loc-types button{font-size:10px}.hm-loc-status{max-width:calc(100% - 85px)}}
+@media(prefers-reduced-motion:reduce){.hm-loc-controls{animation:none!important}}

@@ -26,12 +26,12 @@ export function openDeliveryMap({openSheet,closeSheet,ensureLeaflet,current,onSe
   '<header class="hm-loc-head"><span>CONFIRMAR DIRECCIÓN</span><h2>Marca tu punto exacto</h2></header>',
   '<div class="hm-loc-stage"><div id="hmLocMap" class="hm-loc-map" aria-label="Mapa de entrega"></div>',
   '<div class="hm-loc-pin" aria-hidden="true"><svg viewBox="0 0 24 24" width="32" height="32" fill="white"><path d="M12 2a7 7 0 0 0-7 7c0 4.8 7 12.8 7 12.8S19 13.8 19 9a7 7 0 0 0-7-7Zm0 9.5a2.5 2.5 0 1 1 0-5 2.5 2.5 0 0 1 0 5Z"/></svg></div>',
-  '<div class="hm-loc-legend"><span><i class="hm-dot-blue"></i> Tú</span><span><i class="hm-dot-orange"></i> Entrega</span></div>',
+  '',
   '<div class="hm-loc-loading" id="hmLocLoading" role="status">Preparando mapa…</div>',
-  '<button type="button" class="hm-loc-gps" id="hmLocGPS" aria-label="Centrar en mi ubicación"><svg viewBox="0 0 24 24" width="23" height="23" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="12" cy="12" r="7"/><path d="M12 1v4m0 14v4M1 12h4m14 0h4"/><circle cx="12" cy="12" r="2" fill="currentColor"/></svg></button></div>',
-  '<div class="hm-loc-controls"><div class="hm-loc-handle" aria-hidden="true"></div>',
-  '<p id="hmLocStatus" class="hm-loc-status" aria-live="polite">Mueve el mapa o toca una calle para elegir el destino.</p>',
-  '<div class="hm-loc-gps-row"><button type="button" id="hmLocUseGPS" disabled>Usar mi ubicación como entrega</button><small>Azul: dónde estás · Naranja: dónde entregar</small></div>',
+  '<button type="button" class="hm-loc-gps" id="hmLocGPS" aria-label="Centrar en mi ubicación"><svg viewBox="0 0 24 24" width="23" height="23" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="12" cy="12" r="7"/><path d="M12 1v4m0 14v4M1 12h4m14 0h4"/><circle cx="12" cy="12" r="2" fill="currentColor"/></svg></button>',
+  '<p id="hmLocStatus" class="hm-loc-status" aria-live="polite">Elige un punto en el mapa</p></div><div class="hm-loc-controls"><div class="hm-loc-handle" aria-hidden="true"></div>',
+  '',
+  '',
   saved.length?'<label class="hm-loc-label">Tus direcciones guardadas<select id="hmLocSaved"><option value="">Elegir dirección guardada</option></select></label>':'',
   '<fieldset class="hm-loc-types"><legend>GUARDAR COMO</legend><div>',
   types.map(t=>'<button type="button" data-hm-type="'+t+'" aria-pressed="'+(t===previousType)+'" class="'+(t===previousType?'active':'')+'">'+typeIcon(t)+'<span>'+t+'</span></button>').join(''),
@@ -40,18 +40,18 @@ export function openDeliveryMap({openSheet,closeSheet,ensureLeaflet,current,onSe
   '<label class="hm-loc-remember"><input type="checkbox" id="hmLocRemember"> Recordar dirección en este dispositivo</label>',
   '<div class="hm-loc-actions">',original?'<button type="button" id="hmLocClear">Quitar</button>':'',
   '<button type="button" id="hmLocConfirm" disabled>Confirmar punto →</button></div>',
-  '<small class="hm-loc-note">También puedes escribir una dirección sin compartir el GPS.</small></div></div>'
+  '</div></div>'
  ].join("");
  openSheet(html,async sheet=>{
   const root=sheet.querySelector(".hm-loc-v2");if(!root)return;
-  const $=selector=>root.querySelector(selector),confirm=$("#hmLocConfirm"),status=$("#hmLocStatus"),gps=$("#hmLocGPS"),useGPS=$("#hmLocUseGPS"),ref=$("#hmLocRef"),loading=$("#hmLocLoading");
+  const $=selector=>root.querySelector(selector),confirm=$("#hmLocConfirm"),status=$("#hmLocStatus"),gps=$("#hmLocGPS"),ref=$("#hmLocRef"),loading=$("#hmLocLoading");
   const back=sheet.querySelector(".v10-sheet-close");if(back){back.textContent="‹";back.title="Volver";back.setAttribute("aria-label","Volver al pedido");}
   let map=null,draft=original,chosen=Boolean(original),type=previousType,position=null,blueMarker=null,accuracyCircle=null;
   let watchId=null,observer=null,disposed=false,ready=false,programmatic=false,firstGpsView=!original;
   const refresh=()=>{
-    const valid=Boolean(chosen&&cleanPoint(draft));confirm.disabled=!valid;useGPS.disabled=!position;
+    const valid=Boolean(chosen&&cleanPoint(draft));confirm.disabled=!valid;
     status.classList.toggle("is-ready",valid);
-    status.textContent=valid?"✓ PUNTO DE ENTREGA · "+draft.lat.toFixed(5)+", "+draft.lng.toFixed(5):"Marca dónde deseas recibirlo. El punto azul eres tú.";
+    status.textContent=valid?draft.lat.toFixed(5)+", "+draft.lng.toFixed(5):"Desliza o toca el mapa para elegir";
   };
   const fromCenter=selected=>{
     if(!map||disposed)return;
@@ -110,8 +110,7 @@ export function openDeliveryMap({openSheet,closeSheet,ensureLeaflet,current,onSe
     },{enableHighAccuracy:true,timeout:15000,maximumAge:10000});
   };
   gps.onclick=()=>locate(false);
-  useGPS.onclick=()=>{if(!position)return;pan(position,18,true);refresh()};
-  const savedSelect=$("#hmLocSaved");
+    const savedSelect=$("#hmLocSaved");
   if(savedSelect){
     saved.forEach((entry,i)=>{
       const option=document.createElement("option");option.value=String(i);
@@ -141,17 +140,21 @@ export function openDeliveryMap({openSheet,closeSheet,ensureLeaflet,current,onSe
     const L=await ensureLeaflet();if(disposed||!root.isConnected)return;
     const start=original||{lat:-1.55,lng:-78.5}; // Neutral Ecuador view, not a delivery coverage limit.
     map=L.map($("#hmLocMap"),{zoomControl:false,attributionControl:true,scrollWheelZoom:false,preferCanvas:true}).setView([start.lat,start.lng],original?17:6,{animate:false});
-    const tiles=L.tileLayer("https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png",{maxZoom:19,subdomains:"abcd",attribution:"&copy; OpenStreetMap contributors &copy; CARTO"});
-    let loaded=false,fallbackUsed=false,tileErrors=0;
-    const fallback=()=>{
-      if(fallbackUsed||disposed||!map)return;
-      fallbackUsed=true;map.removeLayer(tiles);
-      L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",{maxZoom:19,attribution:"&copy; OpenStreetMap contributors"}).on("load",()=>loading?.remove()).addTo(map);
+    // Standard OSM raster tiles: no provider API key required.
+    // Browser cache + visible attribution are preserved by Leaflet.
+    const tiles=L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png",{
+      maxZoom:19,attribution:'&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap contributors</a>'
+    });
+    let tilesLoaded=false,tileErrors=0;
+    const showMapUnavailable=()=>{
+      if(disposed||tilesLoaded||!loading)return;
+      loading.textContent="El mapa no está disponible. Puedes escribir la dirección en el pedido.";
+      loading.classList.add("is-error");
     };
-    tiles.on("load",()=>{loaded=true;loading?.remove()});
-    tiles.on("tileerror",()=>{if(++tileErrors>2&&!loaded)fallback()});
+    tiles.on("load",()=>{tilesLoaded=true;loading?.remove()});
+    tiles.on("tileerror",()=>{if(++tileErrors>=4&&!tilesLoaded)showMapUnavailable()});
     tiles.addTo(map);
-    setTimeout(()=>{if(!loaded&&!disposed)fallback()},6500);
+    setTimeout(showMapUnavailable,9500);
     L.control.zoom({position:"bottomleft"}).addTo(map);
     map.on("dragstart",()=>root.classList.add("dragging"));
     map.on("dragend",()=>{root.classList.remove("dragging");fromCenter(true)});
