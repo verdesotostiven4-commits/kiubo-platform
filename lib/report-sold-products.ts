@@ -74,8 +74,8 @@ export function yukiYogurtFlavorReport(sales:SaleRecord[]){
       // Selections are represented historically by optionLabel, and in some
       // recent sales only by the displayed line name.
       const label=String(item.optionLabel||meta.displayName||"");
-      const matches=[...label.matchAll(/Yogur(?:t)?(?:\s+\d+\s*:)?\s*([^·/×]+?)(?=\s*·|\s*\/|\s*$)/gi)];
-      const selected=matches.length?matches:label===meta.displayName?[]:[...meta.displayName.matchAll(/Yogur(?:t)?(?:\s+\d+\s*:)?\s*([^·/×]+?)(?=\s*·|\s*\/|\s*$)/gi)];
+      const matches=[...label.matchAll(/Yogur(?:t)?(?:\s+\d+\s*:)?\s*([^·/×]+?)(?:\s*×\s*(\d+))?(?=\s*·|\s*\/|\s*$)/gi)];
+      const selected=matches.length?matches:label===meta.displayName?[]:[...meta.displayName.matchAll(/Yogur(?:t)?(?:\s+\d+\s*:)?\s*([^·/×]+?)(?:\s*×\s*(\d+))?(?=\s*·|\s*\/|\s*$)/gi)];
       const count=Number(item.qty);
       if(!Number.isFinite(count)||count<=0)continue;
       for(const match of selected){
@@ -83,7 +83,7 @@ export function yukiYogurtFlavorReport(sales:SaleRecord[]){
         if(!flavor||/^sin especificar$/i.test(flavor))continue;
         const key=flavor.toLocaleLowerCase("es");
         const row=totals.get(key)||{name:flavor,qty:0};
-        row.qty+=count;
+        row.qty+=count*Math.max(1,Number(match[2])||1);
         totals.set(key,row);
       }
     }

@@ -17,6 +17,21 @@ import styles from "./ReportsClientPro.module.css";
 
 const money=(value:number)=>new Intl.NumberFormat("es-EC",{style:"currency",currency:"USD"}).format(value||0);
 
+const normalizeCatalogQuery=(text:string)=>text.trim().normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLocaleLowerCase("es");
+function ProductVariantChips({variants,search}:{variants:{label:string;qty:number}[];search:string}){
+  const[expanded,setExpanded]=useState(false);
+  const matches=search?variants.filter(v=>normalizeCatalogQuery(v.label).includes(search)):[];
+  const relevant=matches.length?matches:variants;
+  const visible=expanded?relevant:relevant.slice(0,3);
+  const canExpand=relevant.length>3;
+  return <div className={styles.productVariants}>
+    {visible.map(v=><span key={v.label}>{v.label}: <b>{v.qty}</b></span>)}
+    {canExpand&&<button type="button" className={styles.variantToggle} aria-expanded={expanded} onClick={()=>setExpanded(value=>!value)}>
+      {expanded?"Ocultar combinaciones":`Ver ${relevant.length-3} combinaciones más`}
+    </button>}
+  </div>;
+}
+
 export function ReportsClientPro(){
   const[db,setDb]=useState<ReturnType<typeof loadLocalDatabase>|null>(null);
   const[from,setFrom]=useState("");const[to,setTo]=useState("");const[scope,setScope]=useState<"branch"|"tenant">("branch");
@@ -78,9 +93,17 @@ export function ReportsClientPro(){
     }
   }
   const allProductRows=[...rowsByProduct.values()].sort((a,b)=>b.qty-a.qty||a.name.localeCompare(b.name,"es"));
-  const normSearch=productSearch.trim().toLocaleLowerCase("es");
-  const productRows=allProductRows.filter(row=>(!onlySold||row.qty>0)&&(!normSearch||(row.name+" "+row.variants.map(v=>v.label).join(" ")).toLocaleLowerCase("es").includes(normSearch)));
-  const productCountWithSales=allProductRows.filter(row=>row.qty>0).length;
+  const extrasByKey=new Set(db.tenantProducts.filter(p=>p.tenantId===ctx.tenantId&&p.category.trim().toLocaleLowerCase("es")==="extras").map(p=>`${p.branchId}:${p.id}`));
+  const isExtra=(row:{id:string;name:string})=>extrasByKey.has(row.id)||/^(domicilio|bolsa llevar)$/i.test(row.name.trim());
+  const catalogProducts=allProductRows.filter(row=>!isExtra(row));
+  const extraProducts=allProductRows.filter(isExtra);
+  const normSearch=normalizeCatalogQuery(productSearch);
+  const matchesFilter=(row:{name:string;qty:number;variants:{label:string}[]})=>(!onlySold||row.qty>0)&&(!normSearch||normalizeCatalogQuery(row.name+" "+row.variants.map(v=>v.label).join(" ")).includes(normSearch));
+  const productRows=catalogProducts.filter(matchesFilter);
+  const extraRows=extraProducts.filter(matchesFilter);
+  const productCountWithSales=catalogProducts.filter(row=>row.qty>0).length;
+  const productUnitCount=catalogProducts.reduce((sum,row)=>sum+row.qty,0);
+  const extraUnitCount=extraProducts.reduce((sum,row)=>sum+row.qty,0);
   const yogurtFlavors=ctx.tenant?.name?.trim().toLocaleUpperCase("es")==="YUKI"?yukiYogurtFlavorReport(sales):[];
   const yogurtPortions=yogurtFlavors.reduce((sum,row)=>sum+row.qty,0);
   const ingredientRows=ingredientConsumptionRows(sales,db.tenantProducts,db.stockMovements);
@@ -96,8 +119,8 @@ export function ReportsClientPro(){
     {actionMessage&&<div className={styles.notice}>{actionMessage}</div>}
     <section className={styles.metrics}><article><span>Ventas</span><strong>{money(revenue)}</strong><small>{sales.length} ventas válidas</small></article><article><span>Ticket promedio</span><strong>{money(avg)}</strong><small>Promedio por venta</small></article><article className={!grossReliable?styles.metricWarn:""}><span>Utilidad bruta</span><strong>{grossReliable?money(gross):"—"}</strong><small>{grossReliable?"Venta menos costo histórico":`${missingCostLines} líneas sin costo · completa costos para estimar`}</small></article><article><span>Por cobrar</span><strong>{money(receivable)}</strong><small>Fiados abiertos</small></article></section>
     <section id="total-productos-vendidos" className={`${styles.panel} ${styles.catalogReport}`}>
-      <header className={styles.catalogReportHeader}><div><span>CONTROL DE VENTAS · CARTA COMPLETA</span><h2>Todos los productos vendidos</h2><small>Consulta cuánto salió de cada producto, incluso si no tuvo ventas.</small></div><b>{totalUnits} unidades vendidas</b></header>
-      <div className={styles.catalogSummary}><strong>{productCountWithSales} productos con ventas</strong><span>{allProductRows.length-productCountWithSales} sin ventas</span><span>{sales.length} ventas válidas</span></div>
+      <header className={styles.catalogReportHeader}><div><span>CONTROL DE VENTAS · CARTA COMPLETA</span><h2>Todos los productos vendidos</h2><small>Unidades reales vendidas por producto, aunque haya vendido cero.</small></div><b>{productUnitCount} unidades de productos</b></header>
+      <div className={styles.catalogSummary}><strong>{productCountWithSales} productos con ventas</strong><span>{catalogProducts.length-productCountWithSales} sin ventas</span><span>{sales.length} ventas válidas</span></div>
       <div className={styles.catalogTools}>
         <label>Buscar producto o sabor<input type="search" placeholder="Ej. yogurt naranjilla, sánduche de pollo…" value={productSearch} onChange={e=>setProductSearch(e.target.value)}/></label>
         <div className={styles.catalogToggle} aria-label="Filtrar productos">
@@ -105,23 +128,28 @@ export function ReportsClientPro(){
           <button type="button" className={onlySold?styles.catalogActive:""} aria-pressed={onlySold} onClick={()=>setOnlySold(true)}>Solo vendidos</button>
         </div>
       </div>
-      <p className={styles.productReportNote}>Cantidades de ventas confirmadas del período seleccionado. No cuenta ventas anuladas, {excludedProductLines.courtesy} unidades de cortesía, {excludedProductLines.internal} de consumo interno ni {excludedProductLines.charge} cargos. Los combos se muestran como productos y sus sabores se detallan aparte.</p>
+      <p className={styles.productReportNote}>Unidades: cantidad de productos. Ventas: número de tickets que los incluyeron (un ticket puede tener varias unidades). Se excluyen anulaciones, {excludedProductLines.courtesy} cortesías, {excludedProductLines.internal} consumos internos y {excludedProductLines.charge} cargos. Los extras se muestran aparte.</p>
+      {yogurtFlavors.length>0&&<details className={styles.yogurtReport}>
+        <summary className={styles.flavorSummary}><span><strong>Yogures por sabor</strong><small>Incluye los vendidos solos y dentro de combos</small></span><b>{yogurtPortions} porciones</b><span className={styles.expandHint}>Ver detalle</span></summary>
+        <div className={styles.flavorRows}>{yogurtFlavors.map(flavor=><div key={flavor.name}><strong>Yogurt {flavor.name}</strong><b>{flavor.qty}</b></div>)}</div>
+      </details>}
       {productRows.length?<div className={styles.productTable}>
         <div className={styles.productHead}><span>Producto de la carta</span><span>Unidades</span><span>Ventas</span><span>Importe</span></div>
         {productRows.map(item=><div className={styles.productRow} key={item.id}>
           <div className={styles.productLabel}><strong>{item.name}</strong>
-            {item.variants.length>0&&<div className={styles.productVariants}>{item.variants.map(v=><span key={v.label}>{v.label}: <b>{v.qty}</b></span>)}</div>}
+            {item.variants.length>0&&<ProductVariantChips variants={item.variants} search={normSearch}/>}
             {item.qty===0&&<small className={styles.zeroSales}>Sin ventas en este período</small>}
           </div>
           <b className={item.qty===0?styles.zeroQuantity:""}>{item.qty}</b>
           <span>{item.tickets.size}</span>
           <span>{money(item.revenue)}</span>
         </div>)}
-      </div>:<div className={styles.empty}>{allProductRows.length?"No encontramos productos con ese filtro.":"Aún no hay productos de carta registrados."}</div>}
-      {yogurtFlavors.length>0&&<div className={styles.yogurtReport}>
-        <div className={styles.yogurtHeader}><div><span>DESGLOSE PARA PREPARACIÓN</span><h3>Yogures por sabor</h3><p>Incluye yogures vendidos solos y los que forman parte de combos; no se suman otra vez como ventas.</p></div><b>{yogurtPortions} porciones</b></div>
-        <div className={styles.flavorRows}>{yogurtFlavors.map(flavor=><div key={flavor.name}><strong>Yogurt {flavor.name}</strong><b>{flavor.qty}</b></div>)}</div>
-      </div>}
+      </div>:<div className={styles.empty}>{catalogProducts.length?"No hay productos con ese filtro.":"Aún no hay productos de carta registrados."}</div>}
+      {extraRows.length>0&&<details className={styles.extraDetails} open={Boolean(normSearch)}>
+        <summary><span><strong>Servicios y extras</strong><small>Domicilios, bolsas y otros conceptos separados de alimentos</small></span><b>{extraUnitCount} unidades registradas</b></summary>
+        <div className={styles.extrasRows}>{extraRows.map(row=><div key={row.id}><strong>{row.name}</strong><span>{row.qty} unidades · {row.tickets.size} ventas</span><b>{money(row.revenue)}</b></div>)}</div>
+      </details>}
+
     </section>
     <section className={styles.mainGrid}><article className={styles.panel}><header><div><span>PRODUCTOS</span><h2>Más vendidos</h2><a className={styles.allProductsLink} href="#total-productos-vendidos">Ver todos los productos vendidos ↓</a></div><b>{sales.length} ventas</b></header><div className={styles.topList}>{topProducts.length?topProducts.map((item,index)=><div key={`${item.name}-${index}`}><span className={styles.rank}>{index+1}</span><div><strong>{item.name}</strong><small>{item.qty} unidades · {money(item.revenue)}</small></div><div className={styles.bar}><i style={{width:`${Math.max(8,(item.qty/(topProducts[0]?.qty||1))*100)}%`}}/></div></div>):<div className={styles.empty}>No hay ventas en este período.</div>}</div></article><article className={styles.panel}><header><div><span>MEDIOS DE PAGO</span><h2>Cómo pagaron</h2></div></header><div className={styles.paymentList}>{paymentTotals.map(item=><div key={item.method}><span>{item.method}</span><strong>{money(item.total)}</strong></div>)}</div></article></section>
 
