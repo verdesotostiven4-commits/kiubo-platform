@@ -192,3 +192,19 @@
 #hmStockBreakdown{max-width:100%;box-sizing:border-box}
 .status-select:disabled{opacity:.78;cursor:default;color:#456457;background:#ecf5ef}
 @media(max-width:600px){#hmBrandChoose{min-height:48px;font-size:16px}#hmStockBreakdown{font-size:12px!important}.status-select{max-width:100%;min-height:44px}}
+
+/* Hakuna: gestión clara de pedidos, un solo botón principal y opciones secundarias. */
+.hm-order-manager{margin:12px 0 16px;display:grid;gap:11px;padding:17px;border-radius:19px;border:1px solid #dbe9de;background:linear-gradient(130deg,#f6fbf7,#fff)}
+.hm-order-top{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px}.hm-order-top small{font-size:11px;font-weight:850;letter-spacing:.1em;color:#657d6c}
+.hm-order-pill{display:inline-flex;align-items:center;max-width:100%;width:max-content;padding:7px 11px;border-radius:999px;background:#e4f2e9;color:#195c39;font-size:12px;font-weight:850;line-height:1.2}
+.hm-order-pill--new{background:#fff2d8;color:#85590e}.hm-order-pill--cancelled{background:#fce7e6;color:#953c33}.hm-order-pill--delivered{background:#e0f6e5;color:#19633c}
+.hm-order-manager>p{margin:0;color:#617467;font-size:13px;line-height:1.5}
+.hm-order-main{width:100%;min-height:54px;padding:11px 15px;border:0;border-radius:14px;background:#14553b;color:#fff;display:flex;align-items:center;justify-content:center;gap:9px;font-size:16px;font-weight:850;cursor:pointer;box-shadow:0 9px 20px #0f543129}
+.hm-order-main:disabled,.hm-order-extra-buttons button:disabled{opacity:.62;cursor:wait}.hm-order-main span{font-size:21px}
+.hm-order-done{padding:14px;background:#e3f5e9;color:#17603a;font-weight:850;font-size:14px;text-align:center;border-radius:13px}
+.hm-order-notify{font-size:11px;text-align:center;line-height:1.5;color:#677e6e}
+.hm-order-extras{border-top:1px solid #e0ebe3;padding-top:9px}.hm-order-extras summary{cursor:pointer;color:#4b6655;font-size:13px;font-weight:800;padding:7px 0;min-height:30px}
+.hm-order-extra-buttons{display:flex;flex-wrap:wrap;gap:9px;padding:8px 0}.hm-order-extra-buttons button{min-height:44px;padding:10px 13px;border-radius:12px;border:1px solid #cadbce;background:white;color:#28533d;font-size:12px;font-weight:800;cursor:pointer}
+.hm-order-extra-buttons .hm-order-danger{color:#a04138;border-color:#ebc3bf;background:#fff7f6}.hm-order-extras p{font-size:11px;line-height:1.5;color:#718175;margin:0 0 4px}
+.order-card__foot .hm-order-pill{font-size:11px}.order-card__foot .order-open-btn{font-size:12px;min-height:43px}
+@media(max-width:650px){.hm-order-manager{padding:15px;border-radius:17px}.hm-order-main{min-height:55px}.hm-order-extra-buttons{display:grid;grid-template-columns:1fr}.hm-order-extra-buttons button{width:100%;font-size:13px}.order-card__foot{flex-wrap:wrap;gap:8px}}

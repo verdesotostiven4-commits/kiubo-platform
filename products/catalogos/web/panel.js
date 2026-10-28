@@ -367,8 +367,8 @@ function canonicalBrand(name) {
 
 function renderOrders() {
   const items = filteredOrders();
-  $("#adminOrderList").innerHTML = items.length ? items.map(order => `<article class="order-card"><div class="order-card__top"><div><span class="order-card__number">${escapeHTML(order.order_number)}</span><h3>${escapeHTML(order.customer_business || order.customer_name)}</h3></div><strong class="order-card__amount">${money(order.total)}</strong></div><div class="order-card__meta"><span>${formatDate(order.created_at)}</span><span>·</span><span>${(order.items || []).reduce((sum, item) => sum + Number(item.quantity), 0)} unidades</span></div><div class="order-card__items">${escapeHTML(orderItemSummary(order) || "Sin detalle")}</div><div class="order-card__foot"><select class="status-select" data-order-status="${order.id}" ${allowedOrderSteps[order.status]?.length ? "" : "disabled title=\"Pedido finalizado\""}>${statusOptions(order.status)}</select><button class="order-open-btn" data-open-order="${order.id}">Ver detalle</button></div></article>`).join("") : `<div class="empty-admin" style="grid-column:1/-1"><svg class="icon"><use href="#i-receipt"/></svg><b>No hay pedidos en esta vista</b><span>Los pedidos nuevos aparecerán automáticamente.</span></div>`;
-  $$('[data-order-status]').forEach(select => select.onchange = async () => { const ok = await updateOrderStatus(select.dataset.orderStatus, select.value); if (!ok) renderOrders(); });
+  $("#adminOrderList").innerHTML = items.length ? items.map(order => `<article class="order-card"><div class="order-card__top"><div><span class="order-card__number">${escapeHTML(order.order_number)}</span><h3>${escapeHTML(order.customer_business || order.customer_name)}</h3></div><strong class="order-card__amount">${money(order.total)}</strong></div><div class="order-card__meta"><span>${formatDate(order.created_at)}</span><span>·</span><span>${(order.items || []).reduce((sum, item) => sum + Number(item.quantity), 0)} unidades</span></div><div class="order-card__items">${escapeHTML(orderItemSummary(order) || "Sin detalle")}</div><div class="order-card__foot"><span class="hm-order-pill hm-order-pill--${order.status}">${escapeHTML(orderStatuses.find(([v])=>v===order.status)?.[1]||"En proceso")}</span><button class="order-open-btn" data-open-order="${order.id}">Gestionar pedido</button></div></article>`).join("") : `<div class="empty-admin" style="grid-column:1/-1"><svg class="icon"><use href="#i-receipt"/></svg><b>No hay pedidos en esta vista</b><span>Los pedidos nuevos aparecerán automáticamente.</span></div>`;
+  // Estados solo de lectura en la lista. Se gestionan desde el detalle.
   bindOrderOpeners($("#adminOrderList"));
 }
 
@@ -489,6 +489,42 @@ async function deleteCategory(id) {
   catch { toast("No se pudo eliminar la categoría", "error"); }
 }
 
+const hmOrderForward = {new:["confirmed","Confirmar pedido"],confirmed:["preparing","Empezar preparación"],preparing:["dispatched","Marcar como despachado"],dispatched:["delivered","Marcar como entregado"],cancelled:["new","Reabrir pedido"]};
+const hmOrderBusy = new Set();
+function renderOrderManager(order) {
+  const label=orderStatuses.find(([v])=>v===order.status)?.[1]||"En proceso";
+  const next=hmOrderForward[order.status];
+  const completed=order.status==="delivered",cancelled=order.status==="cancelled";
+  const info=completed?"Este pedido ya fue entregado.":cancelled?"Fue cancelado. Para reabrirlo se comprobará el inventario.":"Un toque cambia el estado y actualiza el seguimiento del cliente."; 
+  const main=next?`<button type="button" id="hmOrderAdvance" class="hm-order-main">${escapeHTML(next[1])} <span>→</span></button>`:`<div class="hm-order-done">✓ Pedido entregado correctamente</div>`;
+  return `<section id="hmOrderManager" class="hm-order-manager" aria-label="Gestión del pedido"><div class="hm-order-top"><small>ESTADO ACTUAL</small><b class="hm-order-pill hm-order-pill--${order.status}">${escapeHTML(label)}</b></div><p>${escapeHTML(info)}</p>${main}<small class="hm-order-notify">🔔 El cliente ve los cambios en su seguimiento. Si activó avisos, recibirá una notificación.</small><details class="hm-order-extras"><summary>Más opciones</summary><div class="hm-order-extra-buttons">${!completed&&!cancelled?`<button type="button" class="hm-order-danger" id="hmOrderCancel">Cancelar pedido</button>`:""}<button type="button" id="hmOrderWhatsapp">Enviar seguimiento por WhatsApp</button></div><p>WhatsApp es opcional y no cambia el estado del pedido.</p></details></section>`;
+}
+function bindOrderManager(order) {
+  const panel=$("#hmOrderManager");if(!panel)return;
+  async function change(status,needsConfirm=false){
+    if(hmOrderBusy.has(order.id))return;
+    if(needsConfirm){const msg=status==="cancelled"?"¿Cancelar este pedido? Se devolverán las unidades reservadas al inventario.":"¿Reabrir este pedido? Se revisará que exista inventario suficiente.";if(!window.confirm(msg))return;}
+    hmOrderBusy.add(order.id);
+    const buttons=[...panel.querySelectorAll("button")];buttons.forEach(b=>b.disabled=true);
+    const advance=$("#hmOrderAdvance",panel);if(advance)advance.textContent="Guardando…";
+    try{const ok=await updateOrderStatus(order.id,status);if(ok&&state.activeOrder?.id===order.id&&!$("#orderModal").hidden)openOrder(order.id);
+      else if(!ok){buttons.forEach(b=>b.disabled=false);if(advance)advance.textContent=hmOrderForward[order.status]?.[1]||"Continuar";}}
+    finally{hmOrderBusy.delete(order.id)}
+  }
+  const main=$("#hmOrderAdvance",panel);if(main&&hmOrderForward[order.status])main.onclick=()=>change(hmOrderForward[order.status][0],order.status==="cancelled");
+  const cancel=$("#hmOrderCancel",panel);if(cancel)cancel.onclick=()=>change("cancelled",true);
+  const whats=$("#hmOrderWhatsapp",panel);if(whats)whats.onclick=()=>{
+    const raw=phoneDigits(order.customer_phone).replace(/\D/g,"");
+    const phone=raw.startsWith("593")?raw:raw.startsWith("0")?"593"+raw.slice(1):raw.length===9?"593"+raw:raw;
+    if(!/^593\d{9}$/.test(phone))return toast("No hay un número válido de WhatsApp","error");
+    const live=state.orders.find(o=>o.id===order.id)||order;
+    const label=orderStatuses.find(([v])=>v===live.status)?.[1]?.toLowerCase()||"en proceso";
+    const tracking=live.public_token?`${location.origin}/pedido?ref=${encodeURIComponent(live.public_token)}`:"";
+    const msg=`Hola, tu pedido ${live.order_number} está ${label}.${tracking?" Puedes consultar el seguimiento aquí: "+tracking:""}`;
+    window.open(`https://wa.me/${phone}?text=${encodeURIComponent(msg)}`,"_blank","noopener");
+  };
+}
+
 function openOrder(id) {
   const order = state.orders.find(item => item.id === id); if (!order) return; state.activeOrder = order;
   $("#orderModalTitle").textContent = order.order_number;
@@ -499,8 +535,8 @@ function openOrder(id) {
   const deliveryCard=order.delivery_method==="pickup"
     ? `<div class="review-card" style="margin-top:12px"><h3>Entrega</h3><p style="margin:0;color:var(--muted);font-size:10px;line-height:1.5">Retiro acordado.</p></div>`
     : `<div class="review-card" style="margin-top:12px"><h3>Entrega</h3><p style="margin:0 0 ${hasMap?"10px":"0"};color:var(--muted);font-size:10px;line-height:1.5">${escapeHTML(order.delivery_address||(hasMap?"Ubicación marcada por el cliente.":"Dirección por coordinar."))}</p>${hasMap?`<a class="button button--secondary" href="${mapUrl}" target="_blank" rel="noopener">Abrir ubicación en mapa</a>`:""}</div>`;
-  $("#orderModalContent").innerHTML = `<div class="order-detail-top"><h3>${escapeHTML(order.customer_business || order.customer_name)}</h3><p>${escapeHTML(order.customer_name || "Contacto")} · +${escapeHTML(phone)} · ${formatDate(order.created_at)}</p><div class="status-timeline">${orderStatuses.slice(0,5).map((_,index) => `<i class="${index <= progressIndex && order.status !== "cancelled" ? "done" : ""}"></i>`).join("")}</div></div><div class="order-detail-items">${(order.items || []).map(item => `<div class="order-detail-item"><b>${item.quantity}×</b><span>${escapeHTML(item.product_name)}<small style="display:block;color:var(--muted);margin-top:3px">${escapeHTML(item.unit || "")}</small></span><strong>${money(item.line_total)}</strong></div>`).join("")}</div><div class="order-detail-total"><span>Total estimado</span><strong>${money(order.total)}</strong></div>${deliveryCard}${order.notes ? `<div class="review-card" style="margin-top:12px"><h3>Observaciones</h3><p style="margin:0;color:var(--muted);font-size:10px;line-height:1.5">${escapeHTML(order.notes)}</p></div>` : ""}<div class="order-detail-actions"><select class="status-select" id="modalOrderStatus" ${allowedOrderSteps[order.status]?.length ? "" : "disabled title=\"Pedido finalizado\""}>${statusOptions(order.status)}</select><a class="button button--primary" href="https://wa.me/${phone}" target="_blank" rel="noopener"><svg class="icon"><use href="#i-message"/></svg>WhatsApp</a></div>`;
-  $("#modalOrderStatus").onchange = async event => { const ok = await updateOrderStatus(order.id, event.target.value); if (ok) closeModals(); else event.target.value = order.status; };
+  $("#orderModalContent").innerHTML = `<div class="order-detail-top"><h3>${escapeHTML(order.customer_business || order.customer_name)}</h3><p>${escapeHTML(order.customer_name || "Contacto")} · +${escapeHTML(phone)} · ${formatDate(order.created_at)}</p><div class="status-timeline">${orderStatuses.slice(0,5).map((_,index) => `<i class="${index <= progressIndex && order.status !== "cancelled" ? "done" : ""}"></i>`).join("")}</div></div>${renderOrderManager(order)}<div class="order-detail-items">${(order.items || []).map(item => `<div class="order-detail-item"><b>${item.quantity}×</b><span>${escapeHTML(item.product_name)}<small style="display:block;color:var(--muted);margin-top:3px">${escapeHTML(item.unit || "")}</small></span><strong>${money(item.line_total)}</strong></div>`).join("")}</div><div class="order-detail-total"><span>Total estimado</span><strong>${money(order.total)}</strong></div>${deliveryCard}${order.notes ? `<div class="review-card" style="margin-top:12px"><h3>Observaciones</h3><p style="margin:0;color:var(--muted);font-size:10px;line-height:1.5">${escapeHTML(order.notes)}</p></div>` : ""}`;
+  bindOrderManager(order);
   openModal($("#orderModal"));
 }
 
