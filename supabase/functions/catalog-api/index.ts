@@ -1,6 +1,8 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "npm:@supabase/supabase-js@2.112.4";
 
+declare const EdgeRuntime: { waitUntil(promise: Promise<unknown>): void };
+
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL") ?? "";
 const legacySecret = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
 const legacyAnon = Deno.env.get("SUPABASE_ANON_KEY") ?? "";
@@ -22,6 +24,18 @@ const allowedOrigins = new Set([
 
 type Json = Record<string, unknown>;
 type Actor = { type: "provider" | "master"; accountId?: string; sessionId?: string; userId?: string };
+const NOTIFY_URL = `${SUPABASE_URL}/functions/v1/catalog-notify`;
+
+function queueNotification(payload: Json) {
+  const task = fetch(NOTIFY_URL, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Authorization: `Bearer ${SECRET_KEY}` },
+    body: JSON.stringify(payload)
+  }).then(async result => {
+    if (!result.ok) console.error("catalog-notify", { status: result.status, body: (await result.text()).slice(0, 300) });
+  }).catch(error => console.error("catalog-notify", { error: String(error) }));
+  EdgeRuntime.waitUntil(task);
+}
 
 function cors(req: Request) {
   const origin = req.headers.get("origin") || "";
@@ -271,17 +285,17 @@ async function handleJson(req: Request, body: Json) {
     if (rateError) throw rateError;
     if (!allowed) throw Object.assign(new Error("too_many_orders"), { status: 429 });
     const customer: Json = { ...((body.customer || {}) as Json), payment_method: body.payment_method || null };
-    const withLat = customer.delivery_lat != null && customer.delivery_lat !== "";
-    const withLng = customer.delivery_lng != null && customer.delivery_lng !== "";
-    const rawLat = withLat ? Number(customer.delivery_lat) : NaN;
-    const rawLng = withLng ? Number(customer.delivery_lng) : NaN;
-    const hasLocation = customer.delivery_method !== "pickup" && withLat && withLng &&
+    const hasLat = customer.delivery_lat != null && customer.delivery_lat !== "";
+    const hasLng = customer.delivery_lng != null && customer.delivery_lng !== "";
+    const rawLat = hasLat ? Number(customer.delivery_lat) : NaN;
+    const rawLng = hasLng ? Number(customer.delivery_lng) : NaN;
+    const hasLocation = customer.delivery_method !== "pickup" && hasLat && hasLng &&
       Number.isFinite(rawLat) && Number.isFinite(rawLng) &&
       rawLat >= -90 && rawLat <= 90 && rawLng >= -180 && rawLng <= 180 &&
       !(rawLat === 0 && rawLng === 0);
-    // Validar ANTES de registrar el pedido. Un error posterior no debe crear
-    // una orden real y luego responder como si hubiese fallado toda la venta.
-    if (customer.delivery_method !== "pickup" && (withLat || withLng) && !hasLocation) {
+    // La validación debe ocurrir ANTES de crear la orden; de otro modo,
+    // podría guardarse una venta y devolverse un error falso al cliente.
+    if (customer.delivery_method !== "pickup" && (hasLat || hasLng) && !hasLocation) {
       throw Object.assign(new Error("invalid_location"), { status: 400 });
     }
     const { data, error } = await db.rpc("catalog_create_order", { p_slug: slug, p_idempotency_key: idempotency, p_customer: customer, p_items: body.items || [] });
@@ -292,6 +306,7 @@ async function handleJson(req: Request, body: Json) {
       if(locationError) console.error("catalog-api location persistence",{order_id:order.id,message:locationError.message});
       else {order.delivery_lat=Number(rawLat.toFixed(6));order.delivery_lng=Number(rawLng.toFixed(6));order.delivery_location_label=cleanText(customer.delivery_location_label,160)||"Ubicación seleccionada en el mapa";}
     }
+    if(order.duplicate!==true) queueNotification({ action: "notify_provider", slug, order_id: order.id });
     const { data: items } = await db.from("catalog_order_items").select("product_name,quantity,line_total,presentation_name,item_note").eq("order_id", order.id);
     return { order, whatsapp_url: whatsappUrl(String(order.whatsapp || ""), order, (items || []) as Json[], customer) };
   }
@@ -483,7 +498,13 @@ async function handleJson(req: Request, body: Json) {
   if (action === "update_order_status") {
     const status = String(body.status || "");
     if (!orderStatusAllowed(status)) throw Object.assign(new Error("invalid_status"), { status: 400 });
-    const { data, error } = await db.from("catalog_orders").update({ status }).eq("id", body.order_id).eq("account_id", accountId).select("id").single();
+    const orderId = String(body.order_id || "");
+    if (!validUuid(orderId)) throw Object.assign(new Error("invalid_request"), { status: 400 });
+    const { data: existing, error: existingError } = await db.from("catalog_orders").select("id,status").eq("id", orderId).eq("account_id", accountId).maybeSingle();
+    if (existingError) throw existingError;
+    if (!existing) throw Object.assign(new Error("order_not_found"), { status: 404 });
+    if (existing.status === status) return { id: existing.id, status };
+    const { data, error } = await db.from("catalog_orders").update({ status }).eq("id", orderId).eq("account_id", accountId).select("id").single();
     if (error) {
       const message = String((error as { message?: string }).message || "");
       if (message.includes("insufficient_stock")) throw Object.assign(new Error(message), { status: 409 });
@@ -491,6 +512,7 @@ async function handleJson(req: Request, body: Json) {
       throw error;
     }
     await logActivity(accountId, actor, "order.status_updated", "order", data.id, { status });
+    queueNotification({ action: "notify_customer", slug, order_id: data.id });
     return { id: data.id, status };
   }
   if (action === "save_account") {
