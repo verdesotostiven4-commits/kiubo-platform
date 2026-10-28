@@ -21,3 +21,7 @@ jobs:
         run: node --check products/panaderia/demo/app.js
       - name: Simulate sales, cash, security and stock
         run: node products/panaderia/tests/smoke.mjs
+      - name: Verify installable DeliScias app syntax
+        run: node --check products/panaderia/app/app.js
+      - name: Validate DeliScias money math and PWA release safety
+        run: node products/panaderia/app/test-static.mjs
