@@ -50,3 +50,8 @@ html.hm105-boot .v10-app,html.hm105-ready .v10-app,html .v10-app{opacity:1!impor
 @media(min-width:790px){.v10-sheet:has(.hm-loc-v2){height:min(870px,96dvh);max-height:96dvh;bottom:2dvh;border-radius:24px;box-shadow:0 15px 70px #07190e44}.hm-loc-head{padding-top:24px}}
 @media(max-height:680px){.hm-loc-head{padding-bottom:10px}.hm-loc-controls{max-height:57dvh;padding-top:9px;gap:7px}.hm-loc-stage{min-height:135px}.hm-loc-types button{min-height:38px}}
 @media(prefers-reduced-motion:reduce){.hm-loc-pin{transition:none}}
+
+/* Custom green delivery pin, matching Hakuna branding. */
+.hm-loc-pin{width:44px;height:44px;background:#176b49;color:white;border:3px solid white;border-radius:50% 50% 50% 10%;transform:translate(-50%,-100%) rotate(-45deg);box-shadow:0 6px 18px #16412c55;filter:none;transition:none}
+.hm-loc-pin svg{width:26px;height:26px;transform:rotate(45deg)}
+.hm-loc-stage:active .hm-loc-pin{transform:translate(-50%,-110%) rotate(-45deg)}
