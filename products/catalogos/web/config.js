@@ -6,8 +6,29 @@ window.KIUBO_CATALOG_CONFIG=Object.freeze({
   notifyUrl:'https://hysrlckmnzlmscwwbibn.supabase.co/functions/v1/catalog-notify',
   defaultSlug:'hakuna-matata',
   version:'10.16.13',
-  brandLogoUrl:'https://cdn.phototourl.com/free/2026-09-09-81972c89-9fb3-4bb7-ad34-74c1fe90aca9.jpg'
+  brandLogoUrl:'/assets/brand-mark.svg'
 });
+// Recover broken external brand images without changing catalog data.
+document.addEventListener('error',event=>{
+  const img=event.target;
+  if(!(img instanceof HTMLImageElement))return;
+  const src=img.currentSrc||img.src||'';
+  if(src.includes('cdn.phototourl.com/free/2026-09-09-81972c89-9fb3-4bb7-ad34-74c1fe90aca9.jpg')){
+    if(img.dataset.hmLogoFallback)return;
+    img.dataset.hmLogoFallback='1';
+    img.src='/assets/brand-mark.svg';
+    return;
+  }
+  const visual=img.closest('.hm-brand-visual');
+  if(!visual)return;
+  const label=img.alt||img.closest('[data-brand-chip]')?.getAttribute('data-brand-chip')||'Marca';
+  const text=document.createElement('b');
+  text.textContent=label;
+  visual.replaceChildren(text);
+  visual.classList.remove('has-image');
+  visual.style.setProperty('--hm-brand-bg','#f4f6f2');
+  visual.style.setProperty('--hm-brand-fg','#294a37');
+},true);
 (()=>{
   const path=location.pathname,v='10.16.13',logo=window.KIUBO_CATALOG_CONFIG.brandLogoUrl;
   document.documentElement.dataset.hmBuild=v;
