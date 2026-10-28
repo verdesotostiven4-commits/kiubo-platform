@@ -183,3 +183,12 @@
 }
 .side-brand > span,.mobile-brand > span{padding:2px;box-sizing:border-box}
 .gate-logo,.loading-logo,.logo-preview{padding:4px;box-sizing:border-box}
+
+
+/* Hakuna 10.16 — usable existing/new brand selector on desktop and mobile. */
+#hmBrandChoose{display:block;width:100%;min-height:46px;border:1px solid var(--line);border-radius:12px;background:#fff;color:#1b3228;padding:0 12px;font-size:14px}
+#productBrand[hidden]{display:none!important}
+#hmBrandHint{display:block;margin-top:6px;color:var(--muted);font-size:11px;line-height:1.4}
+#hmStockBreakdown{max-width:100%;box-sizing:border-box}
+.status-select:disabled{opacity:.78;cursor:default;color:#456457;background:#ecf5ef}
+@media(max-width:600px){#hmBrandChoose{min-height:48px;font-size:16px}#hmStockBreakdown{font-size:12px!important}.status-select{max-width:100%;min-height:44px}}
