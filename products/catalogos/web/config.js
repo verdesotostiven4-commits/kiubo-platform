@@ -6,14 +6,14 @@ window.KIUBO_CATALOG_CONFIG=Object.freeze({
   notifyUrl:'https://hysrlckmnzlmscwwbibn.supabase.co/functions/v1/catalog-notify',
   defaultSlug:'hakuna-matata',
   version:'10.16.13',
-  brandLogoUrl:'/assets/brand-mark.svg'
+  brandLogoUrl:"https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEir16n1bNYOmluwXB4NgFhKGCSm-g3-h1JVbKMvFAS6dYSzwhdj_K6aHlIqEH19XItSIB0dQ7WMRHNiVGfVfPYUdHWBx4kHfEkQkEA0h3XuGEVVQgc_ksv1a2GhVkCjt9HTK9ks4_ZP600JgxV4wxFKSMq_foUWOVBv9Ds4tdLayG6Q8zf2KlsRtr9KbVg/s1600/image.png"
 });
 // Recover broken external brand images without changing catalog data.
 document.addEventListener('error',event=>{
   const img=event.target;
   if(!(img instanceof HTMLImageElement))return;
   const src=img.currentSrc||img.src||'';
-  if(src.includes('cdn.phototourl.com/free/2026-09-09-81972c89-9fb3-4bb7-ad34-74c1fe90aca9.jpg')){
+  if((src.includes('cdn.phototourl.com/free/2026-09-09-81972c89-9fb3-4bb7-ad34-74c1fe90aca9.jpg')||src.includes('blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEir16n1bNYOmluwXB4NgFhKGCSm-g3-h1JVbKMvFAS6dYSzwhdj_K6aHlIqEH19XItSIB0dQ7WMRHNiVGfVfPYUdHWBx4kHfEkQkEA0h3XuGEVVQgc_ksv1a2GhVkCjt9HTK9ks4_ZP600JgxV4wxFKSMq_foUWOVBv9Ds4tdLayG6Q8zf2KlsRtr9KbVg'))){
     if(img.dataset.hmLogoFallback)return;
     img.dataset.hmLogoFallback='1';
     img.src='/assets/brand-mark.svg';

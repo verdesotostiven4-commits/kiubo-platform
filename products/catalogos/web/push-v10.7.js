@@ -26,7 +26,7 @@ async function subscribeNow({ask=false}={}){
  const json=sub.toJSON();const saved=await post({action:'subscribe',audience,subscription:json});write({id:saved.subscription_id,endpoint:json.endpoint,at:Date.now()});return saved;
 }
 async function bindOrder(token){const saved=read();if(!saved?.id||!token)return;try{await post({action:'bind_order',subscription_id:saved.id,order_public_token:token})}catch{}}
-document.addEventListener('click',e=>{if(e.target.closest?.('[data-hm1051-notify],[data-hm1051-panel-notify]'))setTimeout(()=>subscribeNow({ask:false}).catch(()=>{}),700)},true);
+document.addEventListener('click',e=>{if(e.target.closest?.('[data-hm1051-notify],[data-hm1051-panel-notify]'))subscribeNow({ask:true}).catch(()=>{})},true);
 window.addEventListener('pageshow',()=>{if(Notification.permission==='granted')subscribeNow({ask:false}).catch(()=>{})});
 document.addEventListener('visibilitychange',()=>{if(!document.hidden&&Notification.permission==='granted')subscribeNow({ask:false}).catch(()=>{})});
 if(!isPanel){const upstream=window.fetch.bind(window);window.fetch=async(input,init={})=>{const url=typeof input==='string'?input:input?.url||'';let body=null;if(url===C.apiUrl&&typeof init?.body==='string'){try{body=JSON.parse(init.body)}catch{}}const res=await upstream(input,init);if(res.ok&&body?.action==='create_order')res.clone().json().then(p=>bindOrder(p?.order?.public_token)).catch(()=>{});return res}}
