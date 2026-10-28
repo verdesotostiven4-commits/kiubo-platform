@@ -93,7 +93,7 @@ export function ReportsClientPro(){
     }
   }
   const allProductRows=[...rowsByProduct.values()].sort((a,b)=>b.qty-a.qty||a.name.localeCompare(b.name,"es"));
-  const extrasByKey=new Set(db.tenantProducts.filter(p=>p.tenantId===ctx.tenantId&&p.category.trim().toLocaleLowerCase("es")==="extras").map(p=>`${p.branchId}:${p.id}`));
+  const extrasByKey=new Set(db.tenantProducts.filter(p=>p.tenantId===ctx.tenantId&&String(p.category||"").trim().toLocaleLowerCase("es")==="extras").map(p=>`${p.branchId}:${p.id}`));
   const isExtra=(row:{id:string;name:string})=>extrasByKey.has(row.id)||/^(domicilio|bolsa llevar)$/i.test(row.name.trim());
   const catalogProducts=allProductRows.filter(row=>!isExtra(row));
   const extraProducts=allProductRows.filter(isExtra);
