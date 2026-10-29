@@ -13,11 +13,8 @@ function loadActual(path,mocks={}){
   },mod,mod.exports);
   return mod.exports;
 }
-const options={
-  getProductOptionConfig:p=>p.optionConfig,
-  parseProductOptionSelection:(_config,label)=>label?label.split(" + ").map(x=>x.trim()):[]
-};
-const classification={isIngredientProduct:p=>p.category==="Insumos"};
+const classification=loadActual("lib/product-classification.ts");
+const options=loadActual("lib/product-options.ts",{"./product-classification":classification});
 const recipe=loadActual("lib/recipe-inventory.ts",{"./product-options":options,"./product-classification":classification});
 const reservations=loadActual("lib/inventory-reservations.ts",{"./recipe-inventory":recipe,"./product-options":options});
 const ingredient=(id,stock)=>({id,tenantId:"yuki",branchId:"main",name:id,stock,
