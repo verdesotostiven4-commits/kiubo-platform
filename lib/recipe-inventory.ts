@@ -1,6 +1,6 @@
 import type { TenantProduct } from "./local-store";
-import { getProductOptionConfig } from "./product-options";
-import { isIngredientProduct } from "./product-classification";
+import { getProductOptionConfig,productOptionLabel } from "./product-options";
+import { isIngredientProduct,isSellableProduct } from "./product-classification";
 
 export type RecipeComponent={productId:string;qty:number};
 export type InventoryProduct=TenantProduct&{
@@ -45,16 +45,60 @@ export function recipeReadiness(product:TenantProduct,products:TenantProduct[]):
   return lines.every(line=>{const component=byId.get(line.productId);return Boolean(component&&component.active&&component.trackStock!==false)})?"ready":"partial";
 }
 
+function optionChoiceCandidates(product:TenantProduct,label:string,products:TenantProduct[]){
+  const config=getProductOptionConfig(product);if(!config||config.source!=="category"||!config.sourceCategory)return[];
+  const category=normalize(config.sourceCategory),needle=normalize(productOptionLabel({name:label},config));
+  // Older saved orders may contain the former picker label "de Durazno".
+  const legacyNeedle=category==="yogurts"?needle.replace(/^de\s+/,""):needle;
+  return products.filter(candidate=>candidate.id!==product.id&&candidate.active&&isSellableProduct(candidate)&&
+    candidate.tenantId===product.tenantId&&candidate.branchId===product.branchId&&
+    normalize(candidate.category||"General")===category&&
+    [needle,legacyNeedle].includes(normalize(productOptionLabel(candidate,config))));
+}
+
 function optionChoiceProduct(product:TenantProduct,label:string,products:TenantProduct[]){
-  const config=getProductOptionConfig(product);if(!config||config.source!=="category"||!config.sourceCategory)return undefined;
-  const category=normalize(config.sourceCategory),needle=normalize(label);
-  return products.find(candidate=>{
-    if(candidate.id===product.id||!candidate.active||normalize(candidate.category||"General")!==category)return false;
-    let display=candidate.name.trim();
-    if(category==="yogurts")display=display.replace(/^yogurt\s+/i,"").trim();
-    if(category==="jugos")display=display.replace(/^jugo(?:\s+de)?\s+/i,"").trim();
-    return normalize(display)===needle||normalize(candidate.name)===needle;
-  });
+  const candidates=optionChoiceCandidates(product,label,products);
+  // A newly created duplicate without a recipe must not hide the configured flavor.
+  const configured=candidates.filter(candidate=>hasRecipe(candidate)||candidate.trackStock!==false);
+  const choices=configured.length?configured:candidates;
+  const signatures=new Set(choices.map(candidate=>hasRecipe(candidate)?
+    JSON.stringify(productRecipe(candidate).sort((a,b)=>a.productId.localeCompare(b.productId))):
+    candidate.trackStock!==false?`stock:${candidate.id}`:"untracked"));
+  // Different recipes behind one label need an explicit configuration decision.
+  if(signatures.size>1)return undefined;
+  return [...choices].sort((a,b)=>a.id.localeCompare(b.id))[0];
+}
+
+export function inventorySelectionError(lines:InventorySelectionLine[],products:TenantProduct[]):string|undefined{
+  const byId=new Map(products.map(product=>[product.id,product]));
+  for(const line of lines){
+    const product=byId.get(line.productId);if(!product||!cleanQty(line.qty))continue;
+    const config=getProductOptionConfig(product);
+    if(!config&&!hasRecipe(product)&&product.trackStock===false&&isSellableProduct(product)){
+      const usedAsRecipeChoice=products.some(parent=>{
+        const parentConfig=getProductOptionConfig(parent);
+        return parent.active&&parent.tenantId===product.tenantId&&parent.branchId===product.branchId&&hasRecipe(parent)&&
+          parentConfig?.source==="category"&&normalize(parentConfig.sourceCategory||"")===normalize(product.category||"General");
+      });
+      if(usedAsRecipeChoice)return`Configura la receta de ${product.name} antes de registrar el pedido.`;
+    }
+    if(!config||config.source!=="category")continue;
+    const selections=line.optionSelections||[];
+    if(selections.length!==config.selectionCount)return`${product.name}: elige ${config.selectionCount} ${config.label.toLocaleLowerCase("es")} antes de registrar el pedido.`;
+    const requiresInventory=hasRecipe(product)||products.some(candidate=>candidate.active&&
+      candidate.tenantId===product.tenantId&&candidate.branchId===product.branchId&&
+      normalize(candidate.category||"General")===normalize(config.sourceCategory||"")&&
+      (hasRecipe(candidate)||candidate.trackStock!==false));
+    for(const selection of selections){
+      const choice=optionChoiceProduct(product,selection,products);
+      if(!choice){
+        if(optionChoiceCandidates(product,selection,products).length)return`${product.name}: ${selection} tiene varias recetas distintas. Revisa su configuración antes de registrar el pedido.`;
+        return`${product.name}: la opción ${selection} ya no está disponible. Vuelve a elegirla.`;
+      }
+      if(requiresInventory&&!hasRecipe(choice)&&choice.trackStock===false)return`${product.name}: configura la receta de ${selection} antes de registrar el pedido.`;
+    }
+  }
+  return undefined;
 }
 
 export function usesRecipeInventory(lines:InventorySelectionLine[],products:TenantProduct[]){

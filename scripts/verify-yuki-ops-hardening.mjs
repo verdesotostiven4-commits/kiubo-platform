@@ -4,12 +4,25 @@ import ts from "typescript";
 
 // Run the *actual* inventory impact algorithm without a copy of its implementation.
 const module={exports:{}};
+function loadActual(file,deps={}){
+  const js=ts.transpileModule(readFileSync(file,"utf8"),{
+    compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}
+  }).outputText;
+  const mod={exports:{}};
+  new Function("require","module","exports",js)(name=>{
+    if(!(name in deps))throw Error("Unexpected import: "+name);
+    return deps[name];
+  },mod,mod.exports);
+  return mod.exports;
+}
+const classification=loadActual("lib/product-classification.ts");
+const options=loadActual("lib/product-options.ts",{"./product-classification":classification});
 const transpiled=ts.transpileModule(readFileSync("lib/recipe-inventory.ts","utf8"),{
   compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}
 }).outputText;
 const fakeRequire=(name)=>{
-  if(name==="./product-options")return{getProductOptionConfig:product=>product.optionConfig};
-  if(name==="./product-classification")return{isIngredientProduct:product=>product.category==="Insumos"};
+  if(name==="./product-options")return options;
+  if(name==="./product-classification")return classification;
   throw new Error("Unexpected recipe import: "+name);
 };
 new Function("require","module","exports",transpiled)(fakeRequire,module,module.exports);

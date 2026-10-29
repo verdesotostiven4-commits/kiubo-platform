@@ -51,6 +51,7 @@ export const metadata:Metadata={
   description:"Ventas, inventario, caja, clientes, compras, reportes y facturación para negocios que quieren control sin complicarse.",
   icons:{icon:[{url:KIUBO_ICON_URL}],apple:[{url:KIUBO_ICON_URL}]},
   appleWebApp:{capable:true,title:"KIUBO",statusBarStyle:"black-translucent"},
+  other:{google:"notranslate"},
 };
 
-export default function RootLayout({children}:Readonly<{children:React.ReactNode}>){return <html lang="es"><body><DurabilityRuntime/><SessionEnforcer/><BrandingRuntime/><NativeAppGuards/><FullscreenRuntime/>{children}<AppChrome/><PwaRegister/></body></html>}
+export default function RootLayout({children}:Readonly<{children:React.ReactNode}>){return <html lang="es" translate="no" className="notranslate"><body translate="no" className="notranslate"><DurabilityRuntime/><SessionEnforcer/><BrandingRuntime/><NativeAppGuards/><FullscreenRuntime/>{children}<AppChrome/><PwaRegister/></body></html>}
