@@ -1,6 +1,16 @@
 # YUKI: nombres mostrados e inventario de durazno
 
-Estado: diagnóstico comprobado con lecturas de producción; corrección local preparada en `claude-work`. Pendiente autorización para subir/publicar y prueba en el navegador del negocio.
+Estado: corrección publicada con autorización del usuario y comprobada en producción el 29 de octubre de 2026, a las 03:07 de Ecuador continental. Sigue pendiente la comprobación dentro de la sesión de Richard y la conciliación con un conteo físico.
+
+## Publicación comprobada
+
+- Aplicación: https://kiubo-platform-ebon.vercel.app
+- Despliegue: `dpl_EgMjJ5xmDwTeguMDjuVmmUTD13Gy`, estado `READY`, destino `production`, en la cuenta nueva de Vercel.
+- Commit publicado: `8a4b984ce8e26fef35402961a104ac40b511f575`; árbol Git `cd723d7a62bbda70913ec16bdcadecb5bd84f970`, idéntico al de los archivos probados localmente.
+- Rama: `fix/yuki-translation-flavor-inventory-20261028`. Revisión: https://github.com/verdesotostiven4-commits/kiubo-platform/pull/110
+- El dominio habitual apunta al nuevo despliegue. No se publicó en la cuenta anterior ni se modificó `main`.
+- POS, Inventario, Productos, Pedidos, Reportes, Caja y acceso devolvieron HTTP 200, `lang=es`, `translate=no`/`notranslate` en HTML y body y meta Google `notranslate`.
+- `/api/health` devolvió HTTP 200, `ready=true`, autenticación Supabase y plano de datos disponibles. Proyecto correcto: `hysrlckmnzlmscwwbibn`.
 
 ## Base de la revisión
 
@@ -45,7 +55,7 @@ En estas 38 ventas faltan, por tanto, descuentos por **dos porciones de yogur na
 
 En el corte, las cadenas de movimientos de los productos controlados no mostraron saltos y el saldo final coincidió con el stock guardado. Por ejemplo: Pan de Yuca, `62 + 238 − 273 = 27`; Yogurt Natural, `94 − 6 de ajustes − 53 de ventas = 35`. La consistencia de ese historial no detectaba por sí sola el consumo omitido por una receta ausente.
 
-## Corrección preparada
+## Corrección publicada
 
 1. El selector y el cálculo comparten la misma forma de reconocer `Yogurt Durazno` / `Yogurt de Durazno`; el selector muestra un solo sabor Durazno.
 2. Si existe una única receta configurada equivalente, un duplicado sin receta no puede ocultarla. El orden de llegada de los datos no cambia el resultado.
@@ -64,11 +74,22 @@ No se cambiaron RPCs, permisos, migraciones ni datos reales. Los clientes con la
 - Se ejecutaron los manejadores reales `addDirect`, `saveOrder` y `checkout` extraídos del código: una selección sin receta es rechazada antes de modificar productos, pedidos, ventas o cola de sincronización.
 - Las pruebas existentes de reservas, inventario, pagos, sincronización, mesas cobradas y reportes siguen aprobadas.
 - HTML renderizado: `lang=es`, `translate=no` en HTML/body y meta Google `notranslate` comprobados.
-- Prueba visual interactiva: pendiente. No había un ejecutable de Chromium disponible y su descarga no produjo un archivo válido. No se afirma haber completado una prueba de navegador ni una venta real de extremo a extremo.
+- La compilación remota terminó correctamente y el despliegue quedó `READY`.
+- Navegador remoto: pantalla de acceso cargada y atributos contra traducción comprobados en el DOM. Los mensajes de consola observados pertenecían a una extensión del navegador, no a KIUBO. No se inició sesión ni se registraron operaciones del negocio.
+- La prueba del flujo privado completo y del traductor en el equipo de Richard sigue pendiente. El intento local de Playwright no disponía de un ejecutable válido de Chromium; la comprobación posterior del navegador remoto se limita a la pantalla pública de acceso. No se afirma haber realizado una venta real de extremo a extremo.
+
+## Revisión complementaria de KIUBO/YUKI
+
+- Se revisaron los resultados de la suite completa de pagos, caja, compras, inventario, sincronización, aislamiento entre negocios, reservas, mesas cobradas, PWA y reportes; todos pasaron. Es cobertura automatizada de los casos existentes y la nueva regresión, no una garantía de ausencia de cualquier fallo.
+- Vercel no devolvió errores de ejecución agrupados en la última hora consultada tras la publicación. Esta telemetría no cubre todos los posibles errores del navegador de cada usuario.
+- Consulta actual del catálogo: 86 productos activos, sin stock negativo ni componentes de recetas ausentes o inactivos. Se encontraron 16 referencias a diez ingredientes que tienen el control de stock desactivado; esa configuración hace que no generen descuentos y debe distinguirse de una pérdida de movimientos de productos controlados. No se activó su control ni se inventaron existencias.
+- Las dos entradas de sabores sin receta siguen siendo `Yogurt Natural` y el duplicado `Yogurt Durazno`. En combos, Durazno resuelve a la receta configurada de `Yogurt de Durazno`; la venta directa de la entrada vacía muestra un aviso. Natural requiere configurar su receta para utilizarlo en estos pedidos.
+- En las RPC principales consultadas no hay permiso de ejecución para `anon`. Se comprobó que las funciones de ventas y finanzas delegan en sus motores existentes y que estos conservan controles de negocio, rol y sucursal; sincronización y ajustes también conservan estos controles. Esto no sustituye una auditoría exhaustiva de seguridad.
+- Los avisos de Supabase incluyen 42 funciones `SECURITY DEFINER` ejecutables por usuarios autenticados y 18 tablas con RLS sin políticas. Las RPC y las tablas internas utilizan este patrón deliberadamente en varios casos: no se revocaron permisos indiscriminadamente. [Referencia del aviso de funciones](https://supabase.com/docs/guides/database/database-linter?lint=0029_authenticated_security_definer_function_executable).
+- Mejoras de configuración identificadas: protección contra contraseñas filtradas desactivada, índice recomendado para la clave foránea de usuario de `tenant_operational_leases_v2` y dos políticas de imágenes de Deliscias con evaluación RLS por fila. Quedan documentadas; no bloquean esta corrección de YUKI y no se cambiaron planes ni configuración de otros productos. [Contraseñas](https://supabase.com/docs/guides/auth/password-security#password-strength-and-leaked-password-protection), [índice](https://supabase.com/docs/guides/database/database-linter?lint=0001_unindexed_foreign_keys), [evaluación RLS](https://supabase.com/docs/guides/database/database-linter?lint=0003_auth_rls_initplan).
 
 ## Pendientes concretos
 
-- Publicar únicamente después de la instrucción explícita del usuario, conforme a `CLAUDE.md`; hasta entonces no hay push, PR ni despliegue nuevo.
 - Verificar el idioma original y el selector de Durazno en el navegador de Richard tras la actualización.
 - Confirmar existencias físicas y registrar, si corresponde, un ajuste con motivo; no reconstruir ni reescribir ventas anteriores.
 - Configurar explícitamente las entradas vendibles sin receta que se quieran utilizar. No archivar duplicados ni cambiar sus recetas sin decidir cuál se conserva.
