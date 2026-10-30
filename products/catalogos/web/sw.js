@@ -1,11 +1,11 @@
-const CACHE='kiubo-catalog-v10-20-1-20261030';
+const CACHE='kiubo-catalog-v10-20-2-20261030';
 const SHELL=[
 '/','/index.html','/panel.html','/pedido.html','/assets/brand-mark.svg','/assets/hakuna-logo-192.png','/assets/hakuna-logo-512.png','/assets/hakuna-logo-maskable-512.png','/vendor/leaflet-1.9.4/leaflet.js','/vendor/leaflet-1.9.4/leaflet.css',
 '/catalog-v10.css','/catalog-v10.2.css','/catalog-v10.3.css','/catalog-v10.4.css','/catalog-v10.4.1.css','/catalog-v10.4.2.css','/catalog-v10.5.css','/catalog-v10.5.1.css','/catalog-v10.6.css','/catalog-v10.7.1.css','/catalog-v10.7.2.css','/catalog-v10.7.3.css','/catalog-v10.7.4.css','/catalog-v10.8.css','/catalog-v10.9.css','/catalog-v10.11.css','/catalog-v10.12.css','/catalog-v10.13.css','/catalog-v10.16.css','/catalog-v10.16.1.css','/catalog-v10.16.2.css','/catalog-v10.16.3.css','/catalog-v10.16.4.css','/catalog-v10.16.5.css','/catalog-v10.16.9.css',
 '/catalog-v10.2.js','/hakuna-delivery-map-v2.js','/hakuna-delivery-map-v3.js','/catalog-v10.3.js','/catalog-v10.4.js','/catalog-v10.4.1.js','/catalog-v10.4.2.js','/catalog-v10.5.js','/catalog-v10.5.1.js','/catalog-v10.6.js','/catalog-v10.7.1.js','/catalog-v10.7.2.js','/catalog-v10.7.4.js','/catalog-v10.8.js','/catalog-v10.9.js','/catalog-v10.11.js','/catalog-v10.12.js','/catalog-v10.13.js','/catalog-v10.16.1.js','/catalog-v10.16.2.js','/catalog-v10.16.3.js','/catalog-v10.16.4.js','/catalog-v10.16.6.js','/catalog-v10.16.9.js','/push-v10.7.js','/brand-assets-v10.js','/brand-assets-v10.7.2.js',
 '/panel-v5.css','/panel-v6.css','/panel-v7.css','/panel-v7.1.css','/panel-v7.2.1.css','/panel-v7.5.css','/panel-v7.6.css','/panel-v7.7.css','/panel-v10-stability.css','/panel-v10.4.2.css','/panel-v10.5.css','/panel-v10.5.1.css','/panel-v10.6.css','/panel-v10.9.css','/panel-v10.10.css','/panel-v10.11.css','/panel-v10.14.css','/panel-v10.15.css','/panel-v10.16.2.css',
 '/panel-fast-save-v7.4.js','/panel-v6.js','/panel-v5.js','/panel-extras-v5.js','/panel-orders-v6.js','/panel-v7.js','/panel-v7.5.js','/panel-v7.5.1.js','/panel-v7.6.js','/panel-v7.7.js','/panel-v10-stability.js','/panel-v10.5.1.js','/panel-v10.6.js','/panel-v10.9.js','/panel-v10.10.js','/panel-v10.11-core.js','/panel-v10.11-ui.js','/panel-v10.14.js','/panel-v10.15.js','/panel-v10.16.2.js',
-'/panel.css','/push.css','/styles.css','/pedido.css','/orders-v5.css','/core.js','/order-editor.js','/config.js','/manifest.webmanifest','/panel.webmanifest'
+'/hakuna-mobile-v10.20.2.css','/panel.css','/push.css','/styles.css','/pedido.css','/orders-v5.css','/core.js','/order-editor.js','/config.js','/manifest.webmanifest','/panel.webmanifest'
 ];
 async function warm(cache){await Promise.allSettled(SHELL.map(async url=>{const r=await fetch(url,{cache:'reload'});if(r.ok)await cache.put(url,r)}))}
 self.addEventListener('install',e=>e.waitUntil(caches.open(CACHE).then(warm).then(()=>self.skipWaiting())));
@@ -13,4 +13,16 @@ self.addEventListener('activate',e=>e.waitUntil(caches.keys().then(keys=>Promise
 async function networkFirst(request,fallback){try{const r=await fetch(request,{cache:'no-store'});if(r.ok){const c=await caches.open(CACHE);c.put(request,r.clone())}return r}catch{const cached=await caches.match(request);return cached||fallback}}
 self.addEventListener('fetch',e=>{if(e.request.method!=='GET')return;const u=new URL(e.request.url);if(u.origin!==location.origin)return;if(e.request.mode==='navigate'){e.respondWith((async()=>{const fb=u.pathname.startsWith('/panel')||u.pathname.startsWith('/master')?await caches.match('/panel.html'):u.pathname.startsWith('/pedido')?await caches.match('/pedido.html'):await caches.match('/index.html');return networkFirst(e.request,fb)})());return}if(/\.(?:js|css|html|webmanifest)$/.test(u.pathname)){e.respondWith(networkFirst(e.request,caches.match(e.request)));return}e.respondWith(caches.match(e.request).then(cached=>cached||fetch(e.request).then(async r=>{if(r.ok){const c=await caches.open(CACHE);c.put(e.request,r.clone())}return r})))});
 self.addEventListener('push',event=>{let data={};try{data=event.data?.json()||{}}catch{data={body:event.data?.text()||''}}const title=data.title||'Hakuna Matata';const options={body:data.body||'Tienes una actualización.',tag:data.tag||'hakuna-update',renotify:true,requireInteraction:Boolean(data.requireInteraction),icon:'/assets/hakuna-logo-192.png',badge:'/assets/hakuna-logo-192.png',data:{url:data.url||'/'}};event.waitUntil(self.registration.showNotification(title,options))});
-self.addEventListener('notificationclick',event=>{event.notification.close();let target='/';try{const url=new URL(event.notification.data?.url||'/',self.location.origin);if(url.origin===self.location.origin)target=url.href}catch{}event.waitUntil(clients.matchAll({type:'window',includeUncontrolled:true}).then(async list=>{for(const client of list){if('focus'in client){if('navigate'in client)await client.navigate(target);return client.focus()}}return clients.openWindow?clients.openWindow(target):undefined}))});
+self.addEventListener('notificationclick',event=>{
+ event.notification.close();
+ let target=new URL('/',self.location.origin);
+ try{const requested=new URL(event.notification.data?.url||'/',self.location.origin);if(requested.origin===self.location.origin)target=requested}catch{}
+ event.waitUntil((async()=>{
+  const windows=await clients.matchAll({type:'window',includeUncontrolled:true});
+  const preferred=windows.filter(client=>{try{return new URL(client.url).pathname.startsWith(target.pathname.startsWith('/panel')?'/panel':target.pathname.startsWith('/pedido')?'/pedido':'/')}catch{return false}});
+  for(const client of [...preferred,...windows.filter(c=>!preferred.includes(c))]){
+   try{const moved=typeof client.navigate==='function'?await client.navigate(target.href):null;const active=moved||client;if(active&&typeof active.focus==='function'){await active.focus();if(moved||client.url===target.href)return}}catch{/* Continue with another window. */}
+  }
+  if(typeof clients.openWindow==='function')try{return await clients.openWindow(target.href)}catch{/* Browser may prevent opening. */}
+ })());
+});

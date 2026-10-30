@@ -65,7 +65,7 @@ function subscriberRetryMs(attempts: unknown) {
   return Math.min(60 * 60_000, 60_000 * 2 ** Math.min(n - 1, 6));
 }
 function message(job: Json, order: Json) {
-  if (job.audience === "provider") return { title: "Nuevo pedido en Hakuna", body: `${order.customer_business || order.customer_name || "Cliente"} · ${order.order_number} · $${Number(order.total || 0).toFixed(2)}`, tag: `hakuna-provider-${order.id}`, url: "/panel" };
+  if (job.audience === "provider") return { title: "Nuevo pedido en Hakuna", body: `${order.customer_business || order.customer_name || "Cliente"} · ${order.order_number} · $${Number(order.total || 0).toFixed(2)}`, tag: `hakuna-provider-${order.id}`, url: `/panel?order=${encodeURIComponent(String(order.id))}` };
   const body = job.kind === "return" ? "Se registró una devolución en tu pedido." : job.kind === "edit" ? "Tu pedido fue actualizado. Revisa los cambios." : job.kind === "created" ? "Recibimos tu pedido. Toca para seguirlo." : `Tu pedido está ${statusText[order.status] || "actualizado"}.`;
   return { title: `Pedido ${order.order_number}`, body, tag: `hakuna-${order.id}`, url: `/pedido?ref=${order.public_token}` };
 }

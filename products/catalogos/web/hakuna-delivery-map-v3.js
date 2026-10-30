@@ -70,7 +70,6 @@ export async function openDeliveryMap(options){
  '<fieldset class="hm-loc-types"><legend>GUARDAR COMO</legend><div>',
  TYPES.map(t=>'<button type="button" data-hm-type="'+t+'" aria-pressed="'+(t===oldType)+'" class="'+(t===oldType?'active':'')+'">'+icon(t)+'<span>'+t+'</span></button>').join(''),
  '</div></fieldset>',
- '<button type="button" class="hm-map-alternative" id="hmLocAlternative">¿No ves el mapa? Usar mapa alternativo</button>',
  '<label class="hm-loc-label">REFERENCIA <small>(opcional)</small><input id="hmLocRef" maxlength="160" autocomplete="street-address" placeholder="Ej. Casa blanca, junto a la farmacia…" value="'+escape(customer?.address||"")+'"></label>',
  '<label class="hm-loc-remember"><input type="checkbox" id="hmLocRemember"> Recordar dirección en este dispositivo</label>',
  '<div class="hm-loc-actions">',original?'<button type="button" id="hmLocClear">Quitar</button>':'',
@@ -103,7 +102,6 @@ export async function openDeliveryMap(options){
    observer?.disconnect();sizeObserver?.disconnect();if(map){map.remove();map=null}
   };
   const useFallback=()=>{if(disposed||!root.isConnected)return;const savedOptions={...options,current:chosen?draft:original,customer:{...customer,address:ref.value}};stop();closeSheet(true);fallback(savedOptions).catch(()=>toast("No se pudo abrir el mapa. Escribe la dirección manualmente.","error"))};
-  $("#hmLocAlternative").onclick=useFallback;
   root.querySelectorAll("[data-hm-type]").forEach(btn=>btn.onclick=()=>{
    type=btn.dataset.hmType;
    root.querySelectorAll("[data-hm-type]").forEach(b=>{let active=b===btn;b.classList.toggle("active",active);b.setAttribute("aria-pressed",String(active))})
@@ -125,7 +123,6 @@ export async function openDeliveryMap(options){
    if(firstGps&&!chosen){
     firstGps=false;moveCamera(p,17,false);
     // Blue dot remains at true GPS coordinate; orange pin remains at map center.
-    map.panBy([0,-55],{duration:0});
    }
   };
   const locate=showError=>{
@@ -212,7 +209,9 @@ export async function openDeliveryMap(options){
     chosen=true;const c=map.getCenter();draft=point({lat:c.lat,lng:c.lng});refresh();
    });
    map.on("click",evt=>{
-    if(disposed)return;moveCamera({lat:evt.lngLat.lat,lng:evt.lngLat.lng},map.getZoom(),true)
+    if(disposed||root.classList.contains("dragging"))return;
+    chosen=true;draft=point({lat:evt.lngLat.lat,lng:evt.lngLat.lng});refresh();
+    map.easeTo({center:[evt.lngLat.lng,evt.lngLat.lat],duration:240,essential:true});
    });
    map.on("zoomend",()=>{if(position&&gpsCircle){
     const mpp=156543.03392*Math.cos(position.lat*Math.PI/180)/Math.pow(2,map.getZoom());

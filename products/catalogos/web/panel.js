@@ -180,6 +180,7 @@ async function bootstrap(accountSlug = "") {
     renderAll();
     if (state.mode === "master") renderMasterSwitcher();
     startPolling();
+    openOrderFromNotification();
   } catch (error) {
     if (error.code === "session_expired" || error.status === 401) {
       if (state.mode === "master") { saveMasterSession(null); setGate("#masterGate"); }
@@ -190,6 +191,16 @@ async function bootstrap(accountSlug = "") {
       state.mode === "master" ? setGate("#masterGate") : setGate("#pinGate");
     }
   }
+}
+
+function openOrderFromNotification() {
+  if (state.mode !== "provider") return;
+  const id = new URLSearchParams(location.search).get("order") || "";
+  if (!/^[0-9a-f-]{36}$/i.test(id)) return;
+  navigate("orders");
+  const order = state.orders.find(item => String(item.id) === id);
+  if (order) openOrder(order.id);
+  else toast("Este pedido no está disponible en tu panel.", "error");
 }
 
 function applyBootstrap(result) {
@@ -590,7 +601,7 @@ function openOrder(id) {
   const deliveryCard=order.delivery_method==="pickup"
     ? `<div class="review-card" style="margin-top:12px"><h3>Entrega</h3><p style="margin:0;color:var(--muted);font-size:10px;line-height:1.5">Retiro acordado.</p></div>`
     : `<div class="review-card" style="margin-top:12px"><h3>Entrega</h3><p style="margin:0 0 ${hasMap?"10px":"0"};color:var(--muted);font-size:10px;line-height:1.5">${escapeHTML(order.delivery_address||(hasMap?"Ubicación marcada por el cliente.":"Dirección por coordinar."))}</p>${hasMap?`<a class="button button--secondary" href="${mapUrl}" target="_blank" rel="noopener">Abrir ubicación en mapa</a>`:""}</div>`;
-  $("#orderModalContent").innerHTML = `<div class="order-detail-top"><h3>${escapeHTML(order.customer_business || order.customer_name)}</h3><p>${escapeHTML(order.customer_name || "Contacto")} · +${escapeHTML(phone)} · ${formatDate(order.created_at)}</p><div class="status-timeline">${(simple ? orderStatuses.filter(([value]) => ["new","confirmed","delivered"].includes(value)) : orderStatuses.slice(0,5)).map((_,index) => `<i class="${index <= progressIndex && order.status !== "cancelled" ? "done" : ""}"></i>`).join("")}</div></div>${renderOrderManager(order)}<div class="order-detail-items">${(order.items || []).map(item => `<div class="order-detail-item"><b>${item.quantity}×</b><span>${escapeHTML(item.product_name)}<small style="display:block;color:var(--muted);margin-top:3px">${escapeHTML(item.unit || "")}</small></span><strong>${money(item.line_total)}</strong></div>`).join("")}</div><div class="order-detail-total"><span>Total estimado</span><strong>${money(order.total)}</strong></div>${deliveryCard}${order.notes ? `<div class="review-card" style="margin-top:12px"><h3>Observaciones</h3><p style="margin:0;color:var(--muted);font-size:10px;line-height:1.5">${escapeHTML(order.notes)}</p></div>` : ""}${order.inventory_policy === "delivered" ? '<details class="review-card" id="hmOrderHistory" style="margin-top:12px"><summary>Historial de cambios</summary><div aria-live="polite">Abrir para consultar los cambios.</div></details>' : ''}`;
+  $("#orderModalContent").innerHTML = `<div class="order-detail-top"><h3>${escapeHTML(order.customer_business || order.customer_name)}</h3><p>${escapeHTML(order.customer_name || "Contacto")} · +${escapeHTML(phone)} · ${formatDate(order.created_at)}</p><div class="status-timeline">${(simple ? orderStatuses.filter(([value]) => ["new","confirmed","delivered"].includes(value)) : orderStatuses.slice(0,5)).map((_,index) => `<i class="${index <= progressIndex && order.status !== "cancelled" ? "done" : ""}"></i>`).join("")}</div></div>${renderOrderManager(order)}<div class="order-detail-items">${(order.items || []).map(item => `<div class="order-detail-item"><b>${item.quantity}×</b><span>${escapeHTML(item.product_name)}<small style="display:block;color:var(--muted);margin-top:3px">${escapeHTML(item.presentation_name || item.unit || "Unidad")}</small></span><strong>${money(item.line_total)}</strong></div>`).join("")}</div><div class="order-detail-total"><span>Total estimado</span><strong>${money(order.total)}</strong></div>${deliveryCard}${order.notes ? `<div class="review-card" style="margin-top:12px"><h3>Observaciones</h3><p style="margin:0;color:var(--muted);font-size:10px;line-height:1.5">${escapeHTML(order.notes)}</p></div>` : ""}${order.inventory_policy === "delivered" ? '<details class="review-card" id="hmOrderHistory" style="margin-top:12px"><summary>Historial de cambios</summary><div aria-live="polite">Abrir para consultar los cambios.</div></details>' : ''}`;
   bindOrderManager(order);
   const history = $("#hmOrderHistory");
   if (history) history.addEventListener("toggle", async () => {
@@ -607,7 +618,10 @@ function openOrder(id) {
     } catch { if (history.isConnected) content.textContent = "No se pudo cargar. Cierra y abre el historial para reintentar."; }
     finally { delete history.dataset.loading; }
   });
-  openModal($("#orderModal"));
+  const modalEl=$("#orderModal");
+  $("#orderModalContent").scrollTop=0;
+  modalEl.scrollTop=0;
+  openModal(modalEl);
 }
 
 async function updateOrderStatus(id, status) {

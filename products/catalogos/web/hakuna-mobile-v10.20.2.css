@@ -1,0 +1,53 @@
+/* Hakuna 10.20.2: scoped mobile fixes. No inventory changes. */
+html,body{overscroll-behavior-y:none}
+#hm115PendingChip{z-index:110!important}
+body.modal-open #hm115PendingChip,
+body:has(.admin-modal.visible) #hm115PendingChip{display:none!important}
+#orderModal>header .sheet-close{display:grid!important;place-items:center;flex:0 0 46px!important;width:46px!important;min-height:46px!important;position:relative!important;z-index:60!important;background:#f2f6f3!important;color:#173d2a!important;opacity:1!important;visibility:visible!important;pointer-events:auto!important}
+#orderModal>header{display:flex!important;justify-content:space-between!important;align-items:center!important}
+#orderModalContent{overscroll-behavior-y:contain}
+@media(max-width:760px){
+ #orderModal{position:fixed!important;inset:0!important;top:0!important;left:0!important;right:0!important;bottom:0!important;width:100%!important;height:100dvh!important;max-height:100dvh!important;border-radius:0!important;transform:translateY(105%)!important;opacity:1!important;overflow:hidden!important;display:flex!important;flex-direction:column!important;padding-bottom:env(safe-area-inset-bottom)!important;box-sizing:border-box!important}
+ #orderModal[hidden]{display:none!important}
+ #orderModal.visible{transform:translateY(0)!important}
+ #orderModal>header{position:relative!important;top:0!important;flex:0 0 auto!important;padding:12px 14px!important;min-height:70px!important;box-sizing:border-box!important;z-index:55!important;background:#fff!important}
+ #orderModal>header h2{font-size:19px!important;overflow-wrap:anywhere}
+ #orderModalContent{flex:1 1 auto!important;min-height:0!important;height:auto!important;overflow-y:auto!important;-webkit-overflow-scrolling:touch!important;padding:13px 14px calc(24px + env(safe-area-inset-bottom))!important}
+ #orderModal .order-detail-top{padding:12px!important}
+ #orderModal .hm-order-manager{margin:10px 0!important;padding:12px!important;gap:8px!important}
+ #orderModal .hm-order-main,#orderModal .hm-order-secondary{min-height:48px!important}
+}
+.tracking-page{min-height:100dvh;padding:12px 12px calc(14px + env(safe-area-inset-bottom));place-items:start center;overscroll-behavior-y:none}
+.tracking-shell{width:min(100%,560px)}
+.tracking-brand{margin:0 auto 10px}
+.tracking-card{padding:16px!important;min-height:0!important}
+.tracking-head>span{width:48px;height:48px;border-radius:16px;margin-bottom:7px}
+.tracking-head .icon{width:25px;height:25px}
+.tracking-head h1{font-size:clamp(23px,5vw,27px);line-height:1.12}
+.tracking-head p{font-size:12px;line-height:1.4;margin-top:5px}
+.tracking-number{margin-top:8px}
+.tracking-timeline{grid-template-columns:repeat(var(--hm-stages,5),minmax(0,1fr))!important;margin:17px 0 13px;gap:0}
+.tracking-stage{font-size:12px!important;gap:6px;min-width:0}
+.tracking-stage span{font-size:12px!important;line-height:1.25;overflow-wrap:anywhere}
+.tracking-stage i{width:29px;height:29px}
+.tracking-stage::before{top:14px}
+.order-customer-notice{margin:8px 0!important;padding:12px 14px!important}
+.order-customer-notice__head{margin-bottom:6px!important}
+.order-customer-notice__message{margin:5px 0!important;font-size:13px!important;line-height:1.35!important}
+.tracking-total{margin-top:10px;padding:12px 14px}
+.tracking-products{margin-top:9px;border:1px solid var(--line);border-radius:13px;background:#fff;overflow:hidden}
+.tracking-products summary{min-height:46px;display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 14px;color:#1d573b;font-size:13px;font-weight:800;cursor:pointer}
+.tracking-products summary::after{content:'⌄';font-size:18px}
+.tracking-products[open] summary::after{content:'⌃'}
+.tracking-products .tracking-items{padding:0 9px 10px;display:grid;gap:7px}
+.tracking-products .tracking-item{grid-template-columns:30px minmax(0,1fr) auto}
+.tracking-updated{margin-top:9px}
+.tracking-back{margin-top:9px!important;min-height:44px}
+.hm-map-v3 .hm-loc-stage:active .hm-loc-pin,
+.hm-map-v3.dragging .hm-loc-pin,
+.hm-map-v3 .hm-loc-pin{transform:translate(-50%,calc(-100% - 25px))!important;transition:none!important}
+.hm-map-v3 .hm-loc-stage{bottom:clamp(265px,42dvh,370px)!important}
+.hm-map-v3 .hm-loc-controls{max-height:clamp(265px,42dvh,370px)!important;overscroll-behavior-y:contain!important;padding-bottom:max(12px,env(safe-area-inset-bottom))!important;scroll-padding-bottom:72px!important}
+.hm-map-v3 .hm-loc-actions{position:sticky!important;bottom:0!important;z-index:850!important;padding:10px 0 max(18px,env(safe-area-inset-bottom))!important;margin-bottom:0!important;background:#fff!important;box-shadow:0 -6px 14px #ffffffed!important}
+.hm-map-v3 .hm-loc-actions button{min-height:48px!important}
+@media(max-height:640px){.hm-map-v3 .hm-loc-stage{bottom:260px!important}.hm-map-v3 .hm-loc-controls{max-height:260px!important}.tracking-head>span{width:43px;height:43px}.tracking-card{padding:12px!important}}

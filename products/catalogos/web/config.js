@@ -5,7 +5,7 @@ window.KIUBO_CATALOG_CONFIG=Object.freeze({
   apiUrl:'https://hysrlckmnzlmscwwbibn.supabase.co/functions/v1/catalog-router',
   notifyUrl:'https://hysrlckmnzlmscwwbibn.supabase.co/functions/v1/catalog-notify',
   defaultSlug:'hakuna-matata',
-  version:'10.20.1',
+  version:'10.20.2',
   brandLogoUrl:"/assets/hakuna-logo-512.png"
 });
 // Recover broken external brand images without changing catalog data.
@@ -30,13 +30,14 @@ document.addEventListener('error',event=>{
   visual.style.setProperty('--hm-brand-fg','#294a37');
 },true);
 (()=>{
-  const path=location.pathname,v='10.20.1',logo=window.KIUBO_CATALOG_CONFIG.brandLogoUrl;
+  const path=location.pathname,v='10.20.2',logo=window.KIUBO_CATALOG_CONFIG.brandLogoUrl;
   document.documentElement.dataset.hmBuild=v;
   const setIcon=(rel,href)=>{let l=document.querySelector(`link[rel="${rel}"]`);if(!l){l=document.createElement('link');l.rel=rel;document.head.append(l)}l.href=href};
   setIcon('icon','/assets/hakuna-logo-192.png');setIcon('apple-touch-icon','/assets/hakuna-logo-192.png');
   const addStyle=href=>{if(document.querySelector(`link[href^="${href}"]`))return;const l=document.createElement('link');l.rel='stylesheet';l.href=`${href}?v=${v}`;document.head.append(l)};
   const addManifest=href=>{let l=document.querySelector('link[rel="manifest"]');if(!l){l=document.createElement('link');l.rel='manifest';document.head.append(l)}l.href=`${href}?v=${v}`};
   addStyle('/push.css');
+  addStyle('/hakuna-mobile-v10.20.2.css');
   if(/^\/(panel|master)(?:\/|$)/.test(path)){
     const theme=document.querySelector('meta[name="theme-color"]');if(theme)theme.content='#ffffff';else{const m=document.createElement('meta');m.name='theme-color';m.content='#ffffff';document.head.append(m)}
     document.documentElement.style.background='#ffffff';if(document.body)document.body.style.background='#ffffff';
