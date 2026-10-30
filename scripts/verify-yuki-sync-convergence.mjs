@@ -11,7 +11,7 @@ for(const needle of ["KIUBO_SYNC_QUEUED_EVENT","window.dispatchEvent(new CustomE
 }
 
 const runtime=text("components/RealtimeSyncRuntime.tsx");
-for(const needle of ["KIUBO_SYNC_QUEUED_EVENT","window.addEventListener(\"focus\",wake)","visibilitychange","setInterval(sync,30_000)"]){
+for(const needle of ["KIUBO_SYNC_QUEUED_EVENT","window.addEventListener(\"focus\",wake)","visibilitychange",'window.setInterval(()=>{if(document.visibilityState==="visible")sync()},30_000)',"KIUBO_SYNC_CYCLE_COMPLETED"]){
   assert.ok(runtime.includes(needle),`realtime retry trigger missing: ${needle}`);
 }
 for(const needle of ["isSyntheticYukiProductId","Cloud es la fuente canónica","including tombstones","reconcileCanonicalSnapshot","CANONICAL_SNAPSHOT_INTERVAL","missingWorkspaceProducts","canonicalSnapshotDue(tenantId,missingWorkspaceProducts)"]){

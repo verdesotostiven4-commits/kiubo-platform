@@ -5,6 +5,10 @@ const SESSION_KEY="kiubo.local.session.v1";
 const DATA_CACHE="kiubo-data-durability-v1";
 const SHADOW_PATH="/__kiubo/local-db-shadow";
 const SNAPSHOT_INTERVAL_MS=5000;
+// Recheck unchanged backup once per minute, not every five seconds.
+const SNAPSHOT_REVERIFY_MS=60_000;
+let lastSnapshotRaw:string|null=null;
+let lastSnapshotVerifiedAt=0;
 const UUID_RE=/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 type ShadowEnvelope={
@@ -65,6 +69,7 @@ async function readShadow(expectedTenant:string){
 export async function snapshotOfflineDatabase(){
   if(typeof window==="undefined"||!("caches" in window))return false;
   const raw=window.localStorage.getItem(PRIMARY_KEY);
+  if(raw&&raw===lastSnapshotRaw&&Date.now()-lastSnapshotVerifiedAt<SNAPSHOT_REVERIFY_MS)return true;
   if(!validPrimary(raw))return false;
   try{
     const cache=await caches.open(DATA_CACHE);
@@ -72,11 +77,12 @@ export async function snapshotOfflineDatabase(){
     if(existing){
       try{
         const previous=await existing.clone().json() as ShadowEnvelope;
-        if(previous?.checksum===checksum(raw!))return true;
+        if(previous?.checksum===checksum(raw!)){lastSnapshotRaw=raw;lastSnapshotVerifiedAt=Date.now();return true;}
       }catch{}
     }
     const envelope:ShadowEnvelope={format:"kiubo-local-shadow-v1",writtenAt:new Date().toISOString(),checksum:checksum(raw!),raw:raw!};
     await cache.put(shadowRequest(),new Response(JSON.stringify(envelope),{headers:{"content-type":"application/json","cache-control":"no-store"}}));
+    lastSnapshotRaw=raw;lastSnapshotVerifiedAt=Date.now();
     return true;
   }catch{return false}
 }

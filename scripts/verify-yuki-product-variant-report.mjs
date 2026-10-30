@@ -10,7 +10,7 @@ const load=(file,deps={})=>{
 };
 const adjustments=load("lib/sale-adjustments.ts");
 const classification=load("lib/product-classification.ts");
-const {soldProductReport}=load("lib/report-sold-products.ts",{
+const {soldProductReport,yukiYogurtFlavorReport}=load("lib/report-sold-products.ts",{
  "./sale-adjustments":adjustments,
  "./product-classification":classification
 });
@@ -57,5 +57,24 @@ for(const r of result.summary){
 }
 const ui=readFileSync("components/ReportsClientPro.tsx","utf8");
 assert.ok(ui.includes("soldProductReport(sales,db.tenantProducts"),"Report must call tested canonical grouping helper");
-assert.ok(ui.includes("Desglose por sabor:"),"Show users the actual selected options, not just the first variant");
+assert.ok(ui.includes("<ProductVariantChips variants={item.variants}")&&ui.includes("relevant.slice(0,3)"),"Combos must show only three combinations until the user expands them");
+assert.ok(ui.includes("extrasRows"),"Services and extras should be shown separately from food products");
+assert.ok(ui.includes("normalizeCatalogQuery"),"Search should tolerate accents");
+assert.ok(ui.includes("rowsByProduct.set(key"),"Every active sellable catalog item must appear, even when sales are zero");
+assert.ok(ui.includes("Solo vendidos")&&ui.includes("Toda la carta"),"Richard must be able to choose full or sold-only product lists");
+assert.ok(ui.includes("yukiYogurtFlavorReport(sales)"),"YUKI should display separately the real yogurt portions, including combos");
+const flavors=yukiYogurtFlavorReport([...sales,sales[0]]);
+const flavor=name=>flavors.find(row=>row.name.toLocaleLowerCase("es")===name.toLocaleLowerCase("es"))?.qty||0;
+assert.equal(flavor("Fresa"),11,"Yogurt fresa portions include the ten combo servings plus one standalone");
+assert.equal(flavor("Mora"),21,"Two-yogurt and three-yogurt combos must count each selected portion");
+assert.equal(flavor("Mango"),13,"Combo quantities must multiply flavor portions");
+assert.equal(flavor("Coco"),7,"Flavors from combo options are included");
+assert.equal(flavor("Piña"),2,"All flavors are listed, not only the six favorites");
+const multiply=sale("17",[item("combo3",2,"Yogur Mora ×2 / Yogur Fresa")]);
+const multiple=yukiYogurtFlavorReport([multiply,multiply]);
+assert.equal(multiple.find(x=>x.name==="Mora")?.qty,4,"Encoded ×2 flavors multiply by two servings and item quantity");
+assert.equal(multiple.find(x=>x.name==="Fresa")?.qty,2,"Mixed yogurt labels retain each flavor count");
+const tripled=yukiYogurtFlavorReport([sale("18",[item("combo4",1,"Yogur Mango ×3 / Yogur Piña")])]);
+assert.equal(tripled.find(x=>x.name==="Mango")?.qty,3,"Legacy encoded ×3 flavor labels must count every serving");
+assert.equal(tripled.find(x=>x.name==="Piña")?.qty,1,"Single flavors alongside multiplies count once");
 console.log("✓ Combo 1 = 14, Combo 2 = 12, fresa combinations = 10 plus 1 standalone, actual historical sales stay untouched");

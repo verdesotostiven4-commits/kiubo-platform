@@ -3,7 +3,7 @@ import { useEffect } from "react";
 
 const RECOVERY_KEY = "kiubo.bundle-recovery.v2";
 const SW_URL = "/sw.js?v=10";
-const CANONICAL_HOST = "kiubo-platform.vercel.app";
+const CANONICAL_HOST = "kiubo-platform-ebon.vercel.app";
 
 function isKiuboPreviewHost(host: string) {
   return host !== CANONICAL_HOST && host.includes("kiubo-platform") && host.endsWith(".vercel.app");

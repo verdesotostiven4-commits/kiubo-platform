@@ -57,7 +57,7 @@ export type AuditLogRecord = {
   createdAt: string;
 };
 
-export type SyncPushResult = { operationId:string; ok:boolean; remoteId?:string; error?:string };
+export type SyncPushResult = { operationId:string; ok:boolean; ignored?:boolean; remoteId?:string; error?:string };
 export type SyncChange = {
   tenantId:string;
   branchId?:string;

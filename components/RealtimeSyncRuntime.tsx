@@ -14,6 +14,7 @@ const COLLECTION_BY_ENTITY:Partial<Record<SyncEntity,keyof KiuboLocalDatabase>>=
   tenantProducts:"tenantProducts",settings:"settings",branding:"branding",customers:"customers",suppliers:"suppliers",purchases:"purchases",supplierPayments:"supplierPayments",stockMovements:"stockMovements"
 };
 export const KIUBO_DATA_REFRESHED="kiubo:data-refreshed";
+export const KIUBO_SYNC_CYCLE_COMPLETED="kiubo:sync-cycle-completed";
 
 function canonicalSnapshotDue(tenantId:string,force=false){
   if(typeof window==="undefined")return true;
@@ -34,8 +35,8 @@ function isSyntheticYukiProductId(id:string){
   return id==="yuki-service-packaging"||/^yuki-menu-[a-z0-9-]+$/i.test(id);
 }
 
-function pendingEntityIds(tenantId:string,entityType:SyncEntity){
-  const ids=new Set<string>(),db=loadLocalDatabase();
+function pendingEntityIds(tenantId:string,entityType:SyncEntity,db=loadLocalDatabase()){
+  const ids=new Set<string>();
   for(const item of db.syncQueue){
     if(item.tenantId!==tenantId||item.status==="synced")continue;
     if(item.entityType===entityType)ids.add(item.entityId);
@@ -99,8 +100,10 @@ async function reconcileCanonicalSnapshot(tenantId:string,branchId:string){
       return{...item,status:"synced" as const,lastError:"Ignorada semilla local antigua; Cloud es la fuente canónica",updatedAt:new Date().toISOString()};
     });
   }
-  const protectedByEntity=new Map<SyncEntity,Set<string>>(CANONICAL_ENTITIES.map(entity=>[entity,pendingEntityIds(tenantId,entity)]));
+  const protectedByEntity=new Map<SyncEntity,Set<string>>(CANONICAL_ENTITIES.map(entity=>[entity,pendingEntityIds(tenantId,entity,next)]));
   const remoteIds=new Map<SyncEntity,Set<string>>(CANONICAL_ENTITIES.map(entity=>[entity,new Set<string>()]));
+  // Fast index for the thousands of inventory movements: same records, fewer scans.
+  let movementIndex=new Map(next.stockMovements.map((entry,index)=>[entry.id,index] as const));
   let changed=0;
   for(const row of rows){
     const entity=row.entity_type as SyncEntity,collectionKey=COLLECTION_BY_ENTITY[entity];
@@ -113,16 +116,17 @@ async function reconcileCanonicalSnapshot(tenantId:string,branchId:string){
     if(row.deleted){
       if(!protectedIds.has(id)){
         const before=collection.length;
-        (next[collectionKey] as unknown as Record<string,unknown>[])=collection.filter(record=>String(record.id||record.tenantId||"")!==key);
-        if(collection.length!==before)changed++;
+        const filtered=collection.filter(record=>String(record.id||record.tenantId||"")!==key);
+        (next[collectionKey] as unknown as Record<string,unknown>[])=filtered;
+        if(filtered.length!==before){changed++;if(entity==="stockMovements")movementIndex=new Map(next.stockMovements.map((entry,index)=>[entry.id,index] as const));}
       }
       continue;
     }
     remoteIds.get(entity)!.add(key);
     const payload=row.payload&&typeof row.payload==="object"?row.payload as TenantProduct:null;
     if(!payload||protectedIds.has(id))continue;
-    const index=collection.findIndex(record=>String(record.id||record.tenantId||"")===key);
-    if(index<0){collection.push(payload as unknown as Record<string,unknown>);changed++;continue}
+    const index=entity==="stockMovements"?(movementIndex.get(key)??-1):collection.findIndex(record=>String(record.id||record.tenantId||"")===key);
+    if(index<0){collection.push(payload as unknown as Record<string,unknown>);if(entity==="stockMovements")movementIndex.set(key,collection.length-1);changed++;continue}
     if(JSON.stringify(collection[index])!==JSON.stringify(payload)){collection[index]=payload as unknown as Record<string,unknown>;changed++}
   }
   // Cloud is the canonical catalog and workspace snapshot. Older PWAs could
@@ -181,8 +185,9 @@ export function RealtimeSyncRuntime(){
         // because its revision cursor was already ahead.
         void reconcileCanonicalSnapshot(ctx.tenantId,ctx.branchId).catch(()=>0).then(productChanges=>runSyncCycle().then(result=>({result,productChanges}))).then(async ({result,productChanges})=>{
           continueSync=Boolean(result.hasMore);
+          if(!disposed)window.dispatchEvent(new CustomEvent(KIUBO_SYNC_CYCLE_COMPLETED,{detail:{ok:result.ok}}));
           if(!disposed&&(result.pulled>0||result.pushed>0||productChanges>0))window.dispatchEvent(new CustomEvent(KIUBO_DATA_REFRESHED,{detail:{...result,pulled:result.pulled+productChanges}}));
-        }).finally(()=>{busy=false;if(!disposed&&continueSync){continueSync=false;sync()}});
+        }).catch(()=>{if(!disposed)window.dispatchEvent(new CustomEvent(KIUBO_SYNC_CYCLE_COMPLETED,{detail:{ok:false}}))}).finally(()=>{busy=false;if(!disposed&&continueSync){continueSync=false;sync()}});
       },350);
     };
     const channel=client.channel(`kiubo-live-${ctx.tenantId.slice(0,8)}`)
@@ -190,7 +195,7 @@ export function RealtimeSyncRuntime(){
       .subscribe();
     const wake=()=>sync();
     const visible=()=>{if(document.visibilityState==="visible")sync()};
-    const interval=window.setInterval(sync,30_000);
+    const interval=window.setInterval(()=>{if(document.visibilityState==="visible")sync()},30_000);
     sync();
     window.addEventListener("online",wake);
     window.addEventListener("focus",wake);
