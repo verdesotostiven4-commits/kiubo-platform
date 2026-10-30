@@ -52,9 +52,11 @@ function waitImage(img){
   if(img.complete)return decode();
   return new Promise(resolve=>{let done=false;const finish=()=>{if(done)return;done=true;resolve()};img.addEventListener('load',finish,{once:true});img.addEventListener('error',finish,{once:true});setTimeout(finish,900)}).then(decode);
 }
-function releaseFirstPaint(payload){
+function releaseFirstPaint(payload,force=false){
   if(released)return;
-  if(!normalizeHomeBrands(payload))return;
+  // Brand is optional. Empty catalogs and products without a brand still need
+  // usable navigation; a decorative rail must never keep the whole app hidden.
+  if(!normalizeHomeBrands(payload)&&orderedLiveBrands(payload).length&&!force)return;
   const imgs=$$('#homeView .hm-brand-block img,#homeView .v10-brand-block img,#homeView .hm-slide-main img,#homeView .hm109-image-slide img').slice(0,14);
   Promise.all(imgs.map(waitImage)).finally(()=>requestAnimationFrame(()=>requestAnimationFrame(()=>{
     if(released)return;normalizeHomeBrands(readJSON(cacheKey(),payload));released=true;clearTimeout(bootDeadline);
@@ -70,7 +72,7 @@ function tryFirstPaint(force=false){
   if(!force&&navigator.onLine!==false&&!live)return;
   if(!$('#homeView .v10-home')){setTimeout(()=>tryFirstPaint(force),70);return}
   if(paintPending)return;paintPending=true;
-  setTimeout(()=>{paintPending=false;if(released)return;releaseFirstPaint(readJSON(cacheKey(),payload))},live?180:80);
+  setTimeout(()=>{paintPending=false;if(released)return;releaseFirstPaint(readJSON(cacheKey(),payload),force)},live?180:80);
 }
 function pollFirstPaint(){
   if(released)return;

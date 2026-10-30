@@ -33,6 +33,10 @@ try{
   const snapshot=()=>request({action:'product_snapshot',product_id:product.id});
   assert.equal((await snapshot()).product.stock_quantity,12);
   const edit=await request({action:'amend_order',order_id:order.id,operation_id:randomUUID(),expected_revision:0,reason:'Quitar unidades y agregar agua',items:[{product_id:product.id,presentation_id:jaba.id,quantity:1},{product_id:second.id,presentation_id:second.presentations[0].id,quantity:3}]});order=edit.order;
+  for(const [initial_stock,error] of [[{...stock,stock_quantity:8},'stock_below_reserved'],[{...stock,stock_tracking:false},'stock_tracking_required_for_pending_orders']]){
+    const rejected=await request({...body,product_operation_id:randomUUID(),product:{name:'No guardar',price:18,id:product.id},expected_stock_quantity:12,initial_stock,presentations:product.presentations},true,409);
+    assert.equal(rejected.error,error);assert.equal((await snapshot()).product.name,'Cola integración');
+  }
   const status=async(next,op=randomUUID(),revision=order.revision)=>{const r=await request({action:'update_order_status',order_id:order.id,status:next,operation_id:op,expected_revision:revision,reason:'Prueba aislada'});order=r.order;return r;};
   await status('confirmed');assert.equal((await snapshot()).product.stock_quantity,12,'Confirmation must not debit physical stock');
   const delivery=randomUUID(),revision=order.revision;await status('delivered',delivery,revision);await status('delivered',delivery,revision);
@@ -47,11 +51,16 @@ try{
   const upload=await fetch(api,{method:'POST',headers:{apikey:env.ANON_KEY,authorization:'Bearer '+env.ANON_KEY,'x-provider-session':session,origin:'http://localhost:4173'},body:form});
   const photo=await upload.json();assert.equal(upload.status,200,JSON.stringify(photo));
   await request({action:'save_presentation_image',presentation_id:jaba.id,image_path:photo.path,image_url:null});
+  const secondUpload=await fetch(api,{method:'POST',headers:{apikey:env.ANON_KEY,authorization:'Bearer '+env.ANON_KEY,'x-provider-session':session,origin:'http://localhost:4173'},body:form});
+  const unitPhoto=await secondUpload.json();assert.equal(secondUpload.status,200);
+  await request({action:'save_presentation_image',presentation_id:unit.id,image_path:unitPhoto.path,image_url:null});
   let saved=await snapshot();assert.equal(saved.product.image_path,photo.path,'Default presentation photo is also the cover');
+  assert.equal(saved.presentations.find(p=>p.id===unit.id).image_path,unitPhoto.path);assert.notEqual(unitPhoto.path,photo.path,'Unit and jaba retain independent photos');
   const publicPhoto=photo.public_url.replace('http://kong:8000',env.API_URL);
   assert.deepEqual(Buffer.from(await (await fetch(publicPhoto)).arrayBuffer()),png,'Storage must return original uploaded bytes');
   await request({...body,product_operation_id:randomUUID(),product:{name:'Cola editada',price:18,id:product.id},expected_stock_quantity:12,presentations:product.presentations});
   saved=await snapshot();assert.equal(saved.product.image_path,photo.path,'Editing other fields preserves the autosaved cover');
+  assert.equal(saved.presentations.find(p=>p.id===unit.id).image_path,unitPhoto.path,'Atomic form saves preserve independent presentation photos');
   await request({...body,product_operation_id:randomUUID(),product:{name:'No guardar',price:18,id:product.id},expected_stock_quantity:99,presentations:product.presentations},true,409);
   assert.equal((await snapshot()).product.name,'Cola editada');
   for(const action of ['save_stock','save_presentations'])assert.equal((await request({action,product_id:product.id},true,409)).error,'client_update_required');

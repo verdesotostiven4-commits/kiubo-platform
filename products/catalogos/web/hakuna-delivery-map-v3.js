@@ -197,16 +197,14 @@ export async function openDeliveryMap(options){
     if(!sources||!Object.keys(sources).length)return;
     tilesReady=true;loading?.remove();
    };
-   map.on("load",()=>{if(disposed)return;removePois();resizeMap();if(map?.areTilesLoaded?.())markTilesReady()});
+   map.on("load",()=>{if(disposed)return;removePois();resizeMap()});
    // MapLibre signals `idle` only after all requested visible tiles have loaded.
    // Some versions do not expose a `tile.state` in sourcedata events. Relying
    // solely on it showed a gray loading mask even when the map had rendered.
    map.on("idle",markTilesReady);
-   map.on("sourcedata",event=>{
-    if(disposed)return;
-    if((event?.isSourceLoaded||event?.tile?.state==="loaded")&&
-        (!map?.areTilesLoaded||map.areTilesLoaded()))markTilesReady();
-   });
+   // Source metadata can be loaded before the first visible tile or its glyphs
+   // render. Only idle dismisses the loading mask; otherwise a gray canvas
+   // briefly looks ready while the actual map is still downloading.
    map.on("dragstart",()=>root.classList.add("dragging"));
    map.on("dragend",()=>{
     root.classList.remove("dragging");
