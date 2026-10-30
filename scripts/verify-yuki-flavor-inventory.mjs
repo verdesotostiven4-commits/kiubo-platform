@@ -80,6 +80,7 @@ const invalidLine={...products.at(-1),qty:1,optionSelections:["Natural","Mango",
 const handlerDb={tenantProducts:products,orders:[],sales:[],stockMovements:[],syncQueue:[]};
 const handlerBefore=JSON.stringify(handlerDb),messages=[];
 const scope={
+  autosaveSuppressedRef:{current:false},
   loadLocalDatabase:()=>handlerDb,getWorkspaceContext:()=>({tenantId:"yuki",branchId:"matriz"}),
   inventorySelectionError:inventory.inventorySelectionError,setMessage:message=>messages.push(message),
   ctx:{tenantId:"yuki"},foodService:true,validateOrderDetails:()=>true,cart:[invalidLine],
