@@ -43,4 +43,5 @@ jobs:
         run: node scripts/verify-hakuna-browser.mjs /tmp/hakuna-integration/status.env
       - name: Stop isolated stack
         if: always()
-        run: "$RUNNER_TEMP/hakuna-tools/node_modules/.bin/supabase" stop --workdir /tmp/hakuna-integration --no-backup
+        run: |
+          "$RUNNER_TEMP/hakuna-tools/node_modules/.bin/supabase" stop --workdir /tmp/hakuna-integration --no-backup
