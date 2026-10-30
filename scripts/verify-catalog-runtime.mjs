@@ -33,11 +33,11 @@ for(const needle of ["delivery_lat","delivery_lng","delivery_location_label","ca
 for(const needle of ["catalog_replace_presentations","catalog_update_presentation_settings","Re-check now before validating stock","for share","invalid_presentation","invalid_quantity","allow_item_note","promo_active","payment_method"]) has(migration,needle,`hardening migration missing invariant: ${needle}`);
 
 const config=read("products/catalogos/web/config.js");
-has(config,"version:'10.20.1'","config version must match hardened release");
+has(config,"version:'10.20.2'","config version must match hardened release");
 const index=read("products/catalogos/web/index.html");
 assert.ok(!index.includes("?v=10.9.1"),"index.html must not pin stale 10.9.1 asset query strings");
 const sw=read("products/catalogos/web/sw.js");
-has(sw,"kiubo-catalog-v10-20-1-20261030","service-worker cache must roll for hardened release");
+has(sw,"kiubo-catalog-v10-20-2-20261030","service-worker cache must roll for hardened release");
 
 console.log("✓ Hakuna catalog runtime guard passed.");
 
@@ -76,7 +76,7 @@ for(const name of readdirSync(webDir).filter(name=>name.endsWith(".js"))){
 }
 for(const html of ["products/catalogos/web/panel.html","products/catalogos/web/pedido.html"]){
   const source=read(html);
-  assert.ok(source.includes("/config.js?v=10.20.1"),`${html} must cache-bust config.js`);
+  assert.ok(source.includes("/config.js?v=10.20.2"),`${html} must cache-bust config.js`);
 }
 const vercelConfig=read("products/catalogos/web/vercel.json");
 has(vercelConfig,'"source": "/config.js"',"Vercel config must disable stale config.js caching");
