@@ -120,7 +120,7 @@ export async function openDeliveryMap(options){
     gpsMarker=new lib.Marker({element,anchor:"center"}).setLngLat([p.lng,p.lat]).addTo(map);
    }else gpsMarker.setLngLat([p.lng,p.lat]);
    if(gpsCircle){gpsCircle.dataset.meters=String(circleMeters);gpsCircle.style.width=radiusPixels*2+"px";gpsCircle.style.height=radiusPixels*2+"px"}
-   if(firstGps&&!chosen){
+   if(firstGps&&!chosen&&!root.classList.contains('dragging')){
     firstGps=false;moveCamera(p,17,false);
     // Blue dot remains at true GPS coordinate; orange pin remains at map center.
    }
