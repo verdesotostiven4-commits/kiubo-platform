@@ -181,7 +181,7 @@ async function runSyncCycleCore():Promise<SyncCycleResult>{
       if(reconciled)return{ok:waitingRetry.length===0&&!reconciled.hasMore,mode:provider.mode,pushed:0,failed:waitingRetry.length,pulled:reconciled.pulled,hasMore:reconciled.hasMore,message:reconciled.hasMore?"KIUBO terminó de conciliar pedidos y sigue poniéndose al día":"Pedidos, cobros y caja conciliados con Cloud"};
     }catch{}
     if(!waitingRetry.length&&!tenantIsolationRepairDone(activeTenantId)){try{const repaired=await repairTenantIsolation(provider,db,activeTenantId);if(repaired)return{ok:!repaired.hasMore,mode:provider.mode,pushed:0,failed:0,pulled:repaired.changes.length,hasMore:Boolean(repaired.hasMore),message:repaired.hasMore?"KIUBO sigue verificando el negocio en Cloud":"Datos del negocio verificados y aislados correctamente"}}catch{}}
-    const pulled=await pullAvailable(provider);persistPulled(provider,db,pulled);return{ok:waitingRetry.length===0&&!pulled.hasMore,mode:provider.mode,pushed:0,failed:waitingRetry.length,pulled:pulled.changes.length,hasMore:Boolean(pulled.hasMore),message:waitingRetry.length?`Hay ${waitingRetry.length} cambio${waitingRetry.length===1?"":"s"} protegido${waitingRetry.length===1?"":"s"}; KIUBO reintentará automáticamente`:pulled.hasMore?"KIUBO sigue poniéndose al día":pulled.changes.length?"Datos cloud actualizados":"Todo sincronizado"};
+    const pulled=await pullAvailable(provider);persistPulled(provider,db,pulled);return{ok:waitingRetry.length===0&&!pulled.hasMore,mode:provider.mode,pushed:0,failed:waitingRetry.length,pulled:pulled.changes.length+correctedOrders,hasMore:Boolean(pulled.hasMore),message:waitingRetry.length?`Hay ${waitingRetry.length} cambio${waitingRetry.length===1?"":"s"} protegido${waitingRetry.length===1?"":"s"}; KIUBO reintentará automáticamente`:pulled.hasMore?"KIUBO sigue poniéndose al día":pulled.changes.length?"Datos cloud actualizados":"Todo sincronizado"};
   }
 
   // YUKI's register is licensed to one device. Before replaying ANY queued
@@ -204,6 +204,7 @@ async function runSyncCycleCore():Promise<SyncCycleResult>{
   try{results=await provider.pushOperations(pending.map(safeOperation))}catch(error){const message=error instanceof Error?error.message:"No se pudo contactar al backend";for(const item of pending)updateSyncOperation(item.operationId,"failed",message);return{ok:false,mode:provider.mode,pushed:0,failed:pending.length,pulled:0,message}}
 
   const byId=new Map(results.map(result=>[result.operationId,result]));let pushed=0,failed=0,recovered=0;
+  const ignoredOrderIds=new Set<string>();
   // Compatibility guard: a paid Food Service order is published only after its protected sale command is confirmed.
   const completedOrders:{operationId:string;order:FoodOrderRecord}[]=[];
   const completedCash:{operationId:string;movement:CashMovementRecord}[]=[];
@@ -211,6 +212,7 @@ async function runSyncCycleCore():Promise<SyncCycleResult>{
   for(const item of pending){
     const result=byId.get(item.operationId);
     if(result?.ok){
+      if(item.entityType==="orders"&&result.ignored)ignoredOrderIds.add(item.entityId);
       if((item.entityType==="saleTransactions"||item.entityType==="saleReversalTransactions"||item.entityType==="creditPaymentTransactions")&&item.payload&&typeof item.payload==="object"){
         const payload=item.payload as {orderAfter?:FoodOrderRecord;cashMovement?:CashMovementRecord;saleBefore?:{payment?:string}};
         const order=item.entityType==="saleTransactions"||item.entityType==="creditPaymentTransactions"?payload.orderAfter:undefined;
@@ -236,6 +238,30 @@ async function runSyncCycleCore():Promise<SyncCycleResult>{
     // Keep the historical regression marker intact: updateSyncOperation(completed.operationId,"synced")
   }
 
+  // Cloud acknowledges obsolete autosaves with ignored=true. The old order
+  // revision might be behind our cursor, so reload it directly from Cloud.
+  let correctedOrders=0;
+  if(ignoredOrderIds.size){
+    const client=getSupabaseBrowserClient();
+    if(client){
+      const canonical=await client.from("sync_entities")
+        .select("entity_id,payload,deleted")
+        .eq("tenant_id",activeTenantId).eq("entity_type","orders")
+        .in("entity_id",[...ignoredOrderIds]);
+      if(!canonical.error&&canonical.data){
+        const corrected=loadLocalDatabase();
+        for(const row of canonical.data){
+          const index=corrected.orders.findIndex(item=>item.tenantId===activeTenantId&&item.id===row.entity_id);
+          if(row.deleted){if(index>=0){corrected.orders.splice(index,1);correctedOrders++}continue}
+          if(!row.payload||typeof row.payload!=="object")continue;
+          const authoritative=row.payload as FoodOrderRecord;
+          if(index>=0)corrected.orders[index]=authoritative;else corrected.orders.push(authoritative);
+          correctedOrders++;
+        }
+        if(correctedOrders)saveLocalDatabase(corrected,{trackChanges:false});
+      }
+    }
+  }
   let afterPush=loadLocalDatabase();const unresolved=afterPush.syncQueue.some(item=>isActiveQueueItem(item,activeTenantId)&&(item.status==="pending"||item.status==="syncing"||item.status==="failed"));
   if(recovered&&!unresolved){
     try{const canonical=await pullAvailable(provider,"0");persistPulled(provider,afterPush,canonical);afterPush=loadLocalDatabase();if(!canonical.hasMore)markTenantIsolationRepairDone(activeTenantId);return{ok:false,mode:provider.mode,pushed,failed:0,pulled:canonical.changes.length,message:`KIUBO recuperó ${recovered} operación${recovered===1?"":"es"} rechazada${recovered===1?"":"s"} y restauró el estado cloud`}}
