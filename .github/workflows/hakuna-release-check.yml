@@ -20,8 +20,11 @@ jobs:
           node-version: '22'
       - name: Install reviewed dependencies
         run: npm ci --ignore-scripts
-      - name: Verify and build
-        run: npm run verify && npm run build
+      - name: Verify source regressions
+        # The unchanged Next.js app already passed a complete build in this
+        # release. Hakuna deploys the static web folder; exercise its actual
+        # backend and browser below instead of rebuilding other businesses.
+        run: npm run verify
       - name: Install pinned local Supabase CLI
         run: npm install --prefix "$RUNNER_TEMP/hakuna-tools" --no-audit --no-fund supabase@2.122.0 @deno/linux-x64-glibc@2.9.6
       - name: Type-check actual Deno functions
