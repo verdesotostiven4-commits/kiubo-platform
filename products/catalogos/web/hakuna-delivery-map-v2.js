@@ -167,7 +167,7 @@ export function openDeliveryMap({openSheet,closeSheet,ensureLeaflet,current,onSe
     observer=new MutationObserver(()=>{if(!root.isConnected)stop()});
     observer.observe(document.body,{childList:true,subtree:true});
   }catch{
-    if(loading)loading.textContent="El mapa no está disponible. Escribe tu dirección en el formulario.";
+    if(loading){loading.textContent="El mapa no está disponible. Escribe tu dirección en el formulario.";loading.classList.add("is-error")}
     gps.disabled=true;confirm.disabled=true;stop();
     toast("No se pudo cargar el mapa. Puedes continuar con una dirección escrita.","error");
   }

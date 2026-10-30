@@ -6,7 +6,7 @@ window.KIUBO_CATALOG_CONFIG=Object.freeze({
   notifyUrl:'https://hysrlckmnzlmscwwbibn.supabase.co/functions/v1/catalog-notify',
   defaultSlug:'hakuna-matata',
   version:'10.20.1',
-  brandLogoUrl:"https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEir16n1bNYOmluwXB4NgFhKGCSm-g3-h1JVbKMvFAS6dYSzwhdj_K6aHlIqEH19XItSIB0dQ7WMRHNiVGfVfPYUdHWBx4kHfEkQkEA0h3XuGEVVQgc_ksv1a2GhVkCjt9HTK9ks4_ZP600JgxV4wxFKSMq_foUWOVBv9Ds4tdLayG6Q8zf2KlsRtr9KbVg/s1600/image.png"
+  brandLogoUrl:"/assets/hakuna-logo-512.png"
 });
 // Recover broken external brand images without changing catalog data.
 document.addEventListener('error',event=>{

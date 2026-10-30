@@ -67,10 +67,11 @@ function releaseFirstPaint(payload,force=false){
 }
 function tryFirstPaint(force=false){
   if(released)return;
-  const payload=readJSON(cacheKey(),null);if(!payload?.account)return;
+  const payload=readJSON(cacheKey(),null);
+  if(!payload?.account){if(force)releaseFirstPaint({},true);return}
   const live=Number(payload.cached_at||0)>initialStamp;
   if(!force&&navigator.onLine!==false&&!live)return;
-  if(!$('#homeView .v10-home')){setTimeout(()=>tryFirstPaint(force),70);return}
+  if(!$('#homeView .v10-home')&&!force){setTimeout(()=>tryFirstPaint(force),70);return}
   if(paintPending)return;paintPending=true;
   setTimeout(()=>{paintPending=false;if(released)return;releaseFirstPaint(readJSON(cacheKey(),payload),force)},live?180:80);
 }
