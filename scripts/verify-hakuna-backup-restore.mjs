@@ -44,6 +44,7 @@ try{
   const before=new Map(snapshot.products.map(p=>[p.id,p.stock_quantity]));
   await db.exec(readFileSync('supabase/migrations/20261030074358_hakuna_order_lifecycle_v2.sql','utf8'));
   await db.exec(readFileSync('supabase/migrations/20261030080140_hakuna_push_multi_order_v2.sql','utf8'));
+  await db.exec(readFileSync('supabase/manual/hakuna_activate_delivery_inventory.sql','utf8'));
   const availability=(await db.query('select * from public.catalog_stock_availability($1)',[snapshot.account_id])).rows;
   for(const p of availability)assert.equal(Number(p.available_quantity),Number(before.get(p.product_id)),'Legacy availability must survive conversion');
   const report={restoredTables:Object.keys(mapping).length,products:snapshot.products.length,orders:snapshot.orders.length,

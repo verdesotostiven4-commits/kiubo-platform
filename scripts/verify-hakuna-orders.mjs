@@ -40,8 +40,13 @@ try {
   await db.query("insert into public.catalog_product_presentations(id,account_id,product_id,name,units_per_presentation,price,is_default) values($1,$2,$3,'Unidad',1,2,false),($4,$2,$3,'Jaba',9,18,true)",[unit,account,product,jaba]);
   await db.query("insert into public.catalog_orders(id,account_id,idempotency_key,order_number,customer_business,customer_phone,subtotal,total,status,inventory_committed) values($1,$2,$3,'OLD-1','Fixture','593999999999',6,6,'new',true)",[legacy,account,randomUUID()]);
   await db.query("insert into public.catalog_order_items(id,order_id,product_id,product_name,unit_price,quantity,line_total,presentation_id,presentation_name,units_per_presentation,base_units) values($1,$2,$3,'Cola',2,3,6,$4,'Unidad',1,3)",[legacyItem,legacy,product,unit]);
-  const migration=read('20261030074358_hakuna_order_lifecycle_v2.sql');
-  await db.exec(migration);
+  const staged=read('20261030074358_hakuna_order_lifecycle_v2.sql');
+  const activation=readFileSync('supabase/manual/hakuna_activate_delivery_inventory.sql','utf8');
+  const migration=staged+'\n'+activation;
+  await db.exec(staged);
+  assert.equal(await scalar('select inventory_policy from public.catalog_accounts where id=$1',[account]),'created','Schema preparation cannot activate the new stock policy early');
+  assert.equal(await scalar('select stock_quantity from public.catalog_products where id=$1',[product]),42);
+  await db.exec(activation);
   const stock=()=>scalar('select stock_quantity from public.catalog_products where id=$1',[product]);
   const available=()=>scalar('select available_quantity from public.catalog_stock_availability($1) where product_id=$2',[account,product]);
   const order=id=>rows('select * from public.catalog_orders where id=$1',[id]).then(x=>x[0]);

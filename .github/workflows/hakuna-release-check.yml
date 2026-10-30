@@ -23,7 +23,10 @@ jobs:
       - name: Verify and build
         run: npm run verify && npm run build
       - name: Install pinned local Supabase CLI
-        run: npm install --prefix "$RUNNER_TEMP/hakuna-tools" --no-audit --no-fund supabase@2.122.0
+        run: npm install --prefix "$RUNNER_TEMP/hakuna-tools" --no-audit --no-fund supabase@2.122.0 @deno/linux-x64-glibc@2.9.6
+      - name: Type-check actual Deno functions
+        run: |
+          "$RUNNER_TEMP/hakuna-tools/node_modules/@deno/linux-x64-glibc/deno" check --node-modules-dir=auto supabase/functions/catalog-api/index.ts supabase/functions/catalog-notify/index.ts
       - name: Prepare disposable local stack
         run: |
           mkdir -p /tmp/hakuna-integration
@@ -44,4 +47,6 @@ jobs:
       - name: Stop isolated stack
         if: always()
         run: |
-          "$RUNNER_TEMP/hakuna-tools/node_modules/.bin/supabase" stop --workdir /tmp/hakuna-integration --no-backup
+          if [ -x "$RUNNER_TEMP/hakuna-tools/node_modules/.bin/supabase" ]; then
+            "$RUNNER_TEMP/hakuna-tools/node_modules/.bin/supabase" stop --workdir /tmp/hakuna-integration --no-backup
+          fi
