@@ -29,23 +29,35 @@ const browser=await chromium.launch({headless:true,...(process.env.HAKUNA_CHROMI
 const context=await browser.newContext({viewport:{width:1440,height:900},geolocation:{latitude:-1.6701,longitude:-78.6501},permissions:['geolocation']});
 try{
   const page=await context.newPage(),errors=[],tiles=[];
+  await context.route('http://kong:8000/**',async route=>{
+    const response=await route.fetch({url:route.request().url().replace('http://kong:8000',env.API_URL)});
+    await route.fulfill({response});
+  });
   page.on('pageerror',e=>errors.push(e.message));
   page.on('response',r=>{if(r.ok()&&/tiles\.openfreemap\.org.*(?:pbf|planet)|tile\.openstreetmap.*\.png/.test(r.url()))tiles.push(r.url())});
   await page.goto('http://localhost:4173/',{waitUntil:'domcontentloaded'});
-  await page.locator('[data-open]').first().waitFor({timeout:30000});
+  await page.locator('button[data-view="catalog"]:visible').first().waitFor({timeout:30000});
+  const dismiss=page.getByRole('button',{name:'Ahora no',exact:true});
+  if(await dismiss.isVisible().catch(()=>false))await dismiss.click();
+  await page.locator('button[data-view="catalog"]:visible').first().click();
+  await page.locator('[data-open]:visible').first().waitFor({timeout:30000});
   const products=(await sql.query("select * from public.catalog_products where name in ('Cola editada','Agua integración') order by name")).rows;
   const cola=products.find(x=>x.name==='Cola editada'),agua=products.find(x=>x.name==='Agua integración');
   const ps=(await sql.query('select * from public.catalog_product_presentations where product_id=$1',[cola.id])).rows;
   const unit=ps.find(x=>x.units_per_presentation===1),jaba=ps.find(x=>x.units_per_presentation===9);
-  await page.locator(`[data-open="${cola.id}"]`).first().click();
+  await page.locator(`[data-open="${cola.id}"]:visible`).first().click();
   await page.locator(`[data-pick-plus="${jaba.id}"]`).click();await page.locator(`[data-pick-plus="${unit.id}"]`).click();
   assert.equal(await page.locator(`[data-pick-qty="${jaba.id}"]`).innerText(),'1');
   await page.locator('#detailAdd').click();await page.locator('[data-view="cart"]:visible').first().click();
   await page.locator('#checkoutStart').click();
   await page.locator('#cBusiness').fill('Cliente navegador aislado');await page.locator('#cPhone').fill('0999999999');
-  await page.locator('#cAddress').fill('Referencia de prueba ESPOCH');await page.locator('#locationBtn').click();
+  await page.locator('#cAddress').fill('Referencia de prueba ESPOCH');
+  const tileLoaded=page.waitForResponse(r=>r.ok()&&/tiles\.openfreemap\.org\/planet\/.*\.pbf|tile\.openstreetmap.*\.png/.test(r.url()),{timeout:30000});
+  await page.locator('#locationBtn').click();
   await page.locator('#hmLocMap').waitFor({timeout:25000});
+  assert.ok((await page.locator('#hmLocMap').boundingBox()).height>=170,'Dynamically loaded map styles cannot collapse the map canvas');
   await page.waitForFunction(()=>!document.querySelector('#hmLocLoading'),{},{timeout:30000});
+  await tileLoaded;
   assert.ok(tiles.length>0,'Real map tiles must load; a simulated map does not pass');
   const canvas=page.locator('#hmLocMap');await canvas.click({position:{x:100,y:100}});
   await page.locator('#hmLocConfirm').click();
@@ -77,7 +89,8 @@ try{
   assert.ok((await sql.query('select image_path from public.catalog_products where id=$1',[cola.id])).rows[0].image_path);
   for(const [width,height] of [[390,844],[1366,650]]){
     await page.setViewportSize({width,height});await page.goto('http://localhost:4173/',{waitUntil:'domcontentloaded'});
-    await page.locator('[data-open]').first().waitFor();
+    await page.locator('button[data-view="catalog"]:visible').first().click();
+    await page.locator('[data-open]:visible').first().waitFor();
     await page.screenshot({path:output+`/customer-${width}.png`,fullPage:true});
     assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+2),'No horizontal page overflow');
   }

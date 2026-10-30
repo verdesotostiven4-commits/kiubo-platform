@@ -150,7 +150,9 @@ html.hm105-boot .v10-app,html.hm105-ready .v10-app,html .v10-app{opacity:1!impor
 @media(prefers-reduced-motion:reduce){.hm-loc-controls{animation:none!important}}
 
 /* HAKUNA — OpenFreeMap Positron / MapLibre, compact mobile delivery selector. */
-.hm-map-v3 .hm-loc-map{background:#f0f2f2!important}
+/* MapLibre loads its CSS on demand and sets .maplibregl-map to relative.
+   Keep the canvas container anchored to the stage with explicit dimensions. */
+.hm-map-v3 .hm-loc-map{position:absolute;inset:0;width:100%;height:100%;background:#f0f2f2!important}
 .hm-map-v3 .maplibregl-canvas,.hm-map-v3 .maplibregl-map{outline:0}
 .hm-map-v3 .hm-map-alternative{justify-self:start;border:0;background:transparent;color:#245c43;text-decoration:underline;font-size:12px;font-weight:750;padding:4px 0;text-align:left}
 .hm-map-v3 .maplibregl-ctrl-bottom-left{z-index:4;bottom:4px}
