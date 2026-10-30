@@ -27,13 +27,18 @@ await new Promise(r=>server.listen(4173,'127.0.0.1',r));
 const sql=new pg.Client({connectionString:env.DB_URL});await sql.connect();
 const browser=await chromium.launch({headless:true,...(process.env.HAKUNA_CHROMIUM_EXECUTABLE?{executablePath:process.env.HAKUNA_CHROMIUM_EXECUTABLE}:{}),args:['--use-angle=swiftshader','--enable-unsafe-swiftshader']});
 const context=await browser.newContext({viewport:{width:1440,height:900},geolocation:{latitude:-1.6701,longitude:-78.6501},permissions:['geolocation']});
-const page=await context.newPage(),errors=[],tiles=[];
+const page=await context.newPage(),errors=[],tiles=[],apiFailures=[];
 try{
   await context.route('http://kong:8000/**',async route=>{
     const response=await route.fetch({url:route.request().url().replace('http://kong:8000',env.API_URL)});
     await route.fulfill({response});
   });
   page.on('pageerror',e=>errors.push(e.message));
+  page.on('response',async r=>{
+    if(r.status()>=400&&r.url().includes('/functions/v1/')){
+      const body=await r.json().catch(()=>({}));apiFailures.push({status:r.status(),error:body.error});
+    }
+  });
   page.on('response',r=>{if(r.ok()&&/tiles\.openfreemap\.org.*(?:pbf|planet)|tile\.openstreetmap.*\.png/.test(r.url()))tiles.push(r.url())});
   await page.goto('http://localhost:4173/',{waitUntil:'domcontentloaded'});
   await page.locator('button[data-view="catalog"]:visible').first().waitFor({timeout:30000});
@@ -92,6 +97,7 @@ try{
   await page.locator(`[data-edit-product="${cola.id}"]:visible`).first().click();
   await page.locator('#productName').fill('Cola verificada en navegador');
   await page.locator('#productImage').setInputFiles('products/catalogos/web/assets/hakuna-logo-192.png');
+  await page.locator('#hm109GeneralPhotoState[data-state="saved"]').waitFor({timeout:30000});
   await page.locator('#saveProductBtn').click();await page.locator('#productModal').waitFor({state:'hidden',timeout:30000});
   await page.reload({waitUntil:'domcontentloaded'});await page.locator('#adminApp').waitFor({state:'visible'});
   assert.ok((await sql.query('select image_path from public.catalog_products where id=$1',[cola.id])).rows[0].image_path);
@@ -106,6 +112,7 @@ try{
   assert.deepEqual(errors,[],'No uncaught browser application errors');
   console.log('✓ Real Chromium desktop/mobile: mixed cart, map or explicit manual-address fallback, credit checkout, admin edit/add, one close button, photo save/reload, responsive and PWA logo.');
 }catch(error){
-  console.log('Browser diagnostics:',JSON.stringify({rootClasses:await page.locator('html').getAttribute('class'),body:(await page.locator('body').innerText()).slice(-1800),errors,tiles:tiles.length}));
+  console.log('Browser diagnostics:',JSON.stringify({rootClasses:await page.locator('html').getAttribute('class'),body:(await page.locator('body').innerText()).slice(-1800),errors,apiFailures,tiles:tiles.length,
+    invalidInputs:await page.locator('#productModal input').evaluateAll(es=>es.filter(e=>!e.validity.valid).map(e=>({id:e.id,type:e.type,message:e.validationMessage}))),photoState:await page.locator('#hm109GeneralPhotoState').getAttribute('data-state').catch(()=>null)}));
   await page.screenshot({path:output+'/failure.png',fullPage:true}).catch(()=>{});throw error;
 }finally{await context.close();await browser.close();await sql.end();await new Promise(r=>server.close(r))}
