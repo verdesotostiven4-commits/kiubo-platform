@@ -4,6 +4,9 @@ const pos=fs.readFileSync("components/PosClientPro.tsx","utf8");
 const orders=fs.readFileSync("components/FoodOrdersClientPro.tsx","utf8");
 const salesTransaction=fs.readFileSync("lib/sales-transaction.ts","utf8");
 const terminalGuard=fs.readFileSync("supabase/migrations/20261003014800_protect_terminal_food_orders.sql","utf8");
+const syncEngine=fs.readFileSync("lib/sync-engine.ts","utf8");
+const provider=fs.readFileSync("lib/data-provider.ts","utf8");
+const syncTypes=fs.readFileSync("lib/sync-types.ts","utf8");
 const legacyActive="activeMatches=activeExisting&&(activeServiceMode===\"table\"?activeExisting.serviceMode===\"table\"&&activeExisting.tableLabel===tableLabel.trim():activeExisting.serviceMode===activeServiceMode)";
 const queuedActive="activeMatches=activeExisting&&((activeServiceMode===\"table\"||activeServiceMode===\"delivery\")?activeExisting.serviceMode===activeServiceMode&&activeExisting.tableLabel===tableLabel.trim():activeExisting.serviceMode===activeServiceMode)";
 const numberedActive='activeMatches=activeExisting&&((activeServiceMode==="table"||activeServiceMode==="delivery"||activeServiceMode==="takeaway")?activeExisting.serviceMode===activeServiceMode&&activeExisting.tableLabel===tableLabel.trim():activeExisting.serviceMode===activeServiceMode)';
@@ -40,6 +43,13 @@ const checks=[
   [terminalGuard.includes("v_existing_payment='partial' and v_incoming_payment='unpaid'"),"Cloud cannot lose an active partial-payment balance"],
   [terminalGuard.includes("v_existing_sale is not null and v_incoming_sale is distinct from v_existing_sale"),"Cloud cannot detach an order from its authoritative sale"],
   [terminalGuard.includes("v_existing_status in('cancelled','delivered') and v_incoming_status<>v_existing_status"),"Cloud cannot resurrect cancelled or delivered orders"],
+  [pos.includes("requestedActiveId&&!safeActive")&&pos.includes("window.localStorage.removeItem(key)"),"terminal orders invalidate linked browser drafts"],
+  [pos.includes("if(!order||order.status===\"cancelled\"")&&pos.includes("order.paymentStatus!==\"unpaid\""),"checkout-link recovery rejects terminal orders"],
+  [pos.includes("autosaveSuppressedRef.current=true")&&pos.includes("if(autosaveSuppressedRef.current)return null"),"checkout and clearing block delayed table autosaves"],
+  [pos.includes("Pedido cerrado: no se volvió a guardar una copia."),"autosave validates the bound order before persisting"],
+  [pos.includes("Pedido cerrado y sincronizado. Espacio libre"),"Cloud refresh releases local copies of terminal orders"],
+  [provider.includes("ignored:row?.ignored===true")&&syncTypes.includes("ignored?:boolean"),"sync transport preserves ignored ACKs"],
+  [syncEngine.includes("ignoredOrderIds.add(item.entityId)")&&syncEngine.includes(".in(\"entity_id\",[...ignoredOrderIds])"),"ignored stale order autosaves rehydrate from canonical Cloud"],
 ];
 for(const [ok,label] of checks){if(!ok){console.error(`✗ ${label}`);process.exit(1)}console.log(`✓ ${label}`)}
 console.log("✓ Service-context isolation guard passed: tables, takeaway and concurrent delivery slots stay independent and pending cleanup cannot rewrite cash history.");
