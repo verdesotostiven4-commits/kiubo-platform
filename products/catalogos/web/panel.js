@@ -1,4 +1,5 @@
-import { $, $$, api, uploadApi, money, escapeHTML, initials, productColor, slugFromLocation, toast, vibrate, debounce, phoneDigits, formatDate, config } from "./core.js";
+import { $, $$, api, uploadApi, money, escapeHTML, initials, productColor, slugFromLocation, toast, vibrate, debounce, phoneDigits, formatDate, config, uid } from "./core.js";
+import { openOrderEditor } from "./order-editor.js";
 
 const isMaster = location.pathname === "/master" || new URLSearchParams(location.search).get("mode") === "master";
 const slug = slugFromLocation();
@@ -13,11 +14,14 @@ const state = {
   accounts: [],
   categories: [],
   products: [],
+  presentations: [],
   orders: [],
   customers: [],
   productFilter: "all",
   orderFilter: "open",
   editingProduct: null,
+  productSaveOperation: null,
+  productSavePhoto: null,
   editingCategory: null,
   activeOrder: null,
   busy: false,
@@ -193,8 +197,11 @@ function applyBootstrap(result) {
   state.accounts = result.accounts || state.accounts;
   state.categories = result.categories || [];
   state.products = result.products || [];
+  state.presentations = result.presentations || [];
   state.orders = result.orders || [];
   state.customers = result.customers || [];
+  document.documentElement.dataset.hmInventoryPolicy = state.account.inventory_policy || "created";
+  if (state.mode === "provider" && state.providerToken) window.dispatchEvent(new Event("hakuna:provider-ready"));
   document.documentElement.style.setProperty("--brand", state.account.accent || "#f06a3a");
   document.documentElement.style.setProperty("--brand-deep", state.account.accent_deep || "#db4d22");
   document.title = `${state.mode === "master" ? "KIUBO Master" : "Panel"} · ${state.account.name}`;
@@ -285,14 +292,92 @@ function orderItemSummary(order) {
   return (order.items || []).slice(0, 3).map(item => `${item.quantity}× ${item.product_name}`).join(" · ") + ((order.items || []).length > 3 ? ` · +${order.items.length - 3} más` : "");
 }
 
-function statusOptions(active) {
-  return orderStatuses.map(([value, label]) => `<option value="${value}" ${value === active ? "selected" : ""}>${label}</option>`).join("");
+const allowedOrderSteps = Object.freeze({
+  new: ["confirmed", "cancelled"],
+  confirmed: ["preparing", "cancelled"],
+  preparing: ["dispatched", "cancelled"],
+  dispatched: ["delivered", "cancelled"],
+  delivered: ["cancelled"],
+  cancelled: ["new"]
+});
+const deliverySteps = Object.freeze({new:["confirmed","cancelled"],confirmed:["delivered","cancelled"],preparing:["delivered","cancelled"],dispatched:["delivered","cancelled"],delivered:["cancelled"],cancelled:["new"]});
+const stepsFor = order => (order.inventory_policy === "delivered" ? deliverySteps : allowedOrderSteps)[order.status] || [];
+const orderLabel = order => order.inventory_policy === "delivered" && ["preparing","dispatched"].includes(order.status)
+  ? "Confirmado" : orderStatuses.find(([value]) => value === order.status)?.[1] || "En proceso";
+function orderStatusError(error) {
+  const msg = String(error?.message || error?.code || "").toLowerCase();
+  if (msg.includes("invalid_status_transition")) return "Este cambio no está permitido. Actualiza el pedido y revisa su estado.";
+  if (msg.includes("order_conflict")) return "El pedido cambió en otro dispositivo. Actualiza la pantalla y vuelve a revisarlo.";
+  if (msg.includes("insufficient_stock")) return "No hay suficientes unidades para este cambio. Revisa el inventario y las reservas.";
+  if (msg.includes("refund_pending")) return "El pedido tiene un reintegro pendiente y no puede reabrirse todavía.";
+  if (msg.includes("invalid_refund_amount")) return "El importe supera el reintegro pendiente. Actualiza el pedido y revisa la cantidad.";
+  if (msg.includes("session") || error?.status === 401) return "La sesión caducó. Ingresa nuevamente al panel.";
+  if (msg.includes("timeout") || !navigator.onLine) return "Sin conexión. Comprueba internet y vuelve a intentar.";
+  return "No se pudo guardar el estado. Revisa la conexión e inténtalo de nuevo.";
+}
+function brandKey(name) {
+  return String(name || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim().replace(/\s+/g, " ");
+}
+function availableBrands() {
+  const items = new Map();
+  for (const product of state.products) {
+    const label = String(product.brand || "").trim();
+    if (label && !items.has(brandKey(label))) items.set(brandKey(label), label);
+  }
+  return [...items.values()].sort((a, b) => a.localeCompare(b, "es"));
+}
+function setupBrandPicker(value = "") {
+  const field = $("#productBrand")?.closest(".field");
+  const input = $("#productBrand");
+  if (!field || !input) return;
+  let select = $("#hmBrandChoose");
+  if (!select) {
+    select = document.createElement("select");
+    select.id = "hmBrandChoose";
+    select.setAttribute("aria-label", "Seleccionar marca registrada");
+    field.insertBefore(select, input);
+    const hint = document.createElement("small");
+    hint.id = "hmBrandHint";
+    hint.textContent = "Selecciona una marca existente o elige «Nueva marca» para escribir otra.";
+    field.append(hint);
+    select.addEventListener("change", () => {
+      if (select.value === "__new__") {
+        input.hidden = false;
+        input.value = "";
+        input.placeholder = "Escribe la nueva marca";
+        input.focus();
+      } else {
+        input.value = select.value;
+        input.hidden = true;
+      }
+    });
+  }
+  const brands = availableBrands(), current = String(value || "").trim();
+  select.replaceChildren();
+  const option = (label, name) => {
+    const item = document.createElement("option");
+    item.value = label;
+    item.textContent = name;
+    select.append(item);
+  };
+  option("", "Sin marca");
+  for (const brand of brands) option(brand, brand);
+  option("__new__", "+ Nueva marca");
+  const match = brands.find(item => brandKey(item) === brandKey(current));
+  select.value = current ? (match || "__new__") : "";
+  input.hidden = select.value !== "__new__";
+  input.value = match || current;
+  input.placeholder = "Nombre de la nueva marca";
+}
+function canonicalBrand(name) {
+  const clean = String(name || "").trim();
+  return availableBrands().find(item => brandKey(item) === brandKey(clean)) || clean;
 }
 
 function renderOrders() {
   const items = filteredOrders();
-  $("#adminOrderList").innerHTML = items.length ? items.map(order => `<article class="order-card"><div class="order-card__top"><div><span class="order-card__number">${escapeHTML(order.order_number)}</span><h3>${escapeHTML(order.customer_business || order.customer_name)}</h3></div><strong class="order-card__amount">${money(order.total)}</strong></div><div class="order-card__meta"><span>${formatDate(order.created_at)}</span><span>·</span><span>${(order.items || []).reduce((sum, item) => sum + Number(item.quantity), 0)} unidades</span></div><div class="order-card__items">${escapeHTML(orderItemSummary(order) || "Sin detalle")}</div><div class="order-card__foot"><select class="status-select" data-order-status="${order.id}">${statusOptions(order.status)}</select><button class="order-open-btn" data-open-order="${order.id}">Ver detalle</button></div></article>`).join("") : `<div class="empty-admin" style="grid-column:1/-1"><svg class="icon"><use href="#i-receipt"/></svg><b>No hay pedidos en esta vista</b><span>Los pedidos nuevos aparecerán automáticamente.</span></div>`;
-  $$('[data-order-status]').forEach(select => select.onchange = () => updateOrderStatus(select.dataset.orderStatus, select.value));
+  $("#adminOrderList").innerHTML = items.length ? items.map(order => `<article class="order-card"><div class="order-card__top"><div><span class="order-card__number">${escapeHTML(order.order_number)}</span><h3>${escapeHTML(order.customer_business || order.customer_name)}</h3></div><strong class="order-card__amount">${money(order.total)}</strong></div><div class="order-card__meta"><span>${formatDate(order.created_at)}</span><span>·</span><span>${(order.items || []).reduce((sum, item) => sum + Number(item.quantity), 0)} unidades</span></div><div class="order-card__items">${escapeHTML(orderItemSummary(order) || "Sin detalle")}</div><div class="order-card__foot"><span class="hm-order-pill hm-order-pill--${order.status}">${escapeHTML(orderLabel(order))}</span><button class="order-open-btn" data-open-order="${order.id}">Gestionar pedido</button></div></article>`).join("") : `<div class="empty-admin" style="grid-column:1/-1"><svg class="icon"><use href="#i-receipt"/></svg><b>No hay pedidos en esta vista</b><span>Los pedidos nuevos aparecerán automáticamente.</span></div>`;
+  // Estados solo de lectura en la lista. Se gestionan desde el detalle.
   bindOrderOpeners($("#adminOrderList"));
 }
 
@@ -357,9 +442,12 @@ function fillCategorySelect() {
 function openProductModal(id = "") {
   const product = id ? state.products.find(item => item.id === id) : null;
   state.editingProduct = product || null;
+  state.productSaveOperation = uid();
+  state.productSavePhoto = null;
   $("#productModalTitle").textContent = product ? "Editar producto" : "Nuevo producto";
   $("#productName").value = product?.name || ""; $("#productCategory").value = product?.category_id || ""; $("#productBrand").value = product?.brand || ""; $("#productPrice").value = product?.price ?? ""; $("#productComparePrice").value = product?.compare_at_price ?? ""; $("#productUnit").value = product?.unit || ""; $("#productSku").value = product?.sku || ""; $("#productDescription").value = product?.description || ""; $("#productStatus").value = product?.status || "available"; $("#productSort").value = product?.sort_order || 0; $("#productVisible").checked = product?.visible !== false; $("#productFeatured").checked = Boolean(product?.featured); $("#productImage").value = "";
   $("#productImagePreview").innerHTML = product?.image_url ? `<img src="${escapeHTML(product.image_url)}" alt="">` : `<svg class="icon"><use href="#i-image"/></svg>`;
+  setupBrandPicker(product?.brand || "");
   $("#archiveProductBtn").hidden = !product;
   $("#archiveProductBtn").textContent = product?.archived_at ? "Restaurar" : "Archivar";
   openModal($("#productModal"));
@@ -367,6 +455,7 @@ function openProductModal(id = "") {
 
 async function saveProduct() {
   if (state.busy) return;
+  if ($("#hm109GeneralPhotoState")?.dataset.state === "saving") return toast("Espera a que termine de guardarse la foto.", "error");
   const name = $("#productName").value.trim(), price = Number($("#productPrice").value);
   if (name.length < 2 || !Number.isFinite(price) || price < 0) return toast("Completa nombre y precio correctamente", "error");
   state.busy = true; $("#saveProductBtn").disabled = true; $("#saveProductBtn").textContent = "Guardando…";
@@ -374,11 +463,20 @@ async function saveProduct() {
     let imagePath = state.editingProduct?.image_path || "";
     let imageUrl = state.editingProduct?.image_url || "";
     const file = $("#productImage").files[0];
-    if (file) { const uploaded = await uploadFile(file, "product", imagePath); imagePath = uploaded.path; imageUrl = uploaded.public_url; }
-    const product = { id: state.editingProduct?.id || null, name, category_id: $("#productCategory").value || null, brand: $("#productBrand").value.trim() || null, price, compare_at_price: $("#productComparePrice").value ? Number($("#productComparePrice").value) : null, unit: $("#productUnit").value.trim() || null, sku: $("#productSku").value.trim() || null, description: $("#productDescription").value.trim() || null, status: $("#productStatus").value, sort_order: Number($("#productSort").value || 0), visible: $("#productVisible").checked, featured: $("#productFeatured").checked, image_path: imagePath || null, image_url: imageUrl || null };
-    await callApi("save_product", { slug: state.account.slug, product });
+    if (file) {
+      const uploaded = state.productSavePhoto?.file === file
+        ? state.productSavePhoto.result : await uploadFile(file, "product", imagePath);
+      state.productSavePhoto = { file, result: uploaded };
+      imagePath = uploaded.path; imageUrl = uploaded.public_url;
+    }
+    const product = { id: state.editingProduct?.id || null, name, category_id: $("#productCategory").value || null, brand: canonicalBrand($("#productBrand").value) || null, price, compare_at_price: $("#productComparePrice").value ? Number($("#productComparePrice").value) : null, unit: $("#productUnit").value.trim() || null, sku: $("#productSku").value.trim() || null, description: $("#productDescription").value.trim() || null, status: $("#productStatus").value, sort_order: Number($("#productSort").value || 0), visible: $("#productVisible").checked, featured: $("#productFeatured").checked, image_path: imagePath || null, image_url: imageUrl || null };
+    // Existing photos are saved separately; an old editor snapshot must not
+    // overwrite a photo saved while the form was open.
+    if (state.editingProduct && !file) { delete product.image_path; delete product.image_url; }
+    await callApi("save_product", { slug: state.account.slug, product,
+      ...(state.account.inventory_policy === "delivered" ? { product_operation_id: state.productSaveOperation } : {}) });
     closeModals(); toast("Producto guardado", "success"); await refreshData();
-  } catch (error) { toast(error.message === "file_too_large" ? "La imagen supera 5 MB" : "No pudimos guardar el producto", "error"); }
+  } catch (error) { toast(error.code === "stock_conflict" ? "El inventario cambió mientras editabas. No se guardaron los cambios; actualiza y revisa el producto." : error.code === "stock_below_reserved" ? "Hay pedidos pendientes que reservan más unidades. Revisa esos pedidos antes de reducir el inventario." : error.code === "stock_tracking_required_for_pending_orders" ? "Este producto tiene pedidos pendientes. Mantén el control de stock hasta que se entreguen o cancelen." : error.code === "operation_conflict" ? "El producto podría haberse guardado con otros datos. Actualiza la lista y revísalo antes de reintentar." : error.code === "client_update_required" ? "Actualiza la aplicación antes de guardar productos." : error.message === "file_too_large" ? "La imagen supera 5 MB" : "No pudimos confirmar el guardado. Si perdiste la conexión, revisa la lista antes de crear otro producto.", "error"); }
   finally { state.busy = false; $("#saveProductBtn").disabled = false; $("#saveProductBtn").textContent = "Guardar producto"; }
 }
 
@@ -412,24 +510,128 @@ async function deleteCategory(id) {
   catch { toast("No se pudo eliminar la categoría", "error"); }
 }
 
+const hmOrderForward = {new:["confirmed","Confirmar pedido"],confirmed:["preparing","Empezar preparación"],preparing:["dispatched","Marcar como despachado"],dispatched:["delivered","Marcar como entregado"],cancelled:["new","Reabrir pedido"]};
+function nextOrderAction(order) {
+  if (order.inventory_policy === "delivered" && ["confirmed","preparing","dispatched"].includes(order.status)) return ["delivered","Marcar como entregado"];
+  return hmOrderForward[order.status];
+}
+const hmOrderBusy = new Set();
+const hmStatusOperations = new Map();
+function renderOrderManager(order) {
+  const label=orderLabel(order);
+  const next=order.status === "cancelled" && Number(order.refund_due)>0 ? null : nextOrderAction(order);
+  const completed=order.status==="delivered",cancelled=order.status==="cancelled";
+  const editable=order.inventory_policy==="delivered";
+  const info=completed?"Este pedido ya fue entregado.":cancelled&&Number(order.refund_due)>0?"Este pedido tiene un reintegro pendiente y no se puede reabrir.":cancelled?"Fue cancelado. Para reabrirlo se comprobará el inventario.":"Un toque cambia el estado y actualiza el seguimiento del cliente.";
+  const main=next?`<button type="button" id="hmOrderAdvance" class="hm-order-main">${escapeHTML(next[1])} <span>→</span></button>`:completed?`<div class="hm-order-done">✓ Pedido entregado correctamente</div>`:`<div class="hm-order-done">Pedido cancelado</div>`;
+  return `<section id="hmOrderManager" class="hm-order-manager" aria-label="Gestión del pedido"><div class="hm-order-top"><small>ESTADO ACTUAL</small><b class="hm-order-pill hm-order-pill--${order.status}">${escapeHTML(label)}</b></div><p>${escapeHTML(info)}</p>${main}${editable&&order.status==="new"?'<button type="button" class="hm-order-secondary" id="hmOrderEdit">Editar pedido</button>':''}${editable&&completed?'<button type="button" class="hm-order-secondary" id="hmOrderReturn">Registrar devolución</button>':''}${Number(order.refund_due)>0?`<div class="hm-refund-alert"><p>Reintegro por coordinar: ${money(order.refund_due)}. No se realiza una devolución de dinero automática.</p><button type="button" id="hmRecordRefund" class="hm-order-secondary">Registrar reintegro manual</button></div>`:''}<small class="hm-order-notify">🔔 El cliente ve los cambios en su seguimiento. Si activó avisos, recibirá una notificación.</small><details class="hm-order-extras"><summary>Más opciones</summary><div class="hm-order-extra-buttons">${!cancelled&&(!completed||editable)?`<button type="button" class="hm-order-danger" id="hmOrderCancel">Cancelar pedido</button>`:""}<button type="button" id="hmOrderWhatsapp">Enviar seguimiento por WhatsApp</button></div><p>WhatsApp es opcional y no cambia el estado del pedido.</p></details></section>`;
+}
+function bindOrderManager(order) {
+  const panel=$("#hmOrderManager");if(!panel)return;
+  async function change(status,needsConfirm=false){
+    if(hmOrderBusy.has(order.id))return;
+    if(needsConfirm){const msg=status==="cancelled"?"¿Cancelar este pedido? Se devolverán las unidades reservadas al inventario.":"¿Reabrir este pedido? Se revisará que exista inventario suficiente.";if(!window.confirm(msg))return;}
+    hmOrderBusy.add(order.id);
+    const buttons=[...panel.querySelectorAll("button")];buttons.forEach(b=>b.disabled=true);
+    const advance=$("#hmOrderAdvance",panel);if(advance)advance.textContent="Guardando…";
+    try{const ok=await updateOrderStatus(order.id,status);if(ok&&state.activeOrder?.id===order.id&&!$("#orderModal").hidden)openOrder(order.id);
+      else if(!ok){buttons.forEach(b=>b.disabled=false);if(advance)advance.textContent=nextOrderAction(order)?.[1]||"Continuar";}}
+    finally{hmOrderBusy.delete(order.id)}
+  }
+  const main=$("#hmOrderAdvance",panel),next=nextOrderAction(order);if(main&&next)main.onclick=()=>change(next[0],order.status==="cancelled");
+  const launchEditor=kind=>openOrderEditor({host:$("#orderModalContent"),order,kind,products:state.products,presentations:state.presentations,
+    callApi,slug:state.account.slug,onCancel:()=>openOrder(order.id),onSaved:async saved=>{
+      if(saved)Object.assign(order,saved);
+      await refreshData({silent:true});
+      const current=state.orders.find(item=>item.id===order.id);if(current)state.activeOrder=current;
+      renderStats();renderOrders();renderDashboard();
+      toast(kind==="return"?"Devolución registrada":kind==="cancel"?"Pedido cancelado":"Pedido actualizado","success");
+      openOrder(order.id);
+    }});
+  const edit=$("#hmOrderEdit",panel);if(edit)edit.onclick=()=>launchEditor("edit");
+  const returned=$("#hmOrderReturn",panel);if(returned)returned.onclick=()=>launchEditor("return");
+  const cancel=$("#hmOrderCancel",panel);if(cancel)cancel.onclick=()=>order.inventory_policy==="delivered"?launchEditor("cancel"):change("cancelled",true);
+  const refund=$("#hmRecordRefund",panel);if(refund)refund.onclick=async()=>{
+    if(hmOrderBusy.has(order.id))return;
+    const raw=window.prompt(`¿Cuánto dinero ya devolviste al cliente? Pendiente: ${money(order.refund_due)}.`,String(order.refund_due));if(raw===null)return;
+    const amount=Number(raw.trim().replace(",",".")),cents=Math.round(amount*100);
+    if(!Number.isFinite(amount)||amount<=0||Math.abs(amount*100-cents)>0.000001||cents>Math.round(Number(order.refund_due)*100))return toast("Indica un importe válido que no supere el pendiente.","error");
+    const reason=window.prompt("Anota cómo se devolvió el dinero (por ejemplo, efectivo o transferencia).","");if(reason===null)return;
+    if(reason.trim().length<3)return toast("Escribe cómo se realizó el reintegro.","error");
+    if(!window.confirm(`Confirma solo si ya devolviste ${money(amount)} al cliente. Esta acción no envía dinero.`))return;
+    hmOrderBusy.add(order.id);refund.disabled=true;
+    const revision=Number(order.revision||0),key=`refund:${order.id}:${revision}:${amount}:${reason.trim()}`;
+    if(!hmStatusOperations.has(key))hmStatusOperations.set(key,uid());
+    let persisted=false;
+    try{const result=await callApi("record_refund",{slug:state.account.slug,order_id:order.id,expected_revision:revision,operation_id:hmStatusOperations.get(key),amount,reason:reason.trim()});persisted=true;hmStatusOperations.delete(key);Object.assign(order,result.order);await refreshData({silent:true});toast("Reintegro manual registrado","success");openOrder(order.id)}
+    catch(error){toast(persisted?"El reintegro se registró. Actualiza el pedido para verlo.":orderStatusError(error),"error");refund.disabled=false}
+    finally{hmOrderBusy.delete(order.id)}
+  };
+  const whats=$("#hmOrderWhatsapp",panel);if(whats)whats.onclick=()=>{
+    const raw=phoneDigits(order.customer_phone).replace(/\D/g,"");
+    const phone=raw.startsWith("593")?raw:raw.startsWith("0")?"593"+raw.slice(1):raw.length===9?"593"+raw:raw;
+    if(!/^593\d{9}$/.test(phone))return toast("No hay un número válido de WhatsApp","error");
+    const live=state.orders.find(o=>o.id===order.id)||order;
+    const label=orderLabel(live).toLowerCase();
+    const tracking=live.public_token?`${location.origin}/pedido?ref=${encodeURIComponent(live.public_token)}`:"";
+    const msg=`Hola, tu pedido ${live.order_number} está ${label}.${tracking?" Puedes consultar el seguimiento aquí: "+tracking:""}`;
+    window.open(`https://wa.me/${phone}?text=${encodeURIComponent(msg)}`,"_blank","noopener");
+  };
+}
+
 function openOrder(id) {
   const order = state.orders.find(item => item.id === id); if (!order) return; state.activeOrder = order;
   $("#orderModalTitle").textContent = order.order_number;
-  const progressIndex = Math.max(0, orderStatuses.findIndex(([value]) => value === order.status));
+  const simple = order.inventory_policy === "delivered";
+  const progressIndex = simple ? (order.status === "delivered" ? 2 : ["confirmed","preparing","dispatched"].includes(order.status) ? 1 : 0) : Math.max(0, orderStatuses.findIndex(([value]) => value === order.status));
   const phone = phoneDigits(order.customer_phone);
-  const lat=Number(order.delivery_lat),lng=Number(order.delivery_lng),hasMap=Number.isFinite(lat)&&Number.isFinite(lng)&&lat>=-90&&lat<=90&&lng>=-180&&lng<=180;
+  const hasCoords=order.delivery_lat!=null&&order.delivery_lng!=null&&order.delivery_lat!==''&&order.delivery_lng!=='';const lat=hasCoords?Number(order.delivery_lat):NaN,lng=hasCoords?Number(order.delivery_lng):NaN,hasMap=hasCoords&&Number.isFinite(lat)&&Number.isFinite(lng)&&!(lat===0&&lng===0)&&lat>=-90&&lat<=90&&lng>=-180&&lng<=180;
   const mapUrl=hasMap?`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${lat},${lng}`)}`:"";
   const deliveryCard=order.delivery_method==="pickup"
     ? `<div class="review-card" style="margin-top:12px"><h3>Entrega</h3><p style="margin:0;color:var(--muted);font-size:10px;line-height:1.5">Retiro acordado.</p></div>`
     : `<div class="review-card" style="margin-top:12px"><h3>Entrega</h3><p style="margin:0 0 ${hasMap?"10px":"0"};color:var(--muted);font-size:10px;line-height:1.5">${escapeHTML(order.delivery_address||(hasMap?"Ubicación marcada por el cliente.":"Dirección por coordinar."))}</p>${hasMap?`<a class="button button--secondary" href="${mapUrl}" target="_blank" rel="noopener">Abrir ubicación en mapa</a>`:""}</div>`;
-  $("#orderModalContent").innerHTML = `<div class="order-detail-top"><h3>${escapeHTML(order.customer_business || order.customer_name)}</h3><p>${escapeHTML(order.customer_name || "Contacto")} · +${escapeHTML(phone)} · ${formatDate(order.created_at)}</p><div class="status-timeline">${orderStatuses.slice(0,5).map((_,index) => `<i class="${index <= progressIndex && order.status !== "cancelled" ? "done" : ""}"></i>`).join("")}</div></div><div class="order-detail-items">${(order.items || []).map(item => `<div class="order-detail-item"><b>${item.quantity}×</b><span>${escapeHTML(item.product_name)}<small style="display:block;color:var(--muted);margin-top:3px">${escapeHTML(item.unit || "")}</small></span><strong>${money(item.line_total)}</strong></div>`).join("")}</div><div class="order-detail-total"><span>Total estimado</span><strong>${money(order.total)}</strong></div>${deliveryCard}${order.notes ? `<div class="review-card" style="margin-top:12px"><h3>Observaciones</h3><p style="margin:0;color:var(--muted);font-size:10px;line-height:1.5">${escapeHTML(order.notes)}</p></div>` : ""}<div class="order-detail-actions"><select class="status-select" id="modalOrderStatus">${statusOptions(order.status)}</select><a class="button button--primary" href="https://wa.me/${phone}" target="_blank" rel="noopener"><svg class="icon"><use href="#i-message"/></svg>WhatsApp</a></div>`;
-  $("#modalOrderStatus").onchange = async event => { await updateOrderStatus(order.id, event.target.value); closeModals(); };
+  $("#orderModalContent").innerHTML = `<div class="order-detail-top"><h3>${escapeHTML(order.customer_business || order.customer_name)}</h3><p>${escapeHTML(order.customer_name || "Contacto")} · +${escapeHTML(phone)} · ${formatDate(order.created_at)}</p><div class="status-timeline">${(simple ? orderStatuses.filter(([value]) => ["new","confirmed","delivered"].includes(value)) : orderStatuses.slice(0,5)).map((_,index) => `<i class="${index <= progressIndex && order.status !== "cancelled" ? "done" : ""}"></i>`).join("")}</div></div>${renderOrderManager(order)}<div class="order-detail-items">${(order.items || []).map(item => `<div class="order-detail-item"><b>${item.quantity}×</b><span>${escapeHTML(item.product_name)}<small style="display:block;color:var(--muted);margin-top:3px">${escapeHTML(item.unit || "")}</small></span><strong>${money(item.line_total)}</strong></div>`).join("")}</div><div class="order-detail-total"><span>Total estimado</span><strong>${money(order.total)}</strong></div>${deliveryCard}${order.notes ? `<div class="review-card" style="margin-top:12px"><h3>Observaciones</h3><p style="margin:0;color:var(--muted);font-size:10px;line-height:1.5">${escapeHTML(order.notes)}</p></div>` : ""}${order.inventory_policy === "delivered" ? '<details class="review-card" id="hmOrderHistory" style="margin-top:12px"><summary>Historial de cambios</summary><div aria-live="polite">Abrir para consultar los cambios.</div></details>' : ''}`;
+  bindOrderManager(order);
+  const history = $("#hmOrderHistory");
+  if (history) history.addEventListener("toggle", async () => {
+    if (!history.open || history.dataset.loaded || history.dataset.loading) return;
+    history.dataset.loading = "1";
+    const content = history.querySelector("div"); content.textContent = "Cargando historial…";
+    try {
+      const result = await callApi("order_history", { slug: state.account.slug, order_id: order.id });
+      if (!history.isConnected) return;
+      const records = (result.history || []).filter(row => row.kind !== "policy_conversion");
+      const labels = { edit: "Pedido editado", return: "Devolución registrada", status: "Estado actualizado", refund_recorded: "Reintegro manual registrado" };
+      content.innerHTML = records.length ? records.map(row => `<p><b>${escapeHTML(labels[row.kind] || "Cambio registrado")}</b> · ${escapeHTML(formatDate(row.created_at))}${row.reason ? `<br>${escapeHTML(row.reason)}` : ""}${row.previous_total != null && row.total != null && Number(row.previous_total) !== Number(row.total) ? `<br>${money(row.previous_total)} → ${money(row.total)}` : ""}${row.kind === "refund_recorded" ? `<br>Reintegrado: ${money(Number(row.previous_refund_due||0)-Number(row.refund_due||0))}` : ""}</p>`).join("") : "Todavía no hay cambios registrados.";
+      history.dataset.loaded = "1";
+    } catch { if (history.isConnected) content.textContent = "No se pudo cargar. Cierra y abre el historial para reintentar."; }
+    finally { delete history.dataset.loading; }
+  });
   openModal($("#orderModal"));
 }
 
 async function updateOrderStatus(id, status) {
-  try { await callApi("update_order_status", { slug: state.account.slug, order_id: id, status }); const order = state.orders.find(item => item.id === id); if (order) order.status = status; renderStats(); renderOrders(); renderDashboard(); toast("Pedido actualizado", "success"); }
-  catch { toast("No se pudo actualizar el pedido", "error"); }
+  const order = state.orders.find(item => item.id === id);
+  if (!order) return false;
+  if (order.status === status) return true;
+  if (!stepsFor(order).includes(status)) {
+    toast("Ese cambio no está permitido. Elige el siguiente paso.", "error");
+    return false;
+  }
+  try {
+    const expected_revision=Number(order.revision||0),key=`${id}:${status}:${expected_revision}`;
+    if(!hmStatusOperations.has(key))hmStatusOperations.set(key,uid());
+    const result=await callApi("update_order_status", { slug: state.account.slug, order_id: id, status,expected_revision,operation_id:hmStatusOperations.get(key) });
+    hmStatusOperations.delete(key);
+    Object.assign(order,result.order||{status});
+    renderStats(); renderOrders(); renderDashboard();
+    toast(status === "delivered" ? "Pedido entregado correctamente" : status === "cancelled" ? "Pedido cancelado · stock devuelto" : "Estado del pedido actualizado", "success");
+    try { await refreshData({ silent: true }); } catch { /* el estado ya fue confirmado por el servidor */ }
+    return true;
+  } catch (error) {
+    toast(orderStatusError(error), "error");
+    return false;
+  }
 }
 
 async function saveIdentity(event) {

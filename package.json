@@ -31,7 +31,7 @@
     "verify:golden": "node scripts/verify-golden-path.mjs",
     "verify:offline": "node scripts/verify-offline-durability.mjs",
     "verify:pilot": "node scripts/verify-pilot-readiness.mjs",
-    "verify:guards": "npm run verify:cloud && npm run verify:sri && npm run verify:product && npm run verify:sync && npm run verify:sales && npm run verify:reversals && npm run verify:finance && npm run verify:idempotency && npm run verify:purchases && npm run verify:inventory && npm run verify:catalog-inventory && npm run verify:catalog-inventory-rules && npm run verify:catalog-runtime && npm run verify:payments && npm run verify:cashrecon && npm run verify:partial-payments && npm run verify:client-preview && npm run verify:session && npm run verify:yuki-sync && npm run verify:yuki-menu && npm run verify:dashboard-sales && npm run verify:launch-splash && npm run verify:yuki-ops-v2 && npm run verify:yuki-report && npm run verify:food && npm run verify:tables && npm run verify:golden && npm run verify:offline && npm run verify:pilot && npm run verify:local-storage && npm run verify:yuki-transfer-ledger && npm run verify:yuki-ops-hardening && npm run verify:yuki-pwa-storage && npm run verify:yuki-stock-reservations && npm run verify:yuki-single-device-team && npm run verify:yuki-session-resilience-v3 && npm run verify:yuki-online-only && npm run verify:yuki-variant-report",
+    "verify:guards": "npm run verify:cloud && npm run verify:sri && npm run verify:product && npm run verify:sync && npm run verify:sales && npm run verify:reversals && npm run verify:finance && npm run verify:idempotency && npm run verify:purchases && npm run verify:inventory && npm run verify:catalog-inventory && npm run verify:catalog-inventory-rules && npm run verify:catalog-runtime && npm run verify:payments && npm run verify:cashrecon && npm run verify:partial-payments && npm run verify:client-preview && npm run verify:session && npm run verify:yuki-sync && npm run verify:yuki-menu && npm run verify:dashboard-sales && npm run verify:launch-splash && npm run verify:yuki-ops-v2 && npm run verify:yuki-report && npm run verify:food && npm run verify:tables && npm run verify:golden && npm run verify:offline && npm run verify:pilot && npm run verify:local-storage && npm run verify:yuki-transfer-ledger && npm run verify:yuki-ops-hardening && npm run verify:yuki-pwa-storage && npm run verify:yuki-stock-reservations && npm run verify:yuki-single-device-team && npm run verify:yuki-session-resilience-v3 && npm run verify:yuki-online-only && npm run verify:yuki-variant-report && npm run verify:hakuna-orders && npm run verify:hakuna-editor && npm run verify:hakuna-customer && npm run verify:hakuna-panel && npm run verify:hakuna-push-ui && npm run verify:hakuna-notify && npm run verify:hakuna-safe-preview && npm run verify:hakuna-map && npm run verify:hakuna-photos && npm run verify:hakuna-stock-editor && npm run verify:hakuna-product-save && npm run verify:hakuna-tracking && npm run verify:hakuna-close && npm run verify:hakuna-legacy-guards",
     "verify": "npm run typecheck && npm run verify:guards",
     "verify:catalog-runtime": "node scripts/verify-catalog-runtime.mjs",
     "verify:session": "node scripts/verify-operational-session.mjs",
@@ -48,7 +48,21 @@
     "verify:yuki-single-device-team": "node scripts/verify-yuki-single-device-team.mjs",
     "verify:yuki-session-resilience-v3": "node scripts/verify-yuki-session-resilience-v3.mjs",
     "verify:yuki-online-only": "node scripts/verify-yuki-online-only.mjs",
-    "verify:yuki-variant-report": "node scripts/verify-yuki-product-variant-report.mjs"
+    "verify:yuki-variant-report": "node scripts/verify-yuki-product-variant-report.mjs",
+    "verify:hakuna-orders": "node scripts/verify-hakuna-orders.mjs",
+    "verify:hakuna-editor": "node scripts/verify-hakuna-order-editor.mjs",
+    "verify:hakuna-customer": "node scripts/verify-hakuna-customer-flow.mjs",
+    "verify:hakuna-panel": "node scripts/verify-hakuna-panel-flow.mjs",
+    "verify:hakuna-push-ui": "node scripts/verify-hakuna-push-ui.mjs",
+    "verify:hakuna-notify": "node scripts/verify-hakuna-notify.mjs",
+    "verify:hakuna-safe-preview": "node scripts/verify-hakuna-safe-preview.mjs",
+    "verify:hakuna-map": "node scripts/verify-hakuna-map-resize.mjs",
+    "verify:hakuna-photos": "node scripts/verify-hakuna-photos.mjs",
+    "verify:hakuna-stock-editor": "node scripts/verify-hakuna-stock-editor.mjs",
+    "verify:hakuna-product-save": "node scripts/verify-hakuna-product-save-flow.mjs",
+    "verify:hakuna-tracking": "node scripts/verify-hakuna-tracking.mjs",
+    "verify:hakuna-close": "node scripts/verify-hakuna-close.mjs",
+    "verify:hakuna-legacy-guards": "node scripts/verify-hakuna-legacy-write-guards.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.57.4",
@@ -60,6 +74,8 @@
     "@types/node": "26.1.1",
     "@types/react": "19.2.17",
     "@types/react-dom": "19.2.3",
-    "typescript": "5.9.3"
+    "typescript": "5.9.3",
+    "pg": "8.23.1",
+    "playwright": "1.58.2"
   }
 }

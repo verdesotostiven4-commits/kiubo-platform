@@ -1,0 +1,11 @@
+import assert from 'node:assert/strict';
+import {readFileSync} from 'node:fs';
+import {JSDOM} from 'jsdom';
+const dom=new JSDOM('<!doctype html><body><section id="orderModal"><header><button data-close-modal aria-label="Cerrar pedido">×</button></header></section><button data-open-order>Pedido</button></body>',{url:'https://hakuna.test/panel',pretendToBeVisual:true,runScripts:'outside-only'});
+const w=dom.window;w.KIUBO_CATALOG_CONFIG={defaultSlug:'hakuna-matata',apiUrl:'https://fixture.test/api'};w.fetch=async()=>new Response('{}');w.Response=Response;
+let closed=false;w.document.querySelector('[data-close-modal]').onclick=()=>{closed=true};
+w.eval(readFileSync('products/catalogos/web/panel-v7.5.js','utf8'));
+w.document.dispatchEvent(new w.Event('DOMContentLoaded'));w.document.querySelector('[data-open-order]').click();await new Promise(resolve=>setTimeout(resolve,80));
+assert.equal(w.document.querySelectorAll('#orderModal [aria-label*="Cerrar"]').length,1,'The old decorator must not add a second close button');
+w.document.querySelector('[data-close-modal]').click();assert.equal(closed,true);
+console.log('✓ Hakuna order detail: the existing close button remains usable and no duplicate is added.');dom.window.close();

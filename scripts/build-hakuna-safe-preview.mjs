@@ -1,0 +1,14 @@
+import {cpSync,existsSync,readFileSync,writeFileSync} from 'node:fs';
+import {resolve,join} from 'node:path';
+const destination=process.argv[2]&&resolve(process.argv[2]);
+if(!destination||existsSync(destination))throw Error('Pass a new, unused preview directory. Existing files will not be overwritten.');
+const source=resolve('products/catalogos/web');
+if(destination.startsWith(source+'/'))throw Error('Preview directory must be outside the application source.');
+cpSync(source,destination,{recursive:true});
+const config=join(destination,'config.js');let text=readFileSync(config,'utf8');
+text=text.replace(/supabaseUrl:'[^']*'/,"supabaseUrl:'https://fixture.invalid'").replace(/publishableKey:'[^']*'/,"publishableKey:'fixture-only'").replace(/apiUrl:'[^']*'/,"apiUrl:'https://fixture.invalid/api'").replace(/notifyUrl:'[^']*'/,"notifyUrl:'https://fixture.invalid/notify'");
+const marker='});\n// Recover broken external brand images';if(!text.includes(marker))throw Error('Unexpected config.js; refusing to generate a preview.');
+text=text.replace(marker,'});\n'+readFileSync('scripts/hakuna-preview-fixture.js','utf8')+'\n// Recover broken external brand images');
+if(text.includes('hysrlckmnzlmscwwbibn.supabase.co'))throw Error('Preview still refers to the production database.');
+writeFileSync(config,text);
+console.log(`Synthetic Hakuna preview prepared at ${destination}; no real backend or notifications.`);

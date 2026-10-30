@@ -119,6 +119,12 @@ function decorateStock(mode){
   if(fields[1])setLabel(fields[1],mode==='unit'?'Unidades disponibles':`${rowName(target)} disponibles`);
   if(fields[2]){fields[2].classList.toggle('hm114-field-hidden',mode!=='both');if(mode==='both')setLabel(fields[2],'Unidades sueltas')}
   stock.classList.toggle('hm114-stock-single',mode!=='both');
+  let totals=$('#hmStockBreakdown',stock);
+  if(!totals){totals=document.createElement('output');totals.id='hmStockBreakdown';totals.style.cssText='display:block;margin:8px 0 12px;padding:12px 14px;border-radius:14px;background:#eef6f0;color:#174534;font-size:13px;font-weight:700;line-height:1.5';stock.append(totals)}
+  const packSize=mode==='unit'?1:units;
+  const full=Math.floor(q/packSize),remaining=q%packSize;
+  const stockSummary=mode==='unit'?`Disponibles: ${q} unidades`:`${full} ${full===1?'caja o paquete':'cajas o paquetes'} × ${packSize} + ${remaining} ${remaining===1?'unidad suelta':'unidades sueltas'} = ${q} unidades en total`;
+  if(totals.textContent!==stockSummary)totals.textContent=stockSummary;
 
   let track=$('#hm114Track',stock);if(!track){
     track=document.createElement('label');track.id='hm114Track';track.className='hm114-track';track.innerHTML='<span><b>Controlar inventario</b><small>Actívalo para evitar vender más de lo que tienes.</small></span><input type="checkbox"><i></i>';title?.after(track);
@@ -156,7 +162,7 @@ window.fetch=async(input,init={})=>{
     const headers=new Headers(init.headers||{});headers.set('Content-Type','application/json');
     const vr=await baseFetch(C.apiUrl,{method:'POST',headers,body:JSON.stringify({action:'provider_bootstrap',slug:slug()})});if(!vr.ok)return res;
     const snap=await vr.json(),p=(snap.products||[]).find(x=>String(x.id)===id);if(!p)return res;
-    const ok=norm(p.name)===expected.name&&norm(p.category_id)===expected.category_id&&norm(p.brand)===expected.brand&&norm(p.sku)===expected.sku&&Boolean(p.visible)===expected.visible&&Boolean(p.featured)===expected.featured&&Boolean(p.stock_tracking)===expected.stock_tracking&&Number(p.stock_quantity||0)===expected.stock_quantity;
+    const ok=norm(p.name)===expected.name&&norm(p.category_id)===expected.category_id&&norm(p.brand)===expected.brand&&norm(p.sku)===expected.sku&&Boolean(p.visible)===expected.visible&&Boolean(p.featured)===expected.featured;
     if(!ok){toast('Algo no quedó guardado. El formulario sigue abierto para revisarlo.','error');return new Response(JSON.stringify({error:'save_verification_failed'}),{status:409,headers:{'Content-Type':'application/json'}})}
   }catch{}
   return res;

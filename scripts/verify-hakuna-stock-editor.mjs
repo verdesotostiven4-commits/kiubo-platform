@@ -1,0 +1,30 @@
+import assert from 'node:assert/strict';
+import {readFileSync} from 'node:fs';
+import vm from 'node:vm';
+import ts from 'typescript';
+import {JSDOM} from 'jsdom';
+
+const api=readFileSync('supabase/functions/catalog-api/index.ts','utf8');
+const start=api.indexOf('  if (action === "save_stock")'),end=api.indexOf('  if (action === "set_product_status")',start);assert.ok(start>0&&end>start);
+const action=api.slice(start,end);
+const js=ts.transpile(`async function run(body,accountId){const action='save_stock';${action}}`,{target:ts.ScriptTarget.ES2022});
+let row={id:'p1',account_id:'a1',stock_quantity:36,stock_tracking:true,stock_initialized:true};
+const db={from(){let values={},filters={};const q={update(v){values=v;return q},eq(k,v){filters[k]=v;return q},is(){return q},select(){return q},async maybeSingle(){if(Object.entries(filters).some(([k,v])=>row[k]!==v))return {data:null,error:null};row={...row,...values};return {data:row,error:null}}};return q}};
+const run=vm.runInNewContext(js+'\nrun',{db,Number,Date,validUuid:()=>true,cleanText:x=>x,logActivity:async()=>{},actor:{type:'provider'},account:{inventory_policy:'created'}});
+const body={product_id:'p1',stock_tracking:true,stock_quantity:45,low_stock_threshold:1,base_unit:'botella',expected_stock_quantity:45};
+await assert.rejects(()=>run(body,'a1'),/stock_conflict/);assert.equal(row.stock_quantity,36,'A stale form must never overwrite a delivered order');
+await run({...body,expected_stock_quantity:36,stock_quantity:30},'a1');assert.equal(row.stock_quantity,30);
+
+const dom=new JSDOM('<!doctype html><body><button data-edit-product="p1">Editar</button><section id="productModal" class="visible"><input id="v5StockTracking" type="checkbox" checked><input id="v5StockQuantity" value="45"><input id="v5LowThreshold" value="1"><input id="v5BaseUnit" value="botella"><input id="v5AllowNote" type="checkbox" checked></section></body>',{url:'https://hakuna.test/panel',pretendToBeVisual:true,runScripts:'outside-only'}),w=dom.window;
+w.KIUBO_CATALOG_CONFIG={defaultSlug:'hakuna-matata',apiUrl:'https://fixture.test/api',version:'test'};w.Response=Response;w.setInterval=()=>0;
+const timeout=w.setTimeout.bind(w);w.setTimeout=(fn,ms,...args)=>ms>=300000?0:timeout(fn,ms,...args);
+let stock=45;const requests=[];
+w.fetch=async(_url,opts)=>{const b=JSON.parse(opts.body);requests.push(b);if(b.action==='provider_bootstrap')return new Response(JSON.stringify({products:[{id:'p1',stock_quantity:stock,stock_tracking:true,stock_initialized:true}],orders:[]}));if(b.action==='save_product')return new Response(JSON.stringify({id:'p1'}));if(b.action==='save_stock'){if(b.expected_stock_quantity!==stock)return new Response(JSON.stringify({error:'stock_conflict'}),{status:409});stock=b.stock_quantity;return new Response(JSON.stringify({product:{stock_quantity:stock,stock_tracking:true,stock_initialized:true}}))}throw Error(b.action)};
+w.eval(readFileSync('products/catalogos/web/panel-v10.15.js','utf8'));w.document.dispatchEvent(new w.Event('DOMContentLoaded'));
+await w.fetch('https://fixture.test/api',{body:JSON.stringify({action:'provider_bootstrap'})});
+w.document.querySelector('[data-edit-product]').click();stock=36;
+await w.fetch('https://fixture.test/api',{body:JSON.stringify({action:'provider_bootstrap'})});
+const saved=await w.fetch('https://fixture.test/api',{body:JSON.stringify({action:'save_product',product:{id:'p1'}})});
+assert.equal(saved.status,409);assert.equal(stock,36);assert.equal(requests.find(x=>x.action==='save_stock').expected_stock_quantity,45,'Background refresh must not replace the editor snapshot');
+assert.match(w.document.body.textContent,/inventario cambió/i);
+console.log('✓ Hakuna product editor: legacy compare-and-update and stale form after background refresh preserve delivered stock.');dom.window.close();

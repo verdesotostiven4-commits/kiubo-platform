@@ -5,16 +5,38 @@ window.KIUBO_CATALOG_CONFIG=Object.freeze({
   apiUrl:'https://hysrlckmnzlmscwwbibn.supabase.co/functions/v1/catalog-router',
   notifyUrl:'https://hysrlckmnzlmscwwbibn.supabase.co/functions/v1/catalog-notify',
   defaultSlug:'hakuna-matata',
-  version:'10.16.13',
-  brandLogoUrl:'https://cdn.phototourl.com/free/2026-09-09-81972c89-9fb3-4bb7-ad34-74c1fe90aca9.jpg'
+  version:'10.20.1',
+  brandLogoUrl:"https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEir16n1bNYOmluwXB4NgFhKGCSm-g3-h1JVbKMvFAS6dYSzwhdj_K6aHlIqEH19XItSIB0dQ7WMRHNiVGfVfPYUdHWBx4kHfEkQkEA0h3XuGEVVQgc_ksv1a2GhVkCjt9HTK9ks4_ZP600JgxV4wxFKSMq_foUWOVBv9Ds4tdLayG6Q8zf2KlsRtr9KbVg/s1600/image.png"
 });
+// Recover broken external brand images without changing catalog data.
+document.addEventListener('error',event=>{
+  const img=event.target;
+  if(!(img instanceof HTMLImageElement))return;
+  const src=img.currentSrc||img.src||'';
+  if((src.includes('cdn.phototourl.com/free/2026-09-09-81972c89-9fb3-4bb7-ad34-74c1fe90aca9.jpg')||src.includes('blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEir16n1bNYOmluwXB4NgFhKGCSm-g3-h1JVbKMvFAS6dYSzwhdj_K6aHlIqEH19XItSIB0dQ7WMRHNiVGfVfPYUdHWBx4kHfEkQkEA0h3XuGEVVQgc_ksv1a2GhVkCjt9HTK9ks4_ZP600JgxV4wxFKSMq_foUWOVBv9Ds4tdLayG6Q8zf2KlsRtr9KbVg'))){
+    if(img.dataset.hmLogoFallback)return;
+    img.dataset.hmLogoFallback='1';
+    img.src='/assets/hakuna-logo-512.png';
+    return;
+  }
+  const visual=img.closest('.hm-brand-visual');
+  if(!visual)return;
+  const label=img.alt||img.closest('[data-brand-chip]')?.getAttribute('data-brand-chip')||'Marca';
+  const text=document.createElement('b');
+  text.textContent=label;
+  visual.replaceChildren(text);
+  visual.classList.remove('has-image');
+  visual.style.setProperty('--hm-brand-bg','#f4f6f2');
+  visual.style.setProperty('--hm-brand-fg','#294a37');
+},true);
 (()=>{
-  const path=location.pathname,v='10.16.13',logo=window.KIUBO_CATALOG_CONFIG.brandLogoUrl;
+  const path=location.pathname,v='10.20.1',logo=window.KIUBO_CATALOG_CONFIG.brandLogoUrl;
   document.documentElement.dataset.hmBuild=v;
   const setIcon=(rel,href)=>{let l=document.querySelector(`link[rel="${rel}"]`);if(!l){l=document.createElement('link');l.rel=rel;document.head.append(l)}l.href=href};
-  if(logo){setIcon('icon',logo);setIcon('apple-touch-icon',logo)}
+  setIcon('icon','/assets/hakuna-logo-192.png');setIcon('apple-touch-icon','/assets/hakuna-logo-192.png');
   const addStyle=href=>{if(document.querySelector(`link[href^="${href}"]`))return;const l=document.createElement('link');l.rel='stylesheet';l.href=`${href}?v=${v}`;document.head.append(l)};
   const addManifest=href=>{let l=document.querySelector('link[rel="manifest"]');if(!l){l=document.createElement('link');l.rel='manifest';document.head.append(l)}l.href=`${href}?v=${v}`};
+  addStyle('/push.css');
   if(/^\/(panel|master)(?:\/|$)/.test(path)){
     const theme=document.querySelector('meta[name="theme-color"]');if(theme)theme.content='#ffffff';else{const m=document.createElement('meta');m.name='theme-color';m.content='#ffffff';document.head.append(m)}
     document.documentElement.style.background='#ffffff';if(document.body)document.body.style.background='#ffffff';
@@ -25,13 +47,14 @@ window.KIUBO_CATALOG_CONFIG=Object.freeze({
     ].forEach(addStyle);
     addManifest('/panel.webmanifest');
     const scripts=[
-      '/panel-fast-save-v7.4.js','/panel-v6.js','/panel-v5.js','/panel-extras-v5.js','/panel-orders-v6.js','/panel-v7.js','/panel-v7.5.js','/panel-v7.5.1.js',
+      '/panel-fast-save-v7.4.js','/panel-v6.js','/panel-v5.js','/panel-extras-v5.js','/panel-v7.js','/panel-v7.5.js','/panel-v7.5.1.js',
       '/panel-v7.6.js','/panel-v7.7.js',
       '/panel-v10-stability.js','/panel-v10.5.1.js','/panel-v10.6.js','/panel-v10.9.js','/panel-v10.10.js','/panel-v10.11-core.js','/panel-v10.11-ui.js','/panel-v10.14.js','/panel-v10.15.js','/panel-v10.16.2.js','/push-v10.7.js'
     ];
     document.write(scripts.map(src=>`<script src="${src}?v=${v}"><\/script>`).join(''));
   }else if(/^\/pedido/.test(path)){
     addStyle('/orders-v5.css');
+    document.write(`<script src="/push-v10.7.js?v=${v}"><\/script>`);
   }else{
     document.documentElement.classList.add('hm112-boot','hm1162-home-brands-pending','hm1163-boot','hm1164-boot');
     if(!document.getElementById('hm112Critical')){

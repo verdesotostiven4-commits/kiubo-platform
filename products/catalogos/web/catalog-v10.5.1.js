@@ -10,25 +10,11 @@ const historyKey=`kiubo-v10-orders:${slug}`;
 const notifySupported=()=>('Notification' in window);
 const notifyGranted=()=>notifySupported()&&Notification.permission==='granted';
 function orderHistory(){try{return JSON.parse(localStorage.getItem(historyKey)||'[]')}catch{return[]}}
-function showNotification(title,body,tag='hakuna-order'){if(!notifyGranted())return;try{new Notification(title,{body,tag,icon:C.brandLogoUrl||undefined,badge:C.brandLogoUrl||undefined})}catch{}}
-async function askNotifications(){if(!notifySupported())return'unsupported';try{return await Notification.requestPermission()}catch{return'denied'}}
-function notificationCopy(){if(!notifySupported())return['Avisos no disponibles','Tu navegador no admite notificaciones.'];if(Notification.permission==='granted')return['Avisos activados','Te avisaremos de cambios del pedido mientras Hakuna esté abierta.'];if(Notification.permission==='denied')return['Avisos bloqueados','Puedes habilitarlos desde los permisos del navegador.'];return['Recibe avisos de tu pedido','Activa notificaciones para enterarte cuando cambie su estado.']}
-function ensureCheckoutNotificationCoach(){const form=$('#checkoutForm');if(!form||$('.hm1051-notify-card',form))return;const review=$('#reviewOrder',form);if(!review)return;const [title,copy]=notificationCopy(),card=document.createElement('section');card.className='hm1051-notify-card';card.innerHTML=`<span>🔔</span><div><b>${title}</b><small>${copy}</small></div>${notifySupported()&&Notification.permission==='default'?'<button type="button" data-hm1051-notify>Activar</button>':''}`;review.insertAdjacentElement('beforebegin',card)}
+// The service worker delivers order updates; do not create a second local notification.
+function showNotification(){}
+function notificationCopy(){if(!notifySupported())return['Avisos no disponibles','Tu navegador no admite notificaciones.'];if(Notification.permission==='granted'&&window.HakunaPush?.current())return['Avisos activados','Recibirás avisos cuando cambie el pedido.'];if(Notification.permission==='granted')return['Activa avisos','Pulsa Activar para completar el registro.'];if(Notification.permission==='denied')return['Avisos bloqueados','Puedes habilitarlos desde los permisos del navegador.'];return['Recibe avisos de tu pedido','Activa notificaciones para enterarte cuando cambie su estado.']}
+function ensureCheckoutNotificationCoach(){const form=$('#checkoutForm');if(!form||$('.hm1051-notify-card',form))return;const review=$('#reviewOrder',form);if(!review)return;const [title,copy]=notificationCopy(),card=document.createElement('section');card.className='hm1051-notify-card';card.innerHTML=`<span>🔔</span><div><b>${title}</b><small>${copy}</small></div>${notifySupported()&&Notification.permission!=='denied'&&!window.HakunaPush?.current()?'<button type="button" data-hm1051-notify>Activar</button>':''}`;review.insertAdjacentElement('beforebegin',card)}
 function refreshCoach(){const card=$('.hm1051-notify-card');if(!card)return;card.remove();ensureCheckoutNotificationCoach()}
-document.addEventListener('click',async e=>{if(e.target.closest?.('[data-hm1051-notify]')){e.preventDefault();const p=await askNotifications();refreshCoach();if(p==='granted')showNotification('Hakuna Matata','Avisos activados. Te notificaremos cambios del pedido.','hakuna-enabled')}},true);
-
-const upstream=window.fetch.bind(window);
-window.fetch=async(input,init={})=>{
-  const url=typeof input==='string'?input:input?.url||'',isApi=url===C.apiUrl;let body=null;
-  if(isApi&&typeof init?.body==='string'){try{body=JSON.parse(init.body)}catch{}}
-  const before=body?.action==='order_status'?orderHistory():null;
-  const res=await upstream(input,init);
-  if(res.ok&&body?.action==='order_status')res.clone().json().then(payload=>{
-    const o=payload?.order;if(!o)return;const old=(before||[]).find(x=>String(x.public_token)===String(body.public_token));
-    if(old?.status&&o.status&&old.status!==o.status){const labels={new:'recibido',confirmed:'confirmado',preparing:'en preparación',dispatched:'despachado',delivered:'entregado',cancelled:'cancelado'};showNotification(`Pedido ${o.order_number||''}`,`Tu pedido está ${labels[o.status]||'actualizado'}.`,`hakuna-${o.public_token||o.id||'order'}`)}
-  }).catch(()=>{});
-  return res;
-};
 
 function bindSheetDrag(sheet){if(!sheet||sheet.dataset.hm1051Drag)return;const grab=$('.v10-grab',sheet);if(!grab)return;sheet.dataset.hm1051Drag='1';let drag=null;grab.setAttribute('role','button');grab.setAttribute('aria-label','Desliza hacia abajo para cerrar');
  const move=e=>{if(!drag||e.pointerId!==drag.id)return;const dy=Math.max(0,e.clientY-drag.y);sheet.style.transition='none';sheet.style.transform=`translateY(${Math.min(dy,240)}px)`;const back=$('#sheetHost .v10-backdrop');if(back)back.style.opacity=String(Math.max(.18,1-dy/320))};

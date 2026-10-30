@@ -69,39 +69,11 @@ function manualizeBrandRail(){
   });
 }
 
-function zeroInitialDetailDraft(){
-  const sheet=$('#sheetHost .v10-sheet');
-  const detail=sheet?.querySelector('.v102-detail');
-  if(!sheet||!detail||sheet.dataset.hm1169Zeroed==='1')return;
-  sheet.dataset.hm1169Zeroed='1';
-
-  const reset=()=>{
-    const qtyEls=$$('[data-pick-qty]',sheet);
-    if(!qtyEls.length)return;
-    let changed=false;
-    for(const qtyEl of qtyEls){
-      const id=String(qtyEl.dataset.pickQty||'');
-      let qty=Math.max(0,Math.floor(Number(qtyEl.textContent||0)));
-      const minus=sheet.querySelector(`[data-pick-minus="${CSS.escape(id)}"]`);
-      while(minus&&qty>0&&qty<50){
-        minus.click();
-        qty--;
-        changed=true;
-      }
-    }
-    if(!changed){
-      const total=qtyEls.reduce((sum,el)=>sum+Math.max(0,Number(el.textContent||0)),0);
-      if(total>0)setTimeout(reset,0);
-    }
-  };
-
-  reset();
-}
+// Product quantities start at zero in the catalog itself. Do not reset them asynchronously.
 
 function sync(){
   uiRaf=0;
   manualizeBrandRail();
-  zeroInitialDetailDraft();
   root.dataset.hmCatalogClient='10.16.9';
 }
 function schedule(){if(uiRaf)return;uiRaf=requestAnimationFrame(sync)}
@@ -113,6 +85,6 @@ new MutationObserver(schedule).observe(document.documentElement,{
   subtree:true
 });
 
-const start=()=>{manualizeBrandRail();zeroInitialDetailDraft();schedule()};
+const start=()=>{manualizeBrandRail();schedule()};
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start,{once:true});else start();
 })();

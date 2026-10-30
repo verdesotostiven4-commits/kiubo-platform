@@ -1,0 +1,30 @@
+import assert from 'node:assert/strict';
+import {JSDOM} from 'jsdom';
+const dom=new JSDOM('<!doctype html><body><div id="host"></div></body>',{url:'https://hakuna.test/',pretendToBeVisual:true});
+const w=dom.window;
+for(const name of ['window','document','navigator','localStorage','MutationObserver'])Object.defineProperty(globalThis,name,{value:name==='window'?w:w[name],configurable:true,writable:true});
+globalThis.requestAnimationFrame=w.requestAnimationFrame.bind(w);
+const nativeTimeout=globalThis.setTimeout;globalThis.setTimeout=(fn,ms,...args)=>{const timer=nativeTimeout(fn,ms,...args);if(ms>1000)timer.unref();return timer};
+let resizeObserver,resizeCount=0,removed=false,handlers={};
+class ResizeObserverStub{constructor(fn){this.fn=fn;resizeObserver=this}observe(element){this.element=element}disconnect(){this.disconnected=true}}
+globalThis.ResizeObserver=ResizeObserverStub;
+class MockMap{constructor(){this.zoom=6}addControl(){}on(name,fn){handlers[name]=fn}getStyle(){return {layers:[],sources:{streets:{}}}}resize(){resizeCount++}getZoom(){return this.zoom}remove(){removed=true}}
+w.maplibregl={supported:()=>true,Map:MockMap,NavigationControl:class{}};
+const css=w.document.createElement('link');css.dataset.hakunaMaplibre='1';Object.defineProperty(css,'sheet',{value:{}});w.document.head.append(css);
+const {openDeliveryMap}=await import('../products/catalogos/web/hakuna-delivery-map-v3.js');
+const host=w.document.querySelector('#host');
+const openSheet=(html,mount)=>{host.innerHTML=`<section class="v10-sheet"><button class="v10-sheet-close"></button>${html}</section>`;mount(host.firstElementChild)};
+const closeSheet=()=>{host.innerHTML=''};
+await openDeliveryMap({openSheet,closeSheet,ensureLeaflet:async()=>{throw Error('offline')},current:null,onSelect(){},onClear(){},toast(){},storageKey:'test',customer:{address:'Calle inicial'}});
+assert.ok(resizeObserver?.element,'Map canvas container must be observed for size changes');
+resizeObserver.fn();assert.ok(resizeCount>=1,'A container size change resizes MapLibre');
+handlers.load();handlers.idle();
+assert.equal(host.querySelector('#hmLocLoading'),null,'MapLibre idle removes the loading mask even without tile.state');
+host.querySelector('#hmLocRef').value='Nueva referencia';host.querySelector('#hmLocAlternative').click();
+await new Promise(resolve=>setTimeout(resolve,50));
+assert.equal(removed,true);assert.equal(resizeObserver.disconnected,true);
+assert.ok(host.querySelector('.hm-loc-v2:not(.hm-map-v3)'),'The user can switch to the alternative map');
+assert.equal(host.querySelector('#hmLocRef').value,'Nueva referencia','The typed reference survives switching maps');
+assert.match(host.textContent,/mapa no está disponible/i,'A second map failure gives a manual-address path');
+console.log('✓ Hakuna map: container resize, explicit alternative, reference preservation and offline message pass with simulated maps.');
+dom.window.close();

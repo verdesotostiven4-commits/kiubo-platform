@@ -1,0 +1,46 @@
+name: Hakuna isolated release checks
+on:
+  push:
+    branches: ['release/hakuna-*']
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: hakuna-release-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  integration:
+    # Standard Linux runner on this PUBLIC repository; no paid cloud DB branch.
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '22'
+      - name: Install reviewed dependencies
+        run: npm ci --ignore-scripts
+      - name: Verify and build
+        run: npm run verify && npm run build
+      - name: Install pinned local Supabase CLI
+        run: npm install --prefix "$RUNNER_TEMP/hakuna-tools" --no-audit --no-fund supabase@2.122.0
+      - name: Prepare disposable local stack
+        run: |
+          mkdir -p /tmp/hakuna-integration
+          "$RUNNER_TEMP/hakuna-tools/node_modules/.bin/supabase" init --yes --workdir /tmp/hakuna-integration
+          node scripts/prepare-hakuna-integration.mjs /tmp/hakuna-integration
+      - name: Start PostgreSQL, Auth, Storage and PostgREST locally
+        run: |
+          "$RUNNER_TEMP/hakuna-tools/node_modules/.bin/supabase" start --workdir /tmp/hakuna-integration --exclude studio,imgproxy,realtime,mailpit,postgres-meta,logflare,vector,supavisor
+          "$RUNNER_TEMP/hakuna-tools/node_modules/.bin/supabase" status --workdir /tmp/hakuna-integration --output env > /tmp/hakuna-integration/status.env
+      - name: Run actual Edge Functions against the isolated stack
+        run: |
+          "$RUNNER_TEMP/hakuna-tools/node_modules/.bin/supabase" functions serve --no-verify-jwt --workdir /tmp/hakuna-integration > /tmp/hakuna-integration/functions.log 2>&1 &
+          node scripts/verify-hakuna-integration.mjs /tmp/hakuna-integration/status.env
+      - name: Install Chromium for browser verification
+        run: npx playwright install --with-deps chromium
+      - name: Verify customer and admin in desktop and mobile Chromium
+        run: node scripts/verify-hakuna-browser.mjs /tmp/hakuna-integration/status.env
+      - name: Stop isolated stack
+        if: always()
+        run: "$RUNNER_TEMP/hakuna-tools/node_modules/.bin/supabase" stop --workdir /tmp/hakuna-integration --no-backup

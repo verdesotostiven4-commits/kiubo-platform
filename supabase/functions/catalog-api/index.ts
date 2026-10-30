@@ -1,6 +1,8 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "npm:@supabase/supabase-js@2.112.4";
 
+declare const EdgeRuntime: { waitUntil(promise: Promise<unknown>): void };
+
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL") ?? "";
 const legacySecret = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
 const legacyAnon = Deno.env.get("SUPABASE_ANON_KEY") ?? "";
@@ -15,6 +17,7 @@ if (!SUPABASE_URL || !SECRET_KEY || !PUBLISHABLE_KEY) throw new Error("Missing S
 const db = createClient(SUPABASE_URL, SECRET_KEY, { auth: { persistSession: false, autoRefreshToken: false } });
 const allowedOrigins = new Set([
   "https://hakuna-matata-catalogo.vercel.app",
+  "https://hakuna-matata-catalogo-ten.vercel.app",
   "https://hakuna-matata-catalogo-verdesotostiven4-5089s-projects.vercel.app",
   "http://localhost:4173",
   "http://localhost:8000"
@@ -22,6 +25,18 @@ const allowedOrigins = new Set([
 
 type Json = Record<string, unknown>;
 type Actor = { type: "provider" | "master"; accountId?: string; sessionId?: string; userId?: string };
+const NOTIFY_URL = `${SUPABASE_URL}/functions/v1/catalog-notify`;
+
+function queueNotification(payload: Json) {
+  const task = fetch(NOTIFY_URL, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Authorization: `Bearer ${SECRET_KEY}` },
+    body: JSON.stringify(payload)
+  }).then(async result => {
+    if (!result.ok) console.error("catalog-notify", { status: result.status, body: (await result.text()).slice(0, 300) });
+  }).catch(error => console.error("catalog-notify", { error: String(error) }));
+  EdgeRuntime.waitUntil(task);
+}
 
 function cors(req: Request) {
   const origin = req.headers.get("origin") || "";
@@ -84,6 +99,8 @@ function publicAccount(account: Json) {
     show_prices: account.show_prices,
     payment_methods: account.payment_methods,
     payment_details: account.payment_details,
+    inventory_policy: account.inventory_policy,
+    order_features: { edit: account.inventory_policy === "delivered", returns: account.inventory_policy === "delivered" },
     updated_at: account.updated_at
   };
 }
@@ -162,7 +179,7 @@ async function adminBootstrap(account: Json) {
     db.from("catalog_customers").select("*").eq("account_id", accountId).order("last_order_at", { ascending: false }).limit(250)
   ]);
   for (const result of [categoriesResult, productsResult, presentationsResult, ordersResult, customersResult]) if (result.error) throw result.error;
-  const products = (productsResult.data || []).map(product => ({ ...product, image_url: imageUrl(product.image_path, product.image_url) }));
+  const products = await productsWithAvailability(accountId, (productsResult.data || []) as Json[], false);
   const presentations = (presentationsResult.data || []).map(row => ({ ...row, image_url: imageUrl(row.image_path, row.image_url) }));
   return { account: adminAccount({ ...account, logo_url: imageUrl(account.logo_path, account.logo_url) }), categories: categoriesResult.data || [], products, presentations, orders: ordersResult.data || [], customers: customersResult.data || [] };
 }
@@ -179,9 +196,24 @@ async function publicBootstrap(slug: string) {
   if (productsResult.error) throw productsResult.error;
   if (presentationsResult.error) throw presentationsResult.error;
   const categoryMap = new Map((categoriesResult.data || []).map(category => [category.id, category.name]));
-  const products = (productsResult.data || []).map(product => ({ ...product, category_name: categoryMap.get(product.category_id) || null, image_url: imageUrl(product.image_path, product.image_url) }));
+  const products = await productsWithAvailability(String(account.id), (productsResult.data || []).map(product => ({ ...product, category_name: categoryMap.get(product.category_id) || null })) as Json[], true);
   const presentations = (presentationsResult.data || []).map(row => ({ ...row, image_url: imageUrl(row.image_path, row.image_url) }));
   return { account: publicAccount({ ...account, logo_url: imageUrl(account.logo_path, account.logo_url) }), categories: categoriesResult.data || [], products, presentations };
+}
+
+async function productsWithAvailability(accountId: string, products: Json[], publicView: boolean) {
+  const { data, error } = await db.rpc("catalog_stock_availability", { p_account_id: accountId });
+  if (error) throw error;
+  const quantities = new Map<string, Json>((data || []).map((row: Json): [string, Json] => [String(row.product_id), row]));
+  return products.map(product => {
+    const row = quantities.get(String(product.id)) as Json | undefined;
+    const physical = Number(row?.physical_quantity ?? product.stock_quantity ?? 0);
+    const reserved = Number(row?.reserved_quantity ?? 0), available = Number(row?.available_quantity ?? physical);
+    return { ...product, image_url: imageUrl(product.image_path, product.image_url),
+      physical_stock_quantity: physical, reserved_quantity: reserved, available_stock: available,
+      stock_quantity: publicView && product.stock_tracking ? available : physical,
+      status: publicView && product.stock_tracking && available <= 0 ? "out" : product.status };
+  });
 }
 
 async function logActivity(accountId: string, actor: Actor, action: string, entityType?: string, entityId?: string, metadata: Json = {}) {
@@ -235,7 +267,7 @@ function whatsappUrl(phone: string, order: Json, items: Json[], customer: Json) 
     customer.delivery_method === "pickup" ? "*Entrega:* Retiro acordado" : `*Entrega:* ${customer.delivery_address || (customer.delivery_lat != null && customer.delivery_lng != null ? "Ubicación marcada en el mapa" : "Por coordinar")}`,
     customer.delivery_method !== "pickup" && Number.isFinite(Number(customer.delivery_lat)) && Number.isFinite(Number(customer.delivery_lng)) ? `*Ubicación:* https://www.google.com/maps/search/?api=1&query=${Number(customer.delivery_lat)},${Number(customer.delivery_lng)}` : "",
     customer.notes ? `*Observaciones:* ${customer.notes}` : "", "",
-    `Seguimiento: https://hakuna-matata-catalogo.vercel.app/pedido?ref=${order.public_token}`
+    `Seguimiento: ${String(order.public_base_url || "https://hakuna-matata-catalogo-ten.vercel.app").replace(/\/$/, "")}/pedido?ref=${order.public_token}`
   ].filter(Boolean);
   return `https://wa.me/${String(phone).replace(/\D/g, "")}?text=${encodeURIComponent(lines.join("\n"))}`;
 }
@@ -244,7 +276,10 @@ async function handleJson(req: Request, body: Json) {
   const slug = validSlug(body.slug || "hakuna-matata");
 
   if (action === "catalog_identity") {
-    const account = await accountBySlug(slug);
+    // The order is already committed. An optional WhatsApp lookup must not
+    // turn a successful order into an apparent failure.
+    let account: Json | null = null;
+    try { account = await accountBySlug(slug); } catch (error) { console.error("catalog-api order link", error); }
     if (!account) throw Object.assign(new Error("account_not_found"), { status: 404 });
     return { account: publicAccount({ ...account, logo_url: imageUrl(account.logo_path, account.logo_url) }) };
   }
@@ -252,12 +287,12 @@ async function handleJson(req: Request, body: Json) {
   if (action === "order_status") {
     const token = String(body.public_token || "");
     if (!validUuid(token)) throw Object.assign(new Error("invalid_request"), { status: 400 });
-    const { data: order, error } = await db.from("catalog_orders").select("id,account_id,order_number,total,status,created_at,updated_at,delivery_method,delivery_address,delivery_lat,delivery_lng,delivery_location_label,payment_method").eq("public_token", token).maybeSingle();
+    const { data: order, error } = await db.from("catalog_orders").select("id,account_id,order_number,total,status,created_at,updated_at,delivery_method,delivery_address,delivery_lat,delivery_lng,delivery_location_label,payment_method,payment_status,refund_due,revision").eq("public_token", token).maybeSingle();
     if (error) throw error;
     if (!order) throw Object.assign(new Error("order_not_found"), { status: 404 });
     const { data: items, error: itemsError } = await db.from("catalog_order_items").select("product_name,quantity,line_total,presentation_name,item_note").eq("order_id", order.id).order("created_at");
     if (itemsError) throw itemsError;
-    const { data: account } = await db.from("catalog_accounts").select("slug,name,logo_path,logo_url,accent,accent_deep,currency").eq("id", order.account_id).maybeSingle();
+    const { data: account } = await db.from("catalog_accounts").select("slug,name,logo_path,logo_url,accent,accent_deep,currency,inventory_policy").eq("id", order.account_id).maybeSingle();
     const safeOrder = { ...order, items: items || [] } as Json;
     delete safeOrder.account_id;
     return { order: safeOrder, account: account ? publicAccount({ ...account, logo_url: imageUrl(account.logo_path, account.logo_url) }) : null };
@@ -271,19 +306,34 @@ async function handleJson(req: Request, body: Json) {
     if (rateError) throw rateError;
     if (!allowed) throw Object.assign(new Error("too_many_orders"), { status: 429 });
     const customer: Json = { ...((body.customer || {}) as Json), payment_method: body.payment_method || null };
+    const hasLat = customer.delivery_lat != null && customer.delivery_lat !== "";
+    const hasLng = customer.delivery_lng != null && customer.delivery_lng !== "";
+    const rawLat = hasLat ? Number(customer.delivery_lat) : NaN;
+    const rawLng = hasLng ? Number(customer.delivery_lng) : NaN;
+    const hasLocation = customer.delivery_method !== "pickup" && hasLat && hasLng &&
+      Number.isFinite(rawLat) && Number.isFinite(rawLng) &&
+      rawLat >= -90 && rawLat <= 90 && rawLng >= -180 && rawLng <= 180 &&
+      !(rawLat === 0 && rawLng === 0);
+    // La validación debe ocurrir ANTES de crear la orden; de otro modo,
+    // podría guardarse una venta y devolverse un error falso al cliente.
+    if (customer.delivery_method !== "pickup" && (hasLat || hasLng) && !hasLocation) {
+      throw Object.assign(new Error("invalid_location"), { status: 400 });
+    }
+    customer.delivery_lat = hasLocation ? Number(rawLat.toFixed(6)) : null;
+    customer.delivery_lng = hasLocation ? Number(rawLng.toFixed(6)) : null;
+    customer.delivery_location_label = hasLocation ? cleanText(customer.delivery_location_label, 160) || "Ubicación seleccionada en el mapa" : null;
     const { data, error } = await db.rpc("catalog_create_order", { p_slug: slug, p_idempotency_key: idempotency, p_customer: customer, p_items: body.items || [] });
     if (error) throw error;
     const order = data as Json;
-    const rawLat=Number(customer.delivery_lat),rawLng=Number(customer.delivery_lng);
-    const hasLocation=customer.delivery_method!=="pickup"&&Number.isFinite(rawLat)&&Number.isFinite(rawLng)&&rawLat>=-90&&rawLat<=90&&rawLng>=-180&&rawLng<=180;
-    if(customer.delivery_method!=="pickup"&&(customer.delivery_lat!=null||customer.delivery_lng!=null)&&!hasLocation) throw Object.assign(new Error("invalid_location"),{status:400});
-    if(hasLocation){
-      const { error: locationError }=await db.from("catalog_orders").update({delivery_lat:Number(rawLat.toFixed(6)),delivery_lng:Number(rawLng.toFixed(6)),delivery_location_label:cleanText(customer.delivery_location_label,160)||"Ubicación seleccionada en el mapa"}).eq("id",order.id);
-      if(locationError) console.error("catalog-api location persistence",{order_id:order.id,message:locationError.message});
-      else {order.delivery_lat=Number(rawLat.toFixed(6));order.delivery_lng=Number(rawLng.toFixed(6));order.delivery_location_label=cleanText(customer.delivery_location_label,160)||"Ubicación seleccionada en el mapa";}
+    if (validUuid(body.push_subscription_id) && typeof body.push_endpoint === "string") {
+      const { error: bindError } = await db.rpc("catalog_bind_push_order", { p_slug: slug, p_subscription_id: body.push_subscription_id,
+        p_endpoint: body.push_endpoint, p_order_public_token: order.public_token });
+      if (bindError) console.error("catalog-api push binding", { order_id: order.id, code: bindError.code });
     }
+    queueNotification({ action: "dispatch", slug });
     const { data: items } = await db.from("catalog_order_items").select("product_name,quantity,line_total,presentation_name,item_note").eq("order_id", order.id);
-    return { order, whatsapp_url: whatsappUrl(String(order.whatsapp || ""), order, (items || []) as Json[], customer) };
+    const account = await accountBySlug(slug);
+    return { order, whatsapp_url: whatsappUrl(String(order.whatsapp || ""), { ...order, public_base_url: account?.public_base_url }, (items || []) as Json[], customer) };
   }
   if (action === "provider_login") {
     const pin = String(body.pin || "");
@@ -310,7 +360,10 @@ async function handleJson(req: Request, body: Json) {
   const account = await actorAccount(actor, slug);
   const accountId = String(account.id);
 
-  if (action === "provider_bootstrap") return adminBootstrap(account);
+  if (action === "provider_bootstrap") {
+    queueNotification({ action: "dispatch", slug: account.slug });
+    return adminBootstrap(account);
+  }
   if (action === "master_bootstrap") {
     if (actor.type !== "master") throw Object.assign(new Error("forbidden"), { status: 403 });
     const { data: accounts, error } = await db.from("catalog_accounts").select("id,slug,name,accent,logo_url,created_at").order("name");
@@ -329,9 +382,44 @@ async function handleJson(req: Request, body: Json) {
       brand: cleanText(input.brand, 80), description: cleanText(input.description, 500), unit: cleanText(input.unit, 100),
       price, compare_at_price: input.compare_at_price == null ? null : Number(input.compare_at_price),
       status: ["available", "low", "out"].includes(String(input.status)) ? input.status : "available",
-      visible: input.visible !== false, featured: input.featured === true, image_path: cleanText(input.image_path, 500),
-      image_url: cleanText(input.image_url, 1000), sort_order: Math.max(0, Math.min(100000, Number(input.sort_order || 0)))
+      visible: input.visible !== false, featured: input.featured === true,
+      ...(Object.hasOwn(input, "image_path") ? { image_path: cleanText(input.image_path, 500) } : {}),
+      ...(Object.hasOwn(input, "image_url") ? { image_url: cleanText(input.image_url, 1000) } : {}),
+      sort_order: Math.max(0, Math.min(100000, Number(input.sort_order || 0)))
     };
+    if (account.inventory_policy === "delivered") {
+      // Older clients cannot submit a complete, atomic product save. Asking
+      // them to refresh prevents stale forms from overwriting delivered stock.
+      if (!validUuid(body.product_operation_id) || !body.initial_stock || typeof body.initial_stock !== "object" ||
+          (input.id && body.expected_stock_quantity == null)) {
+        throw Object.assign(new Error("client_update_required"), { status: 409 });
+      }
+      if (input.id && !validUuid(input.id)) throw Object.assign(new Error("invalid_product"), { status: 400 });
+      if (input.id && (typeof body.expected_stock_quantity !== "number" || !Number.isSafeInteger(body.expected_stock_quantity) || body.expected_stock_quantity < 0)) {
+        throw Object.assign(new Error("invalid_stock"), { status: 400 });
+      }
+      if (!presentationsInput?.length) throw Object.assign(new Error("invalid_presentations"), { status: 400 });
+      const stock = body.initial_stock as Json;
+      const quantity = stock.stock_quantity, threshold = stock.low_stock_threshold;
+      if (typeof stock.stock_tracking !== "boolean" || typeof stock.stock_initialized !== "boolean" ||
+          typeof quantity !== "number" || !Number.isSafeInteger(quantity) || quantity < 0 || quantity > 100000000 ||
+          typeof threshold !== "number" || !Number.isSafeInteger(threshold) || threshold < 0 || threshold > 100000000 ||
+          (stock.stock_tracking && !stock.stock_initialized)) throw Object.assign(new Error("invalid_stock"), { status: 400 });
+      const initialStock = { stock_tracking: stock.stock_tracking, stock_initialized: stock.stock_initialized,
+        stock_quantity: quantity, low_stock_threshold: threshold, base_unit: cleanText(stock.base_unit, 40, false) || "unidad",
+        allow_item_note: stock.allow_item_note !== false };
+      const { data: created, error } = await db.rpc("catalog_save_product_atomic", {
+        p_account_id: accountId, p_operation_id: body.product_operation_id,
+        p_product_id: input.id || null, p_expected_stock: input.id ? body.expected_stock_quantity : null,
+        p_product: data, p_presentations: presentationsInput, p_stock: initialStock
+      });
+      if (error) throw error;
+      const result = created as Json;
+      const presentations = (Array.isArray(result.presentations) ? result.presentations as Json[] : [])
+        .map(row => ({ ...row, image_url: imageUrl(row.image_path, row.image_url) }));
+      if (!result.duplicate) await logActivity(accountId, actor, input.id ? "product.updated" : "product.created", "product", String(result.id));
+      return { ...result, presentations };
+    }
     let result;
     if (input.id) result = await db.from("catalog_products").update(data).eq("id", input.id).eq("account_id", accountId).select("id").single();
     else result = await db.from("catalog_products").insert(data).select("id").single();
@@ -342,6 +430,12 @@ async function handleJson(req: Request, body: Json) {
     return { id: productId, presentations };
   }
   if (action === "save_presentations") {
+    // Delivered-inventory catalogs require one transaction for product,
+    // presentations and physical stock. Legacy clients must not partially
+    // persist a form before discovering that the other writes failed.
+    if (account.inventory_policy === "delivered") {
+      throw Object.assign(new Error("client_update_required"), { status: 409 });
+    }
     const productId = String(body.product_id || "");
     const rows = Array.isArray(body.presentations) ? body.presentations as Json[] : [];
     if (!validUuid(productId)) throw Object.assign(new Error("invalid_product"), { status: 400 });
@@ -390,6 +484,14 @@ async function handleJson(req: Request, body: Json) {
     }).eq("id", presentationId).eq("account_id", accountId).select("*").maybeSingle();
     if (error) throw error;
     if (!data) throw Object.assign(new Error("invalid_presentation"), { status: 404 });
+    if (data.is_default) {
+      // The default presentation is also the product's cover. If this update
+      // fails, return an error so the photo queue retries the association.
+      const { error: coverError } = await db.from("catalog_products").update({
+        image_url: data.image_url, image_path: data.image_path, updated_at: new Date().toISOString()
+      }).eq("id", data.product_id).eq("account_id", accountId).is("archived_at", null);
+      if (coverError) throw coverError;
+    }
     await logActivity(accountId, actor, "presentation.image_updated", "presentation", presentationId);
     return { presentation: { ...data, image_url: imageUrl(data.image_path, data.image_url) } };
   }
@@ -411,6 +513,12 @@ async function handleJson(req: Request, body: Json) {
     return { product: { ...product, image_url: imageUrl(product.image_path, product.image_url) }, presentations: await presentationSnapshot(accountId, productId) };
   }
   if (action === "save_stock") {
+    // The modern delivered-inventory editor submits stock in save_product's
+    // atomic RPC. A stale client using save_stock can otherwise bypass the
+    // expected-stock check and overwrite quantities changed by deliveries.
+    if (account.inventory_policy === "delivered") {
+      throw Object.assign(new Error("client_update_required"), { status: 409 });
+    }
     const productId = String(body.product_id || "");
     if (!validUuid(productId)) throw Object.assign(new Error("invalid_product"), { status: 400 });
     const tracking = body.stock_tracking === true;
@@ -422,7 +530,9 @@ async function handleJson(req: Request, body: Json) {
     }
     const baseUnit = cleanText(body.base_unit, 40, false) || "unidad";
     const allowItemNote = body.allow_item_note !== false;
-    const { data: product, error } = await db.from("catalog_products").update({
+    const expected = body.expected_stock_quantity;
+    if (expected != null && (typeof expected !== "number" || !Number.isSafeInteger(expected) || expected < 0)) throw Object.assign(new Error("invalid_stock"), { status: 400 });
+    let update = db.from("catalog_products").update({
       stock_tracking: tracking,
       stock_initialized: initialized,
       stock_quantity: quantity,
@@ -430,11 +540,14 @@ async function handleJson(req: Request, body: Json) {
       base_unit: baseUnit,
       allow_item_note: allowItemNote,
       updated_at: new Date().toISOString()
-    }).eq("id", productId).eq("account_id", accountId).is("archived_at", null)
-      .select("id,stock_tracking,stock_initialized,stock_quantity,low_stock_threshold,base_unit,allow_item_note,status")
-      .maybeSingle();
+    }).eq("id", productId).eq("account_id", accountId).is("archived_at", null);
+    // A delivered order may change stock while an admin is editing a product.
+    // Compare and update in one database statement so the old form cannot
+    // silently restore those units. Older clients may omit the precondition.
+    if (expected != null) update = update.eq("stock_quantity", expected);
+    const { data: product, error } = await update.select("id,stock_tracking,stock_initialized,stock_quantity,low_stock_threshold,base_unit,allow_item_note,status").maybeSingle();
     if (error) throw error;
-    if (!product) throw Object.assign(new Error("product_not_found"), { status: 404 });
+    if (!product) throw Object.assign(new Error(expected != null ? "stock_conflict" : "product_not_found"), { status: expected != null ? 409 : 404 });
     await logActivity(accountId, actor, "product.stock_updated", "product", productId, { stock_tracking: tracking, stock_initialized: initialized });
     return { product };
   }
@@ -470,18 +583,64 @@ async function handleJson(req: Request, body: Json) {
     await logActivity(accountId, actor, "category.deleted", "category", String(body.category_id));
     return { ok: true };
   }
+  if (action === "order_history") {
+    const orderId = String(body.order_id || "");
+    if (!validUuid(orderId)) throw Object.assign(new Error("invalid_request"), { status: 400 });
+    const { data, error } = await db.from("catalog_order_revisions")
+      .select("revision,kind,reason,created_at,before_state,after_state").eq("account_id", accountId).eq("order_id", orderId)
+      .order("revision", { ascending: false }).limit(20);
+    if (error) throw error;
+    return { history: (data || []).map(row => ({ revision: row.revision, kind: row.kind, reason: row.reason,
+      created_at: row.created_at, previous_total: row.before_state?.order?.total, total: row.after_state?.order?.total,
+      previous_refund_due: row.before_state?.order?.refund_due, refund_due: row.after_state?.order?.refund_due })) };
+  }
+  if (action === "record_refund") {
+    const orderId = String(body.order_id || ""), operationId = String(body.operation_id || ""), amount = Number(body.amount);
+    if (!validUuid(orderId) || !validUuid(operationId) || !Number.isSafeInteger(body.expected_revision) || !Number.isFinite(amount)) {
+      throw Object.assign(new Error("invalid_request"), { status: 400 });
+    }
+    const { data, error } = await db.rpc("catalog_record_refund", { p_account_id: accountId, p_order_id: orderId,
+      p_amount: amount, p_expected_revision: body.expected_revision, p_operation_id: operationId,
+      p_reason: cleanText(body.reason, 240), p_actor: actor });
+    if (error) throw Object.assign(new Error(error.message), { status: 409 });
+    return { order: data };
+  }
+  if (action === "amend_order" || action === "return_order") {
+    const orderId = String(body.order_id || ""), operationId = String(body.operation_id || "");
+    if (!validUuid(orderId) || !validUuid(operationId) || !Array.isArray(body.items) || !Number.isSafeInteger(body.expected_revision)) {
+      throw Object.assign(new Error("invalid_request"), { status: 400 });
+    }
+    const { data, error } = await db.rpc("catalog_amend_order", { p_account_id: accountId, p_order_id: orderId,
+      p_items: body.items, p_expected_revision: body.expected_revision, p_operation_id: operationId,
+      p_kind: action === "return_order" ? "return" : "edit", p_reason: cleanText(body.reason, 240), p_actor: actor });
+    if (error) throw Object.assign(new Error(error.message), { status: 409 });
+    queueNotification({ action: "dispatch", slug: account.slug });
+    return { order: data };
+  }
   if (action === "update_order_status") {
     const status = String(body.status || "");
     if (!orderStatusAllowed(status)) throw Object.assign(new Error("invalid_status"), { status: 400 });
-    const { data, error } = await db.from("catalog_orders").update({ status }).eq("id", body.order_id).eq("account_id", accountId).select("id").single();
+    const orderId = String(body.order_id || "");
+    if (!validUuid(orderId)) throw Object.assign(new Error("invalid_request"), { status: 400 });
+    const { data: existing, error: existingError } = await db.from("catalog_orders").select("id,status,revision").eq("id", orderId).eq("account_id", accountId).maybeSingle();
+    if (existingError) throw existingError;
+    if (!existing) throw Object.assign(new Error("order_not_found"), { status: 404 });
+    const operationId = body.operation_id || crypto.randomUUID();
+    if (!validUuid(operationId)) throw Object.assign(new Error("invalid_request"), { status: 400 });
+    const { data, error } = await db.rpc("catalog_change_order_status", {
+      p_account_id: accountId, p_order_id: orderId, p_status: status,
+      p_expected_revision: Number.isSafeInteger(body.expected_revision) ? body.expected_revision : existing.revision,
+      p_operation_id: operationId,
+      p_reason: cleanText(body.reason, 240) || (status === "cancelled" ? "Cancelado desde el panel" : null), p_actor: actor
+    });
     if (error) {
       const message = String((error as { message?: string }).message || "");
       if (message.includes("insufficient_stock")) throw Object.assign(new Error(message), { status: 409 });
-      if (message.includes("invalid_status_transition")) throw Object.assign(new Error("invalid_status_transition"), { status: 409 });
+      if (message.includes("invalid_status_transition") || message.includes("order_conflict")) throw Object.assign(new Error(message), { status: 409 });
       throw error;
     }
-    await logActivity(accountId, actor, "order.status_updated", "order", data.id, { status });
-    return { id: data.id, status };
+    queueNotification({ action: "dispatch", slug: account.slug });
+    return { id: data.id, status: data.status, order: data };
   }
   if (action === "save_account") {
     const input = (body.settings || {}) as Json;
@@ -541,8 +700,9 @@ async function handleUpload(req: Request, form: FormData) {
   const path = `${account.id}/${kind}s/${crypto.randomUUID()}.${extension}`;
   const { error } = await db.storage.from(BUCKET).upload(path, file, { contentType: file.type, cacheControl: "31536000", upsert: false });
   if (error) throw error;
-  const oldPath = String(form.get("old_path") || "");
-  if (oldPath.startsWith(`${account.id}/`) && oldPath !== path) await db.storage.from(BUCKET).remove([oldPath]);
+  // Upload and association are separate requests. Keep the old file until a
+  // later, reference-checked cleanup; deleting it here breaks existing product
+  // or presentation photos when saving the new association fails.
   await logActivity(String(account.id), actor, "asset.uploaded", kind, path, { size: file.size, type: file.type });
   return { path, public_url: db.storage.from(BUCKET).getPublicUrl(path).data.publicUrl };
 }
@@ -563,9 +723,9 @@ Deno.serve(async (req: Request) => {
   } catch (error) {
     const err = error as Error & { status?: number; details?: unknown; code?: string };
     const message = err.message || "request_failed";
-    const known = ["account_not_found", "order_not_found", "catalog_closed", "invalid_request", "minimum_order", "insufficient_stock", "product_unavailable", "invalid_customer", "invalid_phone", "invalid_items", "invalid_quantity", "invalid_delivery", "invalid_location", "invalid_pin", "too_many_attempts", "too_many_orders", "session_expired", "forbidden", "pin_must_be_4_digits", "invalid_product", "product_not_found", "invalid_presentation", "invalid_presentations", "invalid_payment_settings", "invalid_stock", "invalid_category", "invalid_status", "invalid_status_transition", "invalid_name", "invalid_color", "invalid_upload", "invalid_file", "unknown_action"];
+    const known = ["account_not_found", "order_not_found", "catalog_closed", "invalid_request", "minimum_order", "insufficient_stock", "product_unavailable", "payment_method_unavailable", "order_conflict", "operation_conflict", "order_not_editable", "edit_reason_required", "cancellation_reason_required", "return_quantity_exceeded", "return_cannot_add_items", "return_has_no_changes", "cancel_order_instead", "refund_pending", "invalid_refund_amount", "refund_reason_required", "inventory_product_missing", "invalid_customer", "invalid_phone", "invalid_items", "invalid_quantity", "invalid_delivery", "invalid_location", "invalid_pin", "too_many_attempts", "too_many_orders", "session_expired", "forbidden", "pin_must_be_4_digits", "invalid_product", "product_not_found", "invalid_presentation", "invalid_presentations", "invalid_payment_settings", "invalid_stock", "stock_conflict", "stock_below_reserved", "stock_tracking_required_for_pending_orders", "client_update_required", "invalid_category", "invalid_status", "invalid_status_transition", "invalid_name", "invalid_color", "invalid_upload", "invalid_file", "unknown_action"];
     const code = known.find(item => message.includes(item)) || err.code || "request_failed";
-    const status = err.status || (code === "account_not_found" ? 404 : code === "session_expired" || code === "invalid_pin" ? 401 : code === "forbidden" ? 403 : code === "too_many_attempts" || code === "too_many_orders" ? 429 : code === "insufficient_stock" || code === "invalid_status_transition" ? 409 : code === "request_failed" ? 500 : 400);
+    const status = err.status || (code === "account_not_found" ? 404 : code === "session_expired" || code === "invalid_pin" ? 401 : code === "forbidden" ? 403 : code === "too_many_attempts" || code === "too_many_orders" ? 429 : code === "insufficient_stock" || code === "invalid_status_transition" || code === "stock_conflict" || code === "stock_below_reserved" || code === "stock_tracking_required_for_pending_orders" || code === "operation_conflict" ? 409 : code === "request_failed" ? 500 : 400);
     if (status >= 500) console.error("catalog-api", { code, message, details: err.details });
     return response(req, { error: code, message: status >= 500 ? "No pudimos procesar la solicitud." : code, details: err.details }, status);
   }

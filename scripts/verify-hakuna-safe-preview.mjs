@@ -1,0 +1,18 @@
+import assert from 'node:assert/strict';
+import {readFileSync} from 'node:fs';
+import {JSDOM} from 'jsdom';
+const dom=new JSDOM('<!doctype html><body></body>',{url:'https://fixture-preview.test/',runScripts:'outside-only'}),w=dom.window;
+w.KIUBO_CATALOG_CONFIG={apiUrl:'https://fixture.invalid/api',notifyUrl:'https://fixture.invalid/notify'};w.Response=Response;w.fetch=()=>{throw Error('Unexpected external request')};
+w.eval(readFileSync('scripts/hakuna-preview-fixture.js','utf8'));w.document.dispatchEvent(new w.Event('DOMContentLoaded'));
+const call=async(action,data={})=>{const r=await w.fetch('https://fixture.invalid/api',{method:'POST',body:JSON.stringify({action,...data})});return {status:r.status,...await r.json()}};
+let customer=await call('catalog_bootstrap'),admin=await call('provider_bootstrap');assert.equal(customer.products[0].stock_quantity,24);assert.equal(admin.products[0].stock_quantity,45);assert.equal(admin.products[0].reserved_quantity,21);assert.ok(customer.account.payment_methods.includes('credit'));
+let order=admin.orders[0];const box=order.items[0];
+order=(await call('amend_order',{order_id:order.id,expected_revision:order.revision,items:[{id:box.id,quantity:2}],reason:'cliente'})).order;
+for(const status of ['confirmed','delivered'])order=(await call('update_order_status',{order_id:order.id,expected_revision:order.revision,status})).order;
+assert.equal((await call('provider_bootstrap')).products[0].stock_quantity,27);
+order=(await call('return_order',{order_id:order.id,expected_revision:order.revision,items:[{id:box.id,quantity:1}],reason:'devolución'})).order;
+assert.equal((await call('provider_bootstrap')).products[0].stock_quantity,36);
+order=(await call('update_order_status',{order_id:order.id,expected_revision:order.revision,status:'cancelled'})).order;
+assert.equal((await call('provider_bootstrap')).products[0].stock_quantity,45);assert.match(w.document.body.textContent,/DATOS FICTICIOS/);
+assert.equal((await call('public_key')).public_key,null,'The preview does not send actual notifications');
+console.log('✓ Safe preview fixture: separate sample data, credit, delivery, return, cancellation and no real notification service.');dom.window.close();
