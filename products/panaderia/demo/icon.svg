@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-labelledby="title">
+  <title id="title">DeliScias Galapagueñas, tortuguita de pan</title>
+  <defs>
+    <linearGradient id="cream" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#fff8e8"/>
+      <stop offset="1" stop-color="#edcd9e"/>
+    </linearGradient>
+    <linearGradient id="bread" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#f9bf6f"/>
+      <stop offset="1" stop-color="#b76831"/>
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" rx="112" fill="#4c2d21"/>
+  <circle cx="256" cy="251" r="201" fill="url(#cream)" stroke="#c48a5e" stroke-width="12"/>
+  <g stroke="#6d3c23" stroke-linejoin="round">
+    <ellipse cx="224" cy="361" rx="37" ry="25" fill="#ffe0a2" stroke-width="10"/>
+    <ellipse cx="371" cy="358" rx="38" ry="24" fill="#ffe0a2" stroke-width="10"/>
+    <path d="M180 319c-9-102 34-175 124-176 87-1 132 76 127 172-51 63-198 68-251 4Z" fill="url(#bread)" stroke-width="15"/>
+    <path d="m245 183 44 32 39-29m-116 63 60 31 58-37m-81 85 56-43 66 35" fill="none" stroke="#8b4824" stroke-width="14" stroke-linecap="round"/>
+    <circle cx="155" cy="313" r="89" fill="#ffe8b1" stroke-width="13"/>
+  </g>
+  <circle cx="121" cy="307" r="10" fill="#4c2d21"/>
+  <circle cx="183" cy="307" r="10" fill="#4c2d21"/>
+  <path d="M140 331q14 18 28 0" fill="none" stroke="#4c2d21" stroke-width="8" stroke-linecap="round"/>
+  <circle cx="110" cy="333" r="13" fill="#edaa9a" opacity=".8"/>
+  <circle cx="197" cy="333" r="13" fill="#edaa9a" opacity=".8"/>
+  <path d="M149 217c-13-23-5-36 9-45m-9 45c14-27 28-27 39-18" fill="none" stroke="#a16b3f" stroke-width="9" stroke-linecap="round"/>
+</svg>
