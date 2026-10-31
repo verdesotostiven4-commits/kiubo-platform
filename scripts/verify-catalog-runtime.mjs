@@ -20,24 +20,52 @@ has(catalog,"if(!presentation&&!legacy){delete state.cart[k]","stale real presen
 has(catalog,"function openLocationPicker(","checkout must expose a delivery map picker");
 has(catalog,"leaflet@1.9.4","map picker must pin its map dependency");
 has(catalog,"Escribe una referencia o selecciona la ubicación en el mapa","delivery must have a reference or a map pin");
+has(catalog,"v10-map-centerpin","map must keep the delivery pin fixed in the visual center");
+has(catalog,"map.on('movestart',lift)","map pin must lift while the map is moving");
+has(catalog,"map.on('moveend',drop)","map pin must settle when the map stops");
+assert.ok(!catalog.includes("draggable:true"),"delivery point must come from map center, not dragging the pin");
+has(catalog,"basemaps.cartocdn.com","map must use the polished delivery tile layer");
+has(catalog,"navigator.geolocation.watchPosition","delivery map must keep a live device location while open");
+has(catalog,"v10-user-location-host","delivery map must render the customer's live blue location dot");
+has(catalog,"L.circle(userPoint","delivery map must render the geolocation accuracy halo");
+has(catalog,"Azul: tu ubicación","delivery map must explain the blue device marker separately from the delivery pin");
 
 const api=read("supabase/functions/catalog-api/index.ts");
-for(const needle of ["catalog_replace_presentations",'action === "save_presentations"','action === "save_payment_settings"','action === "save_product_image"','action === "save_presentation_image"','action === "save_presentation_settings"','action === "save_stock"','action === "product_snapshot"',"presentation_name,item_note","payment_method","delivery_lat,delivery_lng,delivery_location_label"]) has(api,needle,`catalog-api missing runtime contract: ${needle}`);
+for(const needle of ["catalog_replace_presentations",'action === "save_presentations"','action === "save_payment_settings"','action === "save_product_image"','action === "save_presentation_image"','action === "save_presentation_settings"','action === "save_stock"','action === "product_snapshot"',"presentation_name,item_note","payment_method","delivery_lat,delivery_lng,delivery_location_label",'action: "notify_provider"','action: "notify_customer"',"EdgeRuntime.waitUntil"]) has(api,needle,`catalog-api missing runtime contract: ${needle}`);
+const notify=read("supabase/functions/catalog-notify/index.ts");
+for(const needle of ['action==="subscribe"','action==="bind_order"','action==="notify_provider"','action==="notify_customer"',"web-push@3.6.7","kiubo-catalogos-master"]) has(notify,needle,`catalog-notify missing runtime contract: ${needle}`);
 
 const router=read("supabase/functions/catalog-router/index.ts");
 for(const needle of ["presentation_name?:","presentation_name,item_note"]) has(router,needle,`catalog-router missing compatibility field: ${needle}`);
 
 const migration=read("supabase/migrations/20260920004500_hakuna_catalog_integrity_hardening.sql");
 const locationMigration=read("supabase/migrations/20260920073000_hakuna_delivery_map_location.sql");
+const pushMigration=read("supabase/migrations/20260920093000_hakuna_push_notifications_baseline.sql");
+for(const needle of ["catalog_push_config","catalog_push_subscriptions","catalog_push_events","enable row level security"]) has(pushMigration,needle,`push migration missing invariant: ${needle}`);
 for(const needle of ["delivery_lat","delivery_lng","delivery_location_label","catalog_orders_delivery_location_pair"]) has(locationMigration,needle,`delivery location migration missing invariant: ${needle}`);
 for(const needle of ["catalog_replace_presentations","catalog_update_presentation_settings","Re-check now before validating stock","for share","invalid_presentation","invalid_quantity","allow_item_note","promo_active","payment_method"]) has(migration,needle,`hardening migration missing invariant: ${needle}`);
 
 const config=read("products/catalogos/web/config.js");
-has(config,"version:'10.16.13'","config version must match hardened release");
+const panel=read("products/catalogos/web/panel.js");
+const panelHtml=read("products/catalogos/web/panel.html");
+has(panel,"dailyNewOrders","provider home must surface new orders clearly");
+has(panel,"dailyInProcess","provider home must surface in-process orders clearly");
+has(panel,"dailyStock","provider home must surface inventory attention clearly");
+has(panelHtml,'id="dailyFocus"',"provider home focus block must be part of the canonical panel");
+assert.ok(!panelHtml.includes("data-order-filter"),"provider orders must not expose the legacy four-way status filter");
+has(panel,"Pedidos que necesitan respuesta","provider orders must make confirm/cancel the primary workflow");
+has(panel,"Seguimiento opcional","advanced delivery progression must remain optional");
+const catalog1051=read("products/catalogos/web/catalog-v10.5.1.js");
+const sw=read("products/catalogos/web/sw.js");
+has(catalog1051,"hm1051-order-moment","customer app must surface a transient confirmed/cancelled status moment");
+has(sw,"BRAND_NOTIFICATION_ICON","background notifications must use the real Hakuna logo");
+has(sw,"view=orders&order=","provider notification clicks must open the matching order");
+assert.ok(!panel.split("\n").some(line=>line.startsWith("  $('[data-quick]').forEach")||line.startsWith("  $('[data-daily]').forEach")),"provider panel repeated controls must use the querySelectorAll helper");
+has(panelHtml,'/panel.js?v=10.18.0',"provider panel module must use the current release cache-bust");
+has(config,"version:'10.18.0'","config version must match hardened release");
 const index=read("products/catalogos/web/index.html");
 assert.ok(!index.includes("?v=10.9.1"),"index.html must not pin stale 10.9.1 asset query strings");
-const sw=read("products/catalogos/web/sw.js");
-has(sw,"kiubo-catalog-v10-16-13-20260920","service-worker cache must roll for hardened release");
+has(sw,"kiubo-catalog-v10-18-0-20260920","service-worker cache must roll for hardened release");
 
 console.log("✓ Hakuna catalog runtime guard passed.");
 
@@ -55,6 +83,8 @@ has(migration,"cost_total","presentation cost must be represented in the version
 
 for (const file of [
   "products/catalogos/web/catalog-v10.2.js",
+  "products/catalogos/web/catalog-v10.5.1.js",
+  "products/catalogos/web/panel-v10.15.js",
   "products/catalogos/web/panel-fast-save-v7.4.js",
   "products/catalogos/web/panel-v5.js",
   "products/catalogos/web/panel-v7.5.js",
@@ -76,7 +106,7 @@ for(const name of readdirSync(webDir).filter(name=>name.endsWith(".js"))){
 }
 for(const html of ["products/catalogos/web/panel.html","products/catalogos/web/pedido.html"]){
   const source=read(html);
-  assert.ok(source.includes("/config.js?v=10.16.13"),`${html} must cache-bust config.js`);
+  assert.ok(source.includes("/config.js?v=10.18.0"),`${html} must cache-bust config.js`);
 }
 const vercelConfig=read("products/catalogos/web/vercel.json");
 has(vercelConfig,'"source": "/config.js"',"Vercel config must disable stale config.js caching");
@@ -113,3 +143,7 @@ has(catalog,"if(configured.length)return[]","configured-but-hidden presentations
 has(migration,"where product_id=p_product_id and account_id=p_account_id and visible=true","presentation replacement must retain at least one visible option");
 has(migration,"raise exception 'product_unavailable'","checkout must reject a product whose configured presentations are all hidden");
 console.log("✓ Hidden presentations cannot be bypassed through the legacy unit fallback.");
+
+// Hakuna first-paint regression guard
+const legacyCatalog=read("products/catalogos/web/catalog-v10.16.4.js");
+assert.ok(legacyCatalog.includes("function releaseBootShell()")&&legacyCatalog.includes("if(!released)releaseBootShell()"),"catalog first paint must fail open instead of leaving the splash screen forever");
