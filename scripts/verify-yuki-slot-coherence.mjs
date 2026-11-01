@@ -1,0 +1,37 @@
+import assert from "node:assert/strict";
+import {readFileSync} from "node:fs";
+import ts from "typescript";
+const source=readFileSync("lib/slot-order-coherence.ts","utf8");
+const compiled=ts.transpileModule(source,{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText;
+const exports={};
+new Function("exports",compiled)(exports);
+const orphan=exports.supersededUnpaidSlotOrder;
+assert.equal(typeof orphan,"function");
+const base={tenantId:"yuki",branchId:"matriz",serviceMode:"delivery",tableLabel:"1",status:"new",paymentStatus:"unpaid",items:[],saleId:undefined,createdAt:"2026-10-28T12:00:00Z",updatedAt:"2026-10-31T23:08:13Z"};
+const old={...base,id:"old"};
+const newer={...base,id:"new",createdAt:"2026-10-29T15:00:00Z",updatedAt:"2026-10-29T15:02:00Z",paymentStatus:"paid",saleId:"sale-1"};
+assert.equal(orphan([old,newer],old),true,"old unpaid must not occupy after a newer paid slot order");
+assert.equal(orphan([old,newer],newer),false,"paid history is immutable");
+assert.equal(orphan([old],old),false,"unpaid without a newer paid operation stays open");
+assert.equal(orphan([old,{...newer,branchId:"other"}],old),false,"branch isolation");
+assert.equal(orphan([old,{...newer,serviceMode:"table"}],old),false,"service-mode isolation");
+assert.equal(orphan([old,{...newer,tableLabel:"2"}],old),false,"delivery slot isolation");
+assert.equal(orphan([old,{...newer,tenantId:"other"}],old),false,"tenant isolation");
+assert.equal(orphan([{...old,paymentStatus:"partial",saleId:"sale-partial"},newer],{...old,paymentStatus:"partial",saleId:"sale-partial"}),false,"partial payments must remain");
+assert.equal(orphan([{...old,saleId:"sale-existing"},newer],{...old,saleId:"sale-existing"}),false,"any attached sale requires manual reconciliation");
+assert.equal(orphan([old,{...newer,createdAt:"2026-10-27T12:00:00Z"}],old),false,"later sync timestamp alone must never decide");
+assert.equal(orphan([old,{...newer,paymentStatus:"unpaid",saleId:undefined}],old),false,"unpaid cannot supersede unpaid");
+assert.equal(orphan([old,{...newer,saleId:undefined}],old),false,"paid row without attached sale is not sufficient");
+for(const mode of ["table","takeaway","delivery"]){
+  const a={...old,serviceMode:mode},b={...newer,serviceMode:mode};
+  assert.equal(orphan([a,b],a),true,mode+" stale slot");
+}
+const pos=readFileSync("components/PosClientPro.tsx","utf8");
+const inventory=readFileSync("lib/inventory-reservations.ts","utf8");
+const orders=readFileSync("components/FoodOrdersClientPro.tsx","utf8");
+assert.ok(pos.includes("supersededUnpaidSlotOrder(source.orders,order)"),"POS must not reload a superseded open slot");
+assert.ok(pos.includes("supersededUnpaidSlotOrder(db.orders,linkedDraftOrder)"),"PWA browser draft recovery guarded");
+assert.ok(pos.includes("supersededUnpaidSlotOrder(next.orders,linked)"),"manual autosave cannot revive orphan");
+assert.ok(inventory.includes("supersededUnpaidSlotOrder(db.orders,order)"),"orphan orders must not reserve stock");
+assert.ok(orders.includes("orphanedOrders"),"pending orders should flag orphan reconciliation");
+console.log("✓ YUKI slot coherence: superseded drafts excluded across tables, delivery and takeaway; preserve partial balances, stock and tenant isolation.");
