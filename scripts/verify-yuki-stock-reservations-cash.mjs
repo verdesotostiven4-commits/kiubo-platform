@@ -16,7 +16,8 @@ function loadActual(path,mocks={}){
 const classification=loadActual("lib/product-classification.ts");
 const options=loadActual("lib/product-options.ts",{"./product-classification":classification});
 const recipe=loadActual("lib/recipe-inventory.ts",{"./product-options":options,"./product-classification":classification});
-const reservations=loadActual("lib/inventory-reservations.ts",{"./recipe-inventory":recipe,"./product-options":options});
+const slotCoherence=loadActual("lib/slot-order-coherence.ts");
+const reservations=loadActual("lib/inventory-reservations.ts",{"./recipe-inventory":recipe,"./product-options":options,"./slot-order-coherence":slotCoherence});
 const ingredient=(id,stock)=>({id,tenantId:"yuki",branchId:"main",name:id,stock,
   trackStock:true,active:true,category:"Insumos"});
 const apple=ingredient("apple",2),pulp=ingredient("pulp",3);
