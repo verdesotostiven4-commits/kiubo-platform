@@ -1,0 +1,19 @@
+{
+  "name": "DeliScias Galapagueñas · KIUBO DEMO",
+  "short_name": "DeliScias",
+  "description": "Demo de ventas y caja para la Panadería y Pastelería DeliScias Galapagueñas. Sin transacciones reales.",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#fbf7f1",
+  "theme_color": "#4c2d21",
+  "lang": "es-EC",
+  "icons": [
+    {
+      "src": "./icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ]
+}
