@@ -10,11 +10,11 @@ const need=[
   'linkedDraftOrder.status==="cancelled"',
   'linkedDraftOrder.status==="delivered"',
   "if(linkedDraftWasClosed){",
-  'if(order.paymentStatus==="paid"||order.status==="cancelled"||order.status==="delivered")',
+  'if(order.paymentStatus==="paid"||order.status==="cancelled"||order.status==="delivered"||supersededUnpaidSlotOrder(db.orders,order))',
   "if(checkoutInProgressRef.current||Boolean(lastSaleId))",
   "setLastSaleId(\"\");const cartKey",
   "!checkoutInProgressRef.current&&!lastSaleId&&foodService",
-  'if(linked&&(linked.paymentStatus==="paid"||linked.status==="delivered"||linked.status==="cancelled"))',
+  'if(linked&&(linked.paymentStatus==="paid"||linked.status==="delivered"||linked.status==="cancelled"||supersededUnpaidSlotOrder(next.orders,linked)))',
   "enqueueSaleTransaction(next",
   "saveLocalDatabase(next,{trackChanges:false})"
 ];

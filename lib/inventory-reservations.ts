@@ -9,6 +9,7 @@
 import type {FoodOrderRecord,KiuboLocalDatabase,TenantProduct} from "./local-store";
 import {getProductOptionConfig,parseProductOptionSelection} from "./product-options";
 import {resolveInventoryImpact,type InventorySelectionLine} from "./recipe-inventory";
+import {supersededUnpaidSlotOrder} from "./slot-order-coherence";
 
 export type InventoryAvailability={
   product:TenantProduct;physical:number;reserved:number;available:number;
@@ -25,7 +26,7 @@ export function reservedInventory(
   const byId=new Map(products.map(p=>[p.id,p]));
   const byOrder=new Map<string,FoodOrderRecord>();
   for(const order of db.orders){
-    if(order.tenantId!==tenantId||order.branchId!==branchId||!isHoldingOrder(order)||order.id===excludeOrderId)continue;
+    if(order.tenantId!==tenantId||order.branchId!==branchId||(!isHoldingOrder(order)||supersededUnpaidSlotOrder(db.orders,order))||order.id===excludeOrderId)continue;
     const previous=byOrder.get(order.id);
     if(!previous||Date.parse(order.updatedAt)>Date.parse(previous.updatedAt))byOrder.set(order.id,order);
   }

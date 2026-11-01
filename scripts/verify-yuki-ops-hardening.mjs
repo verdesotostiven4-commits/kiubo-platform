@@ -116,7 +116,7 @@ const orderJs=ts.transpileModule(orderCode+"\nmodule.exports=findOpenTakeawayOrd
   compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}
 }).outputText;
 const orderModule={exports:{}};
-new Function("module","exports",orderJs)(orderModule,orderModule.exports);
+new Function("module","exports","supersededUnpaidSlotOrder",orderJs)(orderModule,orderModule.exports,()=>false);
 const findTakeaway=orderModule.exports;
 const clock="2026-10-08T12:00:00Z";
 const order=(id,tenantId,branchId,tableLabel,updatedAt=clock,more={})=>({
