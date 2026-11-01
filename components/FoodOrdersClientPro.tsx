@@ -1,5 +1,6 @@
 "use client";
 
+import {supersededUnpaidSlotOrder} from "@/lib/slot-order-coherence";
 import { useEffect,useState } from "react";
 import { useRouter } from "next/navigation";
 import { CashMovementRecord,CreditPaymentRecord,FoodOrderRecord,FoodOrderStatus,getOpenCashSession,getTenantSettings,getWorkspaceContext,loadLocalDatabase,makeId,saveLocalDatabase } from "@/lib/local-store";
@@ -48,8 +49,9 @@ export function FoodOrdersClientPro(){
   const activeView:OrdersView=simpleFlow&&view==="kitchen"?"pending":view;
   const orders=db.orders.filter(order=>order.tenantId===ctx.tenantId&&order.branchId===ctx.branchId&&order.status!=="cancelled").sort((a,b)=>Date.parse(b.updatedAt||b.createdAt)-Date.parse(a.updatedAt||a.createdAt));
   const filteredOrders=filter==="all"?orders:orders.filter(order=>order.serviceMode===filter);
-  const pendingOrders=filteredOrders.filter(order=>order.paymentStatus!=="paid"&&order.status!=="delivered");
-  const kitchenOrders=filteredOrders.filter(order=>order.status!=="delivered");
+  const orphanedOrders=filteredOrders.filter(order=>supersededUnpaidSlotOrder(db.orders,order));
+   const pendingOrders=filteredOrders.filter(order=>order.paymentStatus!=="paid"&&order.status!=="delivered"&&!supersededUnpaidSlotOrder(db.orders,order));
+  const kitchenOrders=filteredOrders.filter(order=>order.status!=="delivered"&&!supersededUnpaidSlotOrder(db.orders,order));
   const historyOrders=filteredOrders.filter(order=>(simpleFlow?order.paymentStatus==="paid":order.status==="delivered")&&orderVisibleAfterHistoryReset(order,settings));
   const visibleActive=activeView==="pending"?pendingOrders:kitchenOrders;
   const grouped=new Map(activeMeta.map(meta=>[meta.key,visibleActive.filter(order=>order.status===meta.key)]));
@@ -115,6 +117,7 @@ export function FoodOrdersClientPro(){
   return <div className={styles.page}>
     <section className={styles.hero}><div><span className={styles.kicker}>FOOD SERVICE · {ctx.branch?.code} {ctx.branch?.name}</span><h1>Pedidos</h1><p>{simpleFlow?<><strong>Modo rápido:</strong> el pedido queda pendiente, se cobra y pasa al historial. Sin pasos extra de preparación.</>:<><strong>Pendientes</strong> muestra lo que todavía falta cobrar. <strong>Cocina</strong> conserva la preparación aunque el pedido ya esté pagado.</>}</p></div><button className={styles.primary} onClick={openPos}>＋ Nuevo pedido</button></section>
     {message&&<div className={styles.notice}>✓ {message}</div>}
+    {orphanedOrders.length>0&&<div className={styles.notice}>Hay {orphanedOrders.length} pedido{orphanedOrders.length===1?"":"s"} antiguo{orphanedOrders.length===1?"":"s"} sin cobro que coincide{orphanedOrders.length===1?"":"n"} con ventas posteriores pagadas en el mismo espacio. No ocupa{orphanedOrders.length===1?"":"n"} mesa ni reserva{orphanedOrders.length===1?"":"n"} inventario; solicita revisión contable antes de cualquier cobro adicional.</div>}
     {activeView==="pending"&&<div className={styles.notice}>{simpleFlow?<><strong>Flujo rápido activo:</strong> Pedido → Cobrar → Historial. Los abonos quedan visibles hasta completar el saldo.</>:<>Un pedido sin cobros todavía no cuenta en caja. Si recibe un abono, KIUBO registra únicamente ese valor y mantiene visible el saldo pendiente.</>}</div>}
     <section className={styles.controlBar}><div className={styles.viewTabs}>
       <button className={activeView==="pending"?styles.viewActive:""} onClick={()=>{setView("pending");setCancelArmedId("")}}>Pendientes <b>{pendingOrders.length}</b></button>
