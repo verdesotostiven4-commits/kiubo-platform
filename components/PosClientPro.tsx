@@ -6,6 +6,7 @@ import {
   getLocalDeviceId,getOpenCashSession,getTenantSettings,getWorkspaceContext,loadLocalDatabase,makeId,nextOrderNumber,saveLocalDatabase,
 } from "@/lib/local-store";
 import { enqueueSaleTransaction } from "@/lib/sales-transaction";
+import { runSyncCycle } from "@/lib/sync-engine";
 import { heartbeatOperationalSession } from "@/lib/operational-session";
 import { enqueueCreditPaymentTransaction } from "@/lib/finance-transaction";
 import { queueFoodOrder } from "@/lib/order-sync";
@@ -323,7 +324,33 @@ export function PosClientPro(){
     saveLocalDatabase(next,{trackChanges:false});window.localStorage.removeItem(posDraftKey(workspace.tenantId,workspace.branchId));
     const partialText=effectivePayment==="partial"?`Pago parcial ${money(partialApplied)} · ${partialMethod==="cash"?"Efectivo":"Transferencia"} · saldo ${money(partialRemaining)}`:"";
     const methodText=partialText?partialText:internalConsumption?"Consumo interno":sale.total<=0&&courtesySubtotal>0?"Cortesía":effectivePayment==="mixed"?`Mixto · ${money(mixedBreakdown.cash)} efectivo + ${money(mixedBreakdown.transfer)} transferencia`:paymentLabel[effectivePayment];
-    const saleContext=activeServiceMode==="table"&&tableLabel?`Mesa ${tableLabel}`:activeServiceMode==="delivery"&&tableLabel?`Domicilio ${tableLabel}`:activeServiceMode==="delivery"?"Domicilio":activeServiceMode==="takeaway"?"Para llevar":"Venta",successChange=effectivePayment==="cash"?changeDue:0,keepsSlotOpen=Boolean(effectivePayment==="partial"&&order&&partialRemaining>.001&&(activeServiceMode==="table"||activeServiceMode==="delivery"));setDb(next);setQuery("");setMixedCash("");setCashReceived("");setPartialAmount("");setPartialMethod("cash");setLastSaleId(sale.id);setClearArmed(false);if(keepsSlotOpen&&order){setPayment("partial");setActiveOrderId(order.id);setPartialOrderId(order.id)}else{setCart([]);setPayment("cash");setDiscountPercent(0);setCustomDiscount("");setInternalConsumption(false);resetCustomer();setActiveOrderId("");setPartialOrderId("");if(effectivePayment==="partial"&&(activeServiceMode==="table"||activeServiceMode==="delivery"))setTableLabel("")}setSaleSuccess({amount:partialApplied||sale.total,method:methodText,context:saleContext,change:successChange});setMessage(keepsSlotOpen?`${saleContext} sigue abierto · ${methodText}`:`${effectivePayment==="partial"?"Pago parcial registrado":effectivePayment==="credit"?"Fiado registrado":internalConsumption?"Consumo registrado":"Venta guardada"} · ${methodText}${successChange>0?` · cambio ${money(successChange)}`:""}`);
+    const saleContext=activeServiceMode==="table"&&tableLabel?`Mesa ${tableLabel}`:activeServiceMode==="delivery"&&tableLabel?`Domicilio ${tableLabel}`:activeServiceMode==="delivery"?"Domicilio":activeServiceMode==="takeaway"?"Para llevar":"Venta",successChange=effectivePayment==="cash"?changeDue:0,keepsSlotOpen=Boolean(effectivePayment==="partial"&&order&&partialRemaining>.001&&(activeServiceMode==="table"||activeServiceMode==="delivery"));setDb(next);setQuery("");setMixedCash("");setCashReceived("");setPartialAmount("");setPartialMethod("cash");setLastSaleId(sale.id);setClearArmed(false);if(keepsSlotOpen&&order){setPayment("partial");setActiveOrderId(order.id);setPartialOrderId(order.id)}else{setCart([]);setPayment("cash");setDiscountPercent(0);setCustomDiscount("");setInternalConsumption(false);resetCustomer();setActiveOrderId("");setPartialOrderId("");if(effectivePayment==="partial"&&(activeServiceMode==="table"||activeServiceMode==="delivery"))setTableLabel("")}// A local checkout is durable, but not a completed Cloud payment yet.
+    // Never tell the cashier "cobrado" until the authoritative transaction ACK.
+    setSaleSuccess(null);
+    setMessage("Registrando el cobro en KIUBO Cloud… No repitas la venta.");
+    let confirmed=false;
+    try{
+      for(let attempt=0;attempt<2&&!confirmed;attempt++){
+        await Promise.race([
+          runSyncCycle(),
+          new Promise(resolve=>window.setTimeout(resolve,8500))
+        ]);
+        const latest=loadLocalDatabase();
+        const command=latest.syncQueue.find(item=>
+          item.tenantId===workspace.tenantId&&item.entityType==="saleTransactions"&&item.entityId===sale.id
+        );
+        confirmed=command?.status==="synced";
+        if(!confirmed&&attempt===0)await new Promise(resolve=>window.setTimeout(resolve,450));
+      }
+    }catch(error){console.error("KIUBO: cobro guardado localmente pero Cloud no lo confirmó aún",error)}
+    if(confirmed){
+      setSaleSuccess({amount:partialApplied||sale.total,method:methodText,context:saleContext,change:successChange});
+      setMessage(keepsSlotOpen?`${saleContext} sigue abierto · ${methodText}`:`${effectivePayment==="partial"?"Pago parcial confirmado":effectivePayment==="credit"?"Fiado confirmado":internalConsumption?"Consumo confirmado":"Venta confirmada en Cloud"} · ${methodText}${successChange>0?` · cambio ${money(successChange)}`:""}`);
+    }else{
+      // Keep local durability and the transaction identifier for automatic retry.
+      // An unconfirmed command must never be presented as an accepted cash payment.
+      setMessage("ATENCIÓN: el cobro quedó guardado en este dispositivo, pero Cloud no lo ha confirmado. No vuelvas a cobrar, no borres los datos del navegador y revisa la sincronización.");
+    }
   };
 
   if(blocked)return <div className="license-block"><div className="hero-mini">K</div><span className="eyebrow">LICENCIA SUSPENDIDA</span><h2>{tenant?.name??"Este negocio"} está en modo consulta.</h2><p>No se borra información ni se permiten nuevas ventas hasta reactivar la licencia desde KIUBO Control.</p></div>;
