@@ -87,25 +87,25 @@ begin
       and sale.entity_id=new.payload->>'saleId'
       and sale.payload->>'orderId'=new.entity_id
   ) then return new; end if;
-  update public.sync_entities old
-  set payload=old.payload||jsonb_build_object(
+  update public.sync_entities stale
+  set payload=stale.payload||jsonb_build_object(
     'status','cancelled',
     'updatedAt',to_char(now() at time zone 'UTC','YYYY-MM-DD"T"HH24:MI:SS.MS"Z"'),
     'reconciliationReason','superseded_by_newer_paid_slot_order',
     'reconciledAt',to_char(now() at time zone 'UTC','YYYY-MM-DD"T"HH24:MI:SS.MS"Z"')
   ),
   updated_at=now()
-  where old.tenant_id=new.tenant_id and old.branch_id is not distinct from new.branch_id
-    and old.entity_type='orders' and not old.deleted and old.entity_id<>new.entity_id
-    and old.payload->>'serviceMode'=v_mode and trim(coalesce(old.payload->>'tableLabel',''))=v_slot
-    and old.payload->>'paymentStatus'='unpaid'
-    and old.payload->>'status' not in('cancelled','delivered')
-    and nullif(old.payload->>'saleId','') is null
-    and public.kiubo_yuki_order_time_v1(old.payload->>'createdAt') < v_time
+  where stale.tenant_id=new.tenant_id and stale.branch_id is not distinct from new.branch_id
+    and stale.entity_type='orders' and not stale.deleted and stale.entity_id<>new.entity_id
+    and stale.payload->>'serviceMode'=v_mode and trim(coalesce(stale.payload->>'tableLabel',''))=v_slot
+    and stale.payload->>'paymentStatus'='unpaid'
+    and stale.payload->>'status' not in('cancelled','delivered')
+    and nullif(stale.payload->>'saleId','') is null
+    and public.kiubo_yuki_order_time_v1(stale.payload->>'createdAt') < v_time
     and not exists(
       select 1 from public.sync_entities sale
-      where sale.tenant_id=old.tenant_id and sale.entity_type='sales' and not sale.deleted
-        and sale.payload->>'orderId'=old.entity_id
+      where sale.tenant_id=stale.tenant_id and sale.entity_type='sales' and not sale.deleted
+        and sale.payload->>'orderId'=stale.entity_id
     );
   return new;
 end
