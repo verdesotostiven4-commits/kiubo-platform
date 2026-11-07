@@ -3,3 +3,26 @@
 .detailToggle{width:100%;margin:-2px 0 12px;border:1px solid #dce8e2;border-radius:11px;background:#fff;color:#315b4c;padding:9px 11px;font-size:11px;font-weight:850;cursor:pointer}.cashDetail{display:grid;gap:0;margin:0 0 14px;padding:10px 12px;border:1px solid #e3ebe7;border-radius:13px;background:#fff}.cashDetailRow{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:8px 0;border-bottom:1px solid #edf2ef}.cashDetailRow>div{display:grid;gap:2px}.cashDetailRow strong{font-size:11px;color:#27483c}.cashDetailRow span{font-size:9px;color:#7a8982}.cashDetailRow>b{font-size:12px;color:#246b48}.cashDetailRow>.negative{color:#a2473d}.cashDetailTotal{display:flex;justify-content:space-between;align-items:center;padding:10px 0 4px}.cashDetailTotal span{font-size:11px;font-weight:850;color:#52685e}.cashDetailTotal strong{font-size:16px;color:#173e32}.cashDetail small{color:#77867f;font-size:9px;line-height:1.4}
 
 .transferControls{display:flex;flex-wrap:wrap;align-items:center;gap:8px;padding:12px 17px;border-bottom:1px solid #e3ebe7}.transferControls button{padding:9px 12px;border:1px solid #dbe7e0;border-radius:10px;background:#fff;color:#295946;font-size:11px;font-weight:800;cursor:pointer}.transferControls label{display:flex;align-items:center;gap:8px;color:#52685e;font-size:11px;font-weight:800}.transferControls input{padding:7px;border:1px solid #dbe7e0;border-radius:9px}.transferList{display:grid;margin:10px 17px;max-height:540px;overflow:auto;border:1px solid #e3ebe7;border-radius:12px;padding:0 12px}.transferRow{display:flex;align-items:center;justify-content:space-between;gap:12px;border-bottom:1px solid #edf2ef;padding:11px 0}.transferRow>div:first-child{display:grid;gap:4px;min-width:0}.transferRow strong{font-size:12px;color:#27483c}.transferRow small{font-size:10px;color:#687a70;line-height:1.45;overflow-wrap:anywhere}.transferAmount{display:grid;text-align:right;gap:2px;flex:none}.transferAmount b{font-size:14px;color:#173e32}.transferAmount span{font-size:10px;color:#67786e}.transferAmount a{font-size:10px;color:#286b8f}.transferFootnote{margin:0 17px 14px;font-size:11px;color:#667b71}.transferWarning{margin:10px 17px;padding:10px;background:#fff5e9;border-radius:9px;color:#96551d;font-size:11px}@media(max-width:660px){.transferRow{align-items:flex-start}.transferControls label{width:100%}.transferControls input{flex:1;min-width:0}}
+
+
+/* Guided YUKI cash close: distinguish physical cash from bank transfers. */
+.guidedClose{margin:12px 0 14px;padding:15px;border:1px solid #d7e6df;background:#fff;border-radius:14px}
+.guidedClose h4{margin:0 0 10px;color:#173e32;font-size:16px}
+.guidedClose>p{font-size:12px;color:#496357;line-height:1.55;margin:6px 0}
+.guidedClose>p b{color:#173e32}
+.simpleSplit{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin:12px 0}
+.simpleSplit>div{padding:10px;border:1px solid #e1eae4;border-radius:11px;background:#f7faf8;display:flex;flex-direction:column;gap:4px}
+.simpleSplit span{font-size:11px;color:#4d685d}
+.simpleSplit b{font-size:17px;color:#1e4938}
+.simpleSplit small{font-size:10px;color:#677e70}
+.warning{display:grid;gap:6px;padding:11px 12px;border-radius:10px;border:1px solid #f2d0a4;background:#fff6e8;color:#784615;font-size:12px;line-height:1.5}
+.warning strong{font-size:13px}
+.warning span{display:block}
+.warning small{color:#835c32}
+.reviewCheck{display:flex;align-items:flex-start;gap:8px;font-size:11px;line-height:1.4;font-weight:650;cursor:pointer}
+.reviewCheck input{flex:none;width:16px;height:16px;margin:0}
+.manualHint{grid-column:1/-1;margin:0;color:#71522d;font-size:11px;line-height:1.5}
+.bankCheck{display:grid;gap:7px;color:#345544;font-size:12px;font-weight:700;margin:12px 0}
+.bankCheck input{width:100%;max-width:340px;min-height:42px;border:1px solid #cfded4;border-radius:10px;padding:8px 11px;font:inherit}
+.bankMatch{color:#246747;background:#edf8f0;border-radius:10px;padding:9px 12px}
+@media(max-width:700px){.guidedClose{padding:12px}.simpleSplit{grid-template-columns:1fr}.simpleSplit b{font-size:16px}.bankCheck input{max-width:none}}
