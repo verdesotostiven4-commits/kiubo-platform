@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#503326"><meta name="description" content="DeliScias Galapagueñas, sistema de ventas y caja desarrollado con KIUBO">
+<title>DeliScias Galapagueñas · KIUBO</title>
+<link rel="manifest" href="./manifest.webmanifest"><link rel="icon" href="./icon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="./styles.css"><script src="./app.js" defer></script>
+</head><body>
+<div class="app-shell">
+<aside class="side" aria-label="Navegación">
+ <div class="side-head"><span class="kiubo-mark">K<span>·</span></span><div><b>KIUBO</b><small>SOLUCIONES PARA NEGOCIOS</small></div></div>
+ <div class="business"><img src="./assets/deliscias-logo.png" alt="Logo DeliScias Galapagueñas"><b>DeliScias Galapagueñas</b><small>Panadería y pastelería</small></div>
+ <div class="side-label">MENÚ PRINCIPAL</div><nav id="nav">
+ <button class="nav-btn active" data-page="inicio"><span class="ico">▦</span> Resumen</button>
+ <button class="nav-btn" data-page="ventas"><span class="ico">▤</span> Punto de venta</button>
+ <button class="nav-btn" data-page="productos"><span class="ico">◈</span> Productos</button>
+ <button class="nav-btn" data-page="caja"><span class="ico">◉</span> Caja y gastos</button>
+ <button class="nav-btn" data-page="reportes"><span class="ico">↗</span> Reportes</button>
+ <button class="nav-btn" data-page="ajustes"><span class="ico">⚙</span> Ajustes y copias</button>
+ </nav>
+ <div class="side-foot"><span class="online-dot"></span><span id="data-mode">Guardado en esta computadora</span><small>Una sola caja · Modo local</small></div>
+</aside>
+<div class="workspace">
+ <header class="topbar"><div class="breadcrumbs">KIUBO <span>/</span> <strong>DeliScias Galapagueñas</strong> <span>/</span> <b id="breadcrumb">Resumen</b></div><div class="top-right"><span id="clock"></span><span class="mode-pill">LOCAL · 1 PC</span><button id="install-button" class="mini-button" hidden>Instalar aplicación</button><span class="owner-avatar">DG</span></div></header>
+ <div class="alert-strip" id="storage-alert"><span>◉</span> <strong>Modo de evaluación local:</strong> los datos se guardan en este navegador, todavía no en Supabase. Antes de operar con dinero real hay que configurar nube, permisos y respaldos.</div>
+ <div id="update-banner" class="update-banner" hidden><div><b>✨ Nueva versión disponible</b><span>Guarda tus cambios y actualiza sin perder los datos almacenados.</span></div><button id="update-now" class="button primary">Actualizar ahora</button></div>
+ <main id="screen" tabindex="-1"></main>
+ <footer>© 2026 KIUBO · DeliScias Galapagueñas · Versión <span id="app-version">1.0.0</span> · Facturación SRI pendiente</footer>
+</div></div>
+<div id="toast" role="status" aria-live="polite" class="toast" hidden></div><div id="modal"></div>
+</body></html>
