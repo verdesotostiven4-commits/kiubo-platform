@@ -35,8 +35,11 @@
 .plan-section-heading{padding-top:8px!important}
 
 /* Installed PWA fullscreen mode owns the whole viewport cleanly. */
-@media(display-mode:fullscreen){html,body{width:100%;min-height:100dvh;overflow-x:hidden}.window-controls-titlebar{display:none!important}.persistent-workspace-sidebar{top:0!important;height:100dvh!important}}
+@media(display-mode:fullscreen){html,body{width:100%;min-height:100dvh;overflow-x:clip}.window-controls-titlebar{display:none!important}.persistent-workspace-sidebar{top:0!important;height:100dvh!important}}
 
 @media(max-width:1450px){.dashboard-insight-grid{grid-template-columns:minmax(0,1.35fr) minmax(300px,.9fr)!important}.dashboard-top-products{grid-column:1/-1!important}.dashboard-donut-v3 .dashboard-donut-wrap{grid-template-columns:156px minmax(0,1fr)!important}.dashboard-donut-v3 .dashboard-donut{width:154px!important;height:154px!important;max-width:154px!important}}
 @media(max-width:1000px){.dashboard-insight-grid{grid-template-columns:1fr!important}.dashboard-top-products{grid-column:auto!important}.dashboard-donut-v3 .dashboard-donut-wrap{grid-template-columns:170px minmax(0,1fr)!important}.plan-hero-v3{padding:24px!important}}
 @media(max-width:640px){.dashboard-donut-v3 .dashboard-donut-wrap{grid-template-columns:1fr!important;justify-items:center!important}.dashboard-donut-v3 .dashboard-payment-legend{width:100%!important}.plan-hero-v3{padding:21px!important}}
+ 
+/* Avoid creating a non-scrolling overflow container that disables sticky in browser fullscreen. */
+html:fullscreen,html:fullscreen body{overflow-x:clip}
