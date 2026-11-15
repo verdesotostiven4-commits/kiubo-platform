@@ -1,6 +1,7 @@
 "use client";
+import { PageLoadingSkeleton } from "./PageLoadingSkeleton";
 
-import { FormEvent,useEffect,useState } from "react";
+import { FormEvent,useLayoutEffect,useState } from "react";
 import {
   type CashMovementRecord,
   type CashSessionRecord,
@@ -39,14 +40,14 @@ export function CashClient(){
   const[manualCashReviewed,setManualCashReviewed]=useState(false);
   const[showPaidCredits,setShowPaidCredits]=useState(false);
   const refresh=()=>setDb(loadLocalDatabase());
-  useEffect(()=>{
+  useLayoutEffect(()=>{
     refresh();
     const onStorage=()=>refresh();
     window.addEventListener(KIUBO_DATA_REFRESHED,onStorage);
     window.addEventListener("storage",onStorage);
     return()=>{window.removeEventListener(KIUBO_DATA_REFRESHED,onStorage);window.removeEventListener("storage",onStorage)};
   },[]);
-  if(!db)return <div className="loading-card">Preparando caja…</div>;
+  if(!db)return <PageLoadingSkeleton view="cash"/>;
 
   const ctx=getWorkspaceContext(db);
   const customers=db.customers.filter(c=>c.tenantId===ctx.tenantId);
