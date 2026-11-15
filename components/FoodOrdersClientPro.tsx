@@ -1,7 +1,8 @@
 "use client";
+import { PageLoadingSkeleton } from "./PageLoadingSkeleton";
 
 import {supersededUnpaidSlotOrder} from "@/lib/slot-order-coherence";
-import { useEffect,useState } from "react";
+import { useEffect,useLayoutEffect,useState } from "react";
 import { useRouter } from "next/navigation";
 import { CashMovementRecord,CreditPaymentRecord,FoodOrderRecord,FoodOrderStatus,getOpenCashSession,getTenantSettings,getWorkspaceContext,loadLocalDatabase,makeId,saveLocalDatabase } from "@/lib/local-store";
 import { enqueueCreditPaymentTransaction } from "@/lib/finance-transaction";
@@ -35,10 +36,10 @@ export function FoodOrdersClientPro(){
   const[paymentDraft,setPaymentDraft]=useState("");
   const[paymentMethod,setPaymentMethod]=useState<"cash"|"transfer">("cash");
   const refresh=()=>setDb(loadLocalDatabase());
-  useEffect(()=>{refresh();window.addEventListener(KIUBO_DATA_REFRESHED,refresh);return()=>window.removeEventListener(KIUBO_DATA_REFRESHED,refresh)},[]);
+  useLayoutEffect(()=>{refresh();window.addEventListener(KIUBO_DATA_REFRESHED,refresh);return()=>window.removeEventListener(KIUBO_DATA_REFRESHED,refresh)},[]);
   useEffect(()=>{if(!cancelArmedId)return;const timer=window.setTimeout(()=>setCancelArmedId(""),3500);return()=>window.clearTimeout(timer)},[cancelArmedId]);
   useEffect(()=>{setHistoryPage(0)},[filter]);
-  if(!db)return <div className="loading-card">Preparando pedidos…</div>;
+  if(!db)return <PageLoadingSkeleton view="orders"/>;
 
   const ctx=getWorkspaceContext(db),settings=getTenantSettings(db,ctx.tenantId);
   if(settings.businessType!=="food_service")return <div className="panel"><h2>Pedidos no está activado</h2><p>Este espacio no utiliza el perfil Food Service.</p></div>;
