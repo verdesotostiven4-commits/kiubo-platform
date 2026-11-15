@@ -1,0 +1,7 @@
+/* Consistent compact placeholder for legacy KIUBO sections still using loading-card. */
+.loading-card{position:relative;display:block;min-height:255px;padding:16px 0!important;border:0!important;border-radius:0!important;background:transparent!important;color:transparent!important;font-size:0!important;box-shadow:none!important;overflow:hidden}
+.loading-card::before,.loading-card::after{content:"";display:block;border-radius:15px;background:linear-gradient(100deg,#edf2ee 10%,#fafcfb 40%,#edf2ee 70%);background-size:200% 100%;animation:kiuboLoadingPulse 1.65s ease-in-out infinite}
+.loading-card::before{height:38px;width:min(245px,45%);margin-bottom:18px}
+.loading-card::after{height:164px;width:100%;border:1px solid #e6ede8;border-radius:19px}
+@keyframes kiuboLoadingPulse{0%{background-position:100% 0}100%{background-position:-100% 0}}
+@media(prefers-reduced-motion:reduce){.loading-card::before,.loading-card::after{animation:none}}
