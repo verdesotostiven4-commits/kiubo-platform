@@ -1,5 +1,6 @@
 "use client";
-import { FormEvent,useEffect,useState } from "react";
+import { PageLoadingSkeleton } from "./PageLoadingSkeleton";
+import { FormEvent,useLayoutEffect,useState } from "react";
 import { CashMovementRecord,KiuboLocalDatabase,PurchasePaymentMethod,PurchaseRecord,SupplierPaymentRecord,getOpenCashSession,getWorkspaceContext,loadLocalDatabase,makeId,saveLocalDatabase } from "@/lib/local-store";
 import { enqueuePurchaseTransaction,enqueueSupplierPaymentTransaction } from "@/lib/purchase-transaction";
 
@@ -10,8 +11,8 @@ const money=(value:number)=>new Intl.NumberFormat("es-EC",{style:"currency",curr
 
 export function PurchasesClient(){
   const[db,setDb]=useState<KiuboLocalDatabase|null>(null),[lines,setLines]=useState<DraftLine[]>([]),[message,setMessage]=useState("Compras listas"),[supplierId,setSupplierId]=useState(""),[documentType,setDocumentType]=useState<keyof typeof documentLabel>("invoice"),[documentNumber,setDocumentNumber]=useState(""),[documentDate,setDocumentDate]=useState(()=>new Date().toISOString().slice(0,10)),[dueDate,setDueDate]=useState(""),[notes,setNotes]=useState(""),[initialPayment,setInitialPayment]=useState(0),[initialMethod,setInitialMethod]=useState<PurchasePaymentMethod>("transfer");
-  useEffect(()=>setDb(loadLocalDatabase()),[]);
-  if(!db)return <div className="loading-card">Preparando compras…</div>;
+  useLayoutEffect(()=>setDb(loadLocalDatabase()),[]);
+  if(!db)return <PageLoadingSkeleton view="purchases"/>;
   const ctx=getWorkspaceContext(db),products=db.tenantProducts.filter(p=>p.tenantId===ctx.tenantId&&p.branchId===ctx.branchId&&p.active),stockProducts=products.filter(p=>p.trackStock!==false),suppliers=db.suppliers.filter(s=>s.tenantId===ctx.tenantId),purchases=db.purchases.filter(p=>p.tenantId===ctx.tenantId&&p.branchId===ctx.branchId&&p.status!=="cancelled").sort((a,b)=>b.createdAt.localeCompare(a.createdAt)),supplierPayments=db.supplierPayments.filter(p=>p.tenantId===ctx.tenantId&&p.branchId===ctx.branchId),purchaseTotal=lines.reduce((n,l)=>n+l.qty*l.unitCost,0),outstanding=purchases.reduce((n,p)=>n+Math.max(0,p.total-(p.paidAmount??0)),0),overdue=purchases.filter(p=>(p.total-(p.paidAmount??0))>.001&&p.dueDate&&p.dueDate<new Date().toISOString().slice(0,10)).reduce((n,p)=>n+Math.max(0,p.total-(p.paidAmount??0)),0),paid=supplierPayments.reduce((n,p)=>n+p.amount,0),canUseCash=Boolean(ctx.user?.platformAdmin||ctx.user?.role==="owner"||ctx.user?.role==="admin"),paymentOptions=(Object.entries(paymentLabel) as [PurchasePaymentMethod,string][]).filter(([value])=>value!=="cash"||canUseCash);
   const supplierName=(id:string)=>suppliers.find(s=>s.id===id)?.name??"Proveedor";
   const addLine=(event:FormEvent<HTMLFormElement>)=>{event.preventDefault();const f=new FormData(event.currentTarget),productId=String(f.get("productId")||""),qty=Number(f.get("qty")||0),unitCost=Number(f.get("unitCost")||0),product=stockProducts.find(p=>p.id===productId);if(!product||qty<=0||!Number.isInteger(qty)||unitCost<0)return;setLines(current=>{const existing=current.find(l=>l.productId===productId);return existing?current.map(l=>l.productId===productId?{...l,qty:l.qty+qty,unitCost}:l):[...current,{id:makeId("line"),productId,name:product.name,qty,unitCost}]});event.currentTarget.reset();setMessage(`${product.name} agregado a la compra`)};

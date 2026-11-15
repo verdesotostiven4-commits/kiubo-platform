@@ -26,3 +26,33 @@
 .bankCheck input{width:100%;max-width:340px;min-height:42px;border:1px solid #cfded4;border-radius:10px;padding:8px 11px;font:inherit}
 .bankMatch{color:#246747;background:#edf8f0;border-radius:10px;padding:9px 12px}
 @media(max-width:700px){.guidedClose{padding:12px}.simpleSplit{grid-template-columns:1fr}.simpleSplit b{font-size:16px}.bankCheck input{max-width:none}}
+
+/* Cash closing: easy-to-scan numbers, no manual with long instructions. */
+.reconcilePanel{margin:0 0 12px;display:grid;gap:8px}
+.closeBox{background:#fbfcfb;padding:16px}
+.closeHead{align-items:center}
+.turnSummary{gap:8px}
+.turnSummary>div:first-child{background:#eaf4ee;border-color:#cce2d4}
+.turnSummary>div:first-child b{font-size:20px;color:#133f2e;font-variant-numeric:tabular-nums}
+.bankCheck{margin:4px 0 2px;font-size:11px}
+.bankCheck input{max-width:100%}
+.bankMatch,.reconcilePanel .warning{margin:0}
+.detailToggle{display:inline-flex;align-self:start;width:auto;margin:0 0 10px;border:0;background:transparent;padding:4px 0;color:#32624c;font-size:11px;text-decoration:underline;text-underline-offset:3px}
+.countRow label span{font-size:12px;color:#243e34}
+.countRow input{font-size:18px;font-weight:800;font-variant-numeric:tabular-nums}
+.closeAction{justify-content:flex-end}
+.closeAction button{min-width:160px}
+.creditToolbar{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:4px 0 12px}
+.creditToolbar span{font-size:11px;color:#728579;font-weight:700}
+.creditToolbar button{border:1px solid #dfe9e3;background:#fff;padding:6px 9px;border-radius:9px;color:#315b45;font-size:11px;font-weight:800;cursor:pointer}
+.creditList{display:grid}
+.creditRow{display:grid;grid-template-columns:minmax(0,1fr) auto minmax(245px,1.1fr);align-items:center;gap:10px;padding:13px 0;border-top:1px solid #e5ede8;min-width:0}
+.creditIdentity{display:grid;gap:4px;min-width:0}
+.creditIdentity strong{font-size:13px;color:#183b30;overflow-wrap:anywhere}
+.creditIdentity small{font-size:10px;color:#809086;overflow-wrap:anywhere}
+.creditBalance{font-size:17px;font-weight:900;color:#152f25;text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+.creditActions{display:grid;grid-template-columns:minmax(68px,1fr) minmax(98px,1.05fr) auto;gap:6px;min-width:0}
+.creditActions input,.creditActions select{width:100%;min-width:0;padding:9px;border:1px solid #d7e3db;border-radius:10px;background:#fff;font:inherit;font-size:11px}
+.creditActions button{padding:9px 11px;white-space:nowrap}
+@media(max-width:1280px){.creditRow{grid-template-columns:minmax(0,1fr) auto}.creditActions{grid-column:1/-1}}
+@media(max-width:700px){.closeBox{padding:12px}.turnSummary{grid-template-columns:repeat(2,minmax(0,1fr))}.creditActions{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}.creditActions button{grid-column:1/-1}.creditBalance{font-size:16px}.creditRow{gap:7px}}

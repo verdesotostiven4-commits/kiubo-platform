@@ -3,3 +3,21 @@
 
 .preparedList{display:grid;gap:8px;margin-top:14px}.preparedRow{display:grid;grid-template-columns:minmax(0,1fr) auto auto;align-items:center;gap:12px;padding:11px 12px;border:1px solid #e7edf2;border-radius:12px;background:#fbfcfd}.preparedRow>div{display:grid;gap:3px;min-width:0}.preparedRow strong{font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.preparedRow>div span{font-size:10px;color:var(--muted)}.recipeState{padding:6px 9px;border-radius:999px;font-size:10px;font-weight:900;white-space:nowrap}.recipeReady{background:#eaf7ef;color:#28744b}.recipeMissing{background:#fff1df;color:#a66113}.recipeEdit{border:1px solid #dce5ec;background:#fff;color:#38556f;border-radius:9px;padding:7px 9px;font-size:10px;font-weight:900;cursor:pointer}.recipeEdit:hover{background:#f4f8fb}@media(max-width:640px){.preparedRow{grid-template-columns:1fr auto}.preparedRow .recipeEdit{grid-column:1/-1;width:100%}}
 .recipePartial{background:#eef4ff;color:#315f9e}.trackToggle{display:flex!important;align-items:flex-start;gap:9px;padding:9px 10px;border:1px solid #e4e9ee;border-radius:11px;background:#fff}.trackToggle>input{width:16px!important;height:16px;margin-top:1px;flex:0 0 auto}.trackToggle>span{display:grid;gap:2px}.trackToggle strong{font-size:11px}.trackToggle small{font-size:9px;color:var(--muted);line-height:1.35}
+
+/* YUKI stock: reserve actual space for units and quantities at every viewport. */
+.stockNotice{margin:0 20px 8px;padding:9px 12px;border-radius:10px;background:#f0f7f2;color:#315c49;font-size:12px;font-weight:750}
+.stockRow{display:grid;grid-template-columns:minmax(0,1fr) minmax(88px,auto) minmax(144px,.72fr);align-items:center;gap:18px;padding:16px 20px;border-top:1px solid #e7ecea;min-width:0}
+.stockName{display:grid;gap:5px;min-width:0}
+.stockName strong{font-size:15px;color:#102c40;overflow-wrap:anywhere}
+.stockName>span{font-size:11px;color:#7c8995;overflow-wrap:anywhere}
+.stockAvailable{display:grid;align-content:center;justify-items:end;gap:1px;min-width:0;white-space:nowrap;color:#112d40}
+.stockAvailable strong{font-size:clamp(23px,2.5vw,31px);font-weight:900;line-height:1.1;font-variant-numeric:tabular-nums}
+.stockAvailable>span{font-size:12px;color:#536b62;font-weight:800}
+.stockAvailable small{font-size:10px;color:#6b8076;font-weight:700}
+.stockLow strong,.stockLow small{color:#a34b2c}
+.stockBreakdown{display:grid;gap:5px;min-width:0;border-left:1px solid #e6eeea;padding-left:16px}
+.stockBreakdown>span{display:flex;align-items:baseline;justify-content:space-between;gap:8px;min-width:0}
+.stockBreakdown>span>span{font-size:10px;color:#74857b}
+.stockBreakdown b{font-size:11px;color:#344b41;font-weight:850;text-align:right;overflow-wrap:normal;font-variant-numeric:tabular-nums}
+@media(max-width:1180px){.stockRow{grid-template-columns:minmax(0,1fr) minmax(80px,auto);gap:10px 14px}.stockBreakdown{grid-column:1/-1;display:flex;gap:10px;flex-wrap:wrap;padding:8px 0 0;border-left:0;border-top:1px dashed #e2eae5}.stockBreakdown>span{gap:4px}.stockBreakdown>span:not(:last-child){padding-right:10px;border-right:1px solid #e2eae5}}
+@media(max-width:520px){.stockRow{padding:14px;gap:9px}.stockNotice{margin:0 14px 8px}.stockName strong{font-size:13px}.stockAvailable strong{font-size:24px}.stockBreakdown b{font-size:10px}}

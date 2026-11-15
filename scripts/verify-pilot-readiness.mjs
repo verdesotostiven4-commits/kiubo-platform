@@ -13,7 +13,7 @@ requireText("components/SessionEnforcer.tsx",["effectivePlatformAdmin(user.platf
 requireText("components/Sidebar.tsx",["platformOnly:true","effectivePlatformAdmin(user?.platformAdmin)","canAccess(user.role,item.permission,platformAdmin)","href:\"/orders\"","businessTypes:[\"food_service\"]","href:\"/cash\"","label:\"Administración\""]);
 requireText("components/MobileNav.tsx",["platformOnly:true","effectivePlatformAdmin(user.platformAdmin)","canAccess(user.role,item.permission,platformAdmin)","href:\"/orders\"","businessTypes:[\"food_service\"]","href:\"/cash\""]);
 requireText("app/cash/page.tsx",["CashClient","Sidebar"]);
-requireText("components/CashClient.tsx",["enqueueCashTransaction","enqueueCreditPaymentTransaction","Caja y fiados, sin perder el control.","reconcileCashSession","CUADRADA"]);
+requireText("components/CashClient.tsx",["enqueueCashTransaction","enqueueCreditPaymentTransaction","Caja y fiados","reconcileCashSession","CUADRADA"]);
 requireText("components/PosClient.tsx",['const paymentOptions:Payment[]=["cash","transfer","credit"]','if(payment==="mixed")']);
 requireText("app/operations/page.tsx",["NEXT_PUBLIC_KIUBO_AUTH_MODE===\"supabase\"","BusinessAdminClient","TeamAdminClient","OperationsClient"]);
 requireText("components/BusinessAdminClient.tsx",["Reglas generales del negocio","saveLocalDatabase(next)","Exigir caja abierta"]);

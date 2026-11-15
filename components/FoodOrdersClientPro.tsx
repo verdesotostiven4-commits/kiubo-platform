@@ -1,7 +1,8 @@
 "use client";
+import { PageLoadingSkeleton } from "./PageLoadingSkeleton";
 
 import {supersededUnpaidSlotOrder} from "@/lib/slot-order-coherence";
-import { useEffect,useState } from "react";
+import { useEffect,useLayoutEffect,useState } from "react";
 import { useRouter } from "next/navigation";
 import { CashMovementRecord,CreditPaymentRecord,FoodOrderRecord,FoodOrderStatus,getOpenCashSession,getTenantSettings,getWorkspaceContext,loadLocalDatabase,makeId,saveLocalDatabase } from "@/lib/local-store";
 import { enqueueCreditPaymentTransaction } from "@/lib/finance-transaction";
@@ -35,10 +36,10 @@ export function FoodOrdersClientPro(){
   const[paymentDraft,setPaymentDraft]=useState("");
   const[paymentMethod,setPaymentMethod]=useState<"cash"|"transfer">("cash");
   const refresh=()=>setDb(loadLocalDatabase());
-  useEffect(()=>{refresh();window.addEventListener(KIUBO_DATA_REFRESHED,refresh);return()=>window.removeEventListener(KIUBO_DATA_REFRESHED,refresh)},[]);
+  useLayoutEffect(()=>{refresh();window.addEventListener(KIUBO_DATA_REFRESHED,refresh);return()=>window.removeEventListener(KIUBO_DATA_REFRESHED,refresh)},[]);
   useEffect(()=>{if(!cancelArmedId)return;const timer=window.setTimeout(()=>setCancelArmedId(""),3500);return()=>window.clearTimeout(timer)},[cancelArmedId]);
   useEffect(()=>{setHistoryPage(0)},[filter]);
-  if(!db)return <div className="loading-card">Preparando pedidos…</div>;
+  if(!db)return <PageLoadingSkeleton view="orders"/>;
 
   const ctx=getWorkspaceContext(db),settings=getTenantSettings(db,ctx.tenantId);
   if(settings.businessType!=="food_service")return <div className="panel"><h2>Pedidos no está activado</h2><p>Este espacio no utiliza el perfil Food Service.</p></div>;
@@ -115,10 +116,9 @@ export function FoodOrdersClientPro(){
   };
 
   return <div className={styles.page}>
-    <section className={styles.hero}><div><span className={styles.kicker}>FOOD SERVICE · {ctx.branch?.code} {ctx.branch?.name}</span><h1>Pedidos</h1><p>{simpleFlow?<><strong>Modo rápido:</strong> el pedido queda pendiente, se cobra y pasa al historial. Sin pasos extra de preparación.</>:<><strong>Pendientes</strong> muestra lo que todavía falta cobrar. <strong>Cocina</strong> conserva la preparación aunque el pedido ya esté pagado.</>}</p></div><button className={styles.primary} onClick={openPos}>＋ Nuevo pedido</button></section>
+    <section className={styles.hero}><div><span className={styles.kicker}>FOOD SERVICE · {ctx.branch?.code} {ctx.branch?.name}</span><h1>Pedidos</h1></div><button className={styles.primary} onClick={openPos}>＋ Nuevo pedido</button></section>
     {message&&<div className={styles.notice}>✓ {message}</div>}
     {orphanedOrders.length>0&&<div className={styles.notice}>Hay {orphanedOrders.length} pedido{orphanedOrders.length===1?"":"s"} antiguo{orphanedOrders.length===1?"":"s"} sin cobro que coincide{orphanedOrders.length===1?"":"n"} con ventas posteriores pagadas en el mismo espacio. No ocupa{orphanedOrders.length===1?"":"n"} mesa ni reserva{orphanedOrders.length===1?"":"n"} inventario; solicita revisión contable antes de cualquier cobro adicional.</div>}
-    {activeView==="pending"&&<div className={styles.notice}>{simpleFlow?<><strong>Flujo rápido activo:</strong> Pedido → Cobrar → Historial. Los abonos quedan visibles hasta completar el saldo.</>:<>Un pedido sin cobros todavía no cuenta en caja. Si recibe un abono, KIUBO registra únicamente ese valor y mantiene visible el saldo pendiente.</>}</div>}
     <section className={styles.controlBar}><div className={styles.viewTabs}>
       <button className={activeView==="pending"?styles.viewActive:""} onClick={()=>{setView("pending");setCancelArmedId("")}}>Pendientes <b>{pendingOrders.length}</b></button>
       {!simpleFlow&&<button className={activeView==="kitchen"?styles.viewActive:""} onClick={()=>{setView("kitchen");setCancelArmedId("")}}>Cocina <b>{kitchenOrders.length}</b></button>}
@@ -131,7 +131,7 @@ export function FoodOrdersClientPro(){
       </>}
     </>:<section className={styles.historyPanel}>
       <div className={styles.historyHead}><div><span className={styles.kicker}>HISTORIAL</span><h2>{simpleFlow?"Pedidos cobrados":"Pedidos finalizados"}</h2><small className={styles.summaryLine}>Total de estos pedidos: <strong>{money(historyPaidTotal)}</strong></small></div><span>{historyOrders.length} pedidos</span></div>
-      <div className={styles.historyList}>{visibleHistoryOrders.map(order=>{const payment=orderPaymentSummary(db,order);return <article className={styles.historyRow} key={order.id}><div><strong>#{String(order.number).padStart(4,"0")}</strong><span>{order.tableLabel?`${modeLabel[order.serviceMode]} ${order.tableLabel}`:modeLabel[order.serviceMode]} · {new Date(order.updatedAt||order.createdAt).toLocaleString("es-EC")}</span></div><div className={styles.historyCustomer}><strong>{order.customerName||"Cliente"}</strong><span>{order.items.reduce((sum,item)=>sum+item.qty,0)} productos · {payment.label}</span></div><div className={paymentStyles.historyPayment}><strong>{money(order.total)}</strong><span>{payment.cash>0?`Efectivo ${money(payment.cash)}`:""}{payment.cash>0&&payment.transfer>0?" · ":""}{payment.transfer>0?`Transferencia ${money(payment.transfer)}`:""}</span></div><a className={styles.print} href={printUrl(order)} target="_blank" rel="noopener noreferrer">Ver / imprimir</a></article>})}{!historyOrders.length&&<div className={styles.emptyHistory}>Todavía no hay pedidos en el historial con este filtro.</div>}</div>
+      <div className={styles.historyList}>{visibleHistoryOrders.map(order=>{const payment=orderPaymentSummary(db,order);return <article className={styles.historyRow} key={order.id}><div className={styles.historyIdentity}><strong>#{String(order.number).padStart(4,"0")}</strong><span>{order.tableLabel?`${modeLabel[order.serviceMode]} ${order.tableLabel}`:modeLabel[order.serviceMode]} · {new Date(order.updatedAt||order.createdAt).toLocaleString("es-EC")}</span></div><div className={styles.historyCustomer}><strong>{order.customerName||"Cliente"}</strong><span>{order.items.reduce((sum,item)=>sum+item.qty,0)} productos · {payment.label}</span></div><div className={paymentStyles.historyPayment}><strong>{money(order.total)}</strong><span>{payment.cash>0?`Efectivo ${money(payment.cash)}`:""}{payment.cash>0&&payment.transfer>0?" · ":""}{payment.transfer>0?`Transferencia ${money(payment.transfer)}`:""}</span></div><a className={styles.print} href={printUrl(order)} target="_blank" rel="noopener noreferrer">Ver / imprimir</a></article>})}{!historyOrders.length&&<div className={styles.emptyHistory}>Todavía no hay pedidos en el historial con este filtro.</div>}</div>
       {historyOrders.length>HISTORY_PAGE_SIZE&&<div className={styles.historyPager}><span>Mostrando {safeHistoryPage*HISTORY_PAGE_SIZE+1}–{Math.min((safeHistoryPage+1)*HISTORY_PAGE_SIZE,historyOrders.length)} de {historyOrders.length}</span><div><button disabled={safeHistoryPage===0} onClick={()=>setHistoryPage(page=>Math.max(0,page-1))}>← Anterior</button><strong>{safeHistoryPage+1} / {historyPageCount}</strong><button disabled={safeHistoryPage>=historyPageCount-1} onClick={()=>setHistoryPage(page=>Math.min(historyPageCount-1,page+1))}>Siguiente →</button></div></div>}
     </section>}
   </div>;

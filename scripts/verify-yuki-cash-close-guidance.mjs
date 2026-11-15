@@ -34,10 +34,19 @@ assert.equal(pendingTurnFinancialOperations(db,"yuki","main","2026-11-07T14:00:0
 assert.equal(pendingTurnFinancialOperations(db,"yuki","main","2026-11-07T16:00:00Z"),0);
 const cash=readFileSync("components/CashClient.tsx","utf8");
 const css=readFileSync("components/CashClient.module.css","utf8");
-for(const needle of ["KIUBO_DATA_REFRESHED","pendingTurnFinancialOperations(next","Revisar ingreso manual","Transferencias recibidas en el banco","NO suma dinero a caja","Cuadre fácil · 3 pasos","No cierres aún","manualCashReviewed","Diferencia bancaria","Transferencias registradas (verificar banco)"]){
-  assert.ok(cash.includes(needle),"Missing guided-close safeguard: "+needle);
+for(const needle of [
+  "KIUBO_DATA_REFRESHED","pendingTurnFinancialOperations(next",
+  "Revisar ingreso manual","Banco recibido (opcional)",
+  "NO suma dinero a caja","No cierres aún","manualCashReviewed",
+  "Diferencia en banco","Transferencias registradas (verificar banco)",
+  "reconcileCashSession(next,session)","closeDifference"
+]){
+  assert.ok(cash.includes(needle),"Missing YUKI cash safeguard: "+needle);
 }
-for(const needle of [".guidedClose",".simpleSplit",".reviewCheck",".bankCheck","@media(max-width:700px)"])assert.ok(css.includes(needle));
-assert.ok(cash.includes("Las transferencias no se cuentan en el cajón."));
-assert.ok(cash.includes("reconcileCashSession(next,session)"));
+for(const needle of [".reconcilePanel",".simpleSplit",".reviewCheck",".bankCheck","@media(max-width:700px)"]){
+  assert.ok(css.includes(needle),"Missing responsive cash layout: "+needle);
+}
+for(const obsolete of ["Cuadre fácil · 3 pasos","Ver cómo se calcula el efectivo esperado","Cuenta solo el efectivo físico:"]){
+  assert.ok(!cash.includes(obsolete),"Obsolete instruction should be removed: "+obsolete);
+}
 console.log("✓ YUKI cierre claro: efectivo vs banco, cambios de denominación, sincronización pendiente y diferencias reales.");

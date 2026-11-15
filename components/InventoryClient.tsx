@@ -1,6 +1,7 @@
 "use client";
+import { PageLoadingSkeleton } from "./PageLoadingSkeleton";
 import Link from "next/link";
-import { FormEvent,useEffect,useState } from "react";
+import { FormEvent,useLayoutEffect,useState } from "react";
 import { KiuboLocalDatabase,StockMovementRecord,getWorkspaceContext,loadLocalDatabase,makeId,saveLocalDatabase,type TenantProduct } from "@/lib/local-store";
 import { enqueueInventoryAdjustment } from "@/lib/inventory-transaction";
 import { asInventoryProduct,formatStock,inventoryOnly,lowStockThreshold,productRecipe,recipeReadiness,stockUnit,type InventoryProduct } from "@/lib/recipe-inventory";
@@ -17,10 +18,10 @@ const displayQty=(value:number)=>Math.abs(value-Math.round(value))<.0005?String(
 
 export function InventoryClient(){
   const[db,setDb]=useState<KiuboLocalDatabase|null>(null),[message,setMessage]=useState("Inventario listo"),[recipeProductId,setRecipeProductId]=useState(""),[recipeComponentId,setRecipeComponentId]=useState(""),[automationOpen,setAutomationOpen]=useState(false),[editIngredientId,setEditIngredientId]=useState("");
-  useEffect(()=>{const refresh=()=>setDb(loadLocalDatabase());refresh();window.addEventListener(KIUBO_DATA_REFRESHED,refresh);return()=>window.removeEventListener(KIUBO_DATA_REFRESHED,refresh)},[]);
-  if(!db)return <div className="loading-card">Preparando inventario…</div>;
+  useLayoutEffect(()=>{const refresh=()=>setDb(loadLocalDatabase());refresh();window.addEventListener(KIUBO_DATA_REFRESHED,refresh);return()=>window.removeEventListener(KIUBO_DATA_REFRESHED,refresh)},[]);
+  if(!db)return <PageLoadingSkeleton view="inventory"/>;
   const ctx=getWorkspaceContext(db),products=db.tenantProducts.filter(p=>p.tenantId===ctx.tenantId&&p.branchId===ctx.branchId&&p.active),ingredients=products.filter(inventoryOnly),sellableProducts=products.filter(isSellableProduct),trackedProducts=products.filter(p=>p.trackStock!==false),preparedProducts=sellableProducts.filter(p=>p.trackStock===false),configuredRecipes=sellableProducts.filter(p=>recipeReadiness(p,products)!=="missing").length,suppliers=db.suppliers.filter(s=>s.tenantId===ctx.tenantId),purchases=db.purchases.filter(p=>p.tenantId===ctx.tenantId&&p.branchId===ctx.branchId),movements=db.stockMovements.filter(m=>m.tenantId===ctx.tenantId&&m.branchId===ctx.branchId),metrics={units:trackedProducts.reduce((n,p)=>n+p.stock,0),value:trackedProducts.reduce((n,p)=>n+p.stock*p.cost,0),low:trackedProducts.filter(p=>p.stock<=lowStockThreshold(p)).length,prepared:preparedProducts.length};
-  const availability=stockAvailability(db,ctx.tenantId,ctx.branchId),reservedUnits=[...availability.values()].reduce((sum,item)=>sum+item.reserved,0);
+  const availability=stockAvailability(db,ctx.tenantId,ctx.branchId),reservedKinds=[...availability.values()].filter(item=>item.reserved>.0005).length;
   const quantityStep="0.001",quantityMin="0.001";
   const recipeProduct=sellableProducts.find(product=>product.id===recipeProductId)||sellableProducts[0],recipe=recipeProduct?productRecipe(recipeProduct):[];
   const persist=(next:KiuboLocalDatabase,text?:string)=>{saveLocalDatabase(next);setDb(loadLocalDatabase());if(text)setMessage(text);window.dispatchEvent(new CustomEvent(KIUBO_DATA_REFRESHED,{detail:{source:"inventory-recipes"}}))};
@@ -70,7 +71,24 @@ export function InventoryClient(){
     </section>
 
     <section className="inventory-grid">
-      <article className="panel"><div className="panel-head"><div><span className="eyebrow">STOCK REAL</span><h3>Existencias</h3></div><span className="pill">{trackedProducts.length}</span></div><p className="cart-note">Físico = unidades reales. Comprometido = ingredientes de pedidos abiertos sin cobrar. Disponible = físico − comprometido. Al cancelar un pedido se libera; al cobrar se descuenta del físico una sola vez.</p><p className="cart-note"><strong>Comprometido en pedidos abiertos: {displayQty(reservedUnits)} unidades (de distintos insumos).</strong></p><div className="inventory-list">{trackedProducts.length?trackedProducts.map(p=>{const ingredient=inventoryOnly(p),reserved=availability.get(p.id)?.reserved||0,available=availability.get(p.id)?.available??p.stock,low=available<=lowStockThreshold(p);return <div className="inventory-row" key={p.id}><div><strong>{p.name}</strong><span>{p.barcode} · {ingredient?"insumo / ingrediente":"producto con stock"}</span></div><b className={low?"stock-low":""}>{formatStock(Math.max(0,available),stockUnit(p))} disponible</b><small>Físico: {formatStock(p.stock,stockUnit(p))} · Comprometido: {formatStock(reserved,stockUnit(p))} · {low?"Baja disponibilidad · ":""}Mínimo {formatStock(lowStockThreshold(p),stockUnit(p))}</small></div>}):<p className="empty-cart">Aún no hay existencias físicas configuradas.</p>}</div></article>
+      <article className="panel">
+        <div className="panel-head"><div><span className="eyebrow">STOCK REAL</span><h3>Existencias</h3></div><span className="pill">{trackedProducts.length}</span></div>
+        {reservedKinds>0&&<div className={styles.stockNotice}>{reservedKinds} {reservedKinds===1?"insumo reservado":"insumos reservados"} en pedidos</div>}
+        <div className="inventory-list">
+          {trackedProducts.length?trackedProducts.map(p=>{
+            const ingredient=inventoryOnly(p),reserved=availability.get(p.id)?.reserved||0,available=availability.get(p.id)?.available??p.stock,low=available<=lowStockThreshold(p),unit=stockUnit(p);
+            return <div className={styles.stockRow} key={p.id}>
+              <div className={styles.stockName}><strong>{p.name}</strong><span>{p.barcode} · {ingredient?"Insumo":"Producto"}</span></div>
+              <div className={`${styles.stockAvailable} ${low?styles.stockLow:""}`}><strong>{displayQty(Math.max(0,available))}</strong><span>{unit}</span><small>{low?"Bajo stock":"Disponible"}</small></div>
+              <div className={styles.stockBreakdown}>
+                <span><span>Físico</span><b>{formatStock(p.stock,unit)}</b></span>
+                <span><span>Reservado</span><b>{formatStock(reserved,unit)}</b></span>
+                <span><span>Mínimo</span><b>{formatStock(lowStockThreshold(p),unit)}</b></span>
+              </div>
+            </div>;
+          }):<p className="empty-cart">Aún no hay existencias físicas configuradas.</p>}
+        </div>
+      </article>
       <article className="panel" id="inventory-adjustment"><span className="eyebrow">AJUSTE CONTROLADO</span><h3>Sumar o retirar stock</h3><p className="cart-note">Solo existencias físicas. Los productos preparados se descuentan automáticamente mediante su receta.</p>{trackedProducts.length?<form className="inventory-form" onSubmit={adjust}><label>Existencia / insumo<select name="productId" required defaultValue=""><option value="" disabled>Selecciona</option>{trackedProducts.map(p=><option key={p.id} value={p.id}>{p.name} · {formatStock(p.stock,stockUnit(p))}</option>)}</select></label><div className="inventory-inline"><label>Movimiento<select name="kind"><option value="in">Sumar</option><option value="out">Retirar</option></select></label><label>Cantidad<input name="qty" type="number" min={quantityMin} step={quantityStep} required/></label></div><label>Motivo<select name="reason" required defaultValue=""><option value="" disabled>Selecciona</option><option value="Conteo">Conteo</option><option value="Merma">Merma</option><option value="Daño">Daño</option><option value="Corrección">Corrección</option></select></label><button className="button primary" type="submit">Guardar</button></form>:<div className="inventory-untracked-note">Agrega algo al inventario para comenzar.</div>}</article>
     </section>
     <section className="panel"><div className="panel-head"><div><span className="eyebrow">PREPARACIÓN</span><h3>Productos preparados y recetas</h3></div><span className="pill">{preparedProducts.length}</span></div><p className="cart-note">Estos productos no tienen un stock artificial propio. Al venderlos, KIUBO descuenta los ingredientes que ya tengan control de existencias.</p><div className={styles.preparedList}>{preparedProducts.length?preparedProducts.map(product=>{const recipeCount=productRecipe(product).length,readiness=recipeReadiness(product,products),ready=readiness==="ready",partial=readiness==="partial";return <div className={styles.preparedRow} key={product.id}><div><strong>{product.name}</strong><span>{readiness==="missing"?"Falta configurar receta":partial?`Receta visible · ${recipeCount||"opciones"} · falta activar algún stock`:`Receta automática · ${recipeCount||"por opciones"}`}</span></div><span className={`${styles.recipeState} ${ready?styles.recipeReady:partial?styles.recipePartial:styles.recipeMissing}`}>{ready?"Completa":partial?"Parcial":"Revisar"}</span><button type="button" className={styles.recipeEdit} onClick={()=>openRecipeEditor(product.id)}>{readiness==="missing"?"Configurar receta":"Editar receta"}</button></div>}):<div className={styles.empty}>No hay productos preparados en esta sucursal.</div>}</div></section>

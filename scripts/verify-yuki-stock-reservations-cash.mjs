@@ -92,7 +92,7 @@ for(const phrase of [
 "inventoryDeficits(latest,scope.tenantId,scope.branchId,candidate.map",
 "disabled={blockedProduct}"
 ])assert.ok(pos.includes(phrase),"POS guard missing: "+phrase);
-for(const phrase of ["Comprometido:","disponible</b>","stockAvailability(db,ctx.tenantId,ctx.branchId)"]){
+for(const phrase of ["Reservado","Disponible","styles.stockBreakdown","stockAvailability(db,ctx.tenantId,ctx.branchId)","reserved=availability.get(p.id)?.reserved||0","available=availability.get(p.id)?.available??p.stock"]){
  assert.ok(inventory.includes(phrase),"Inventory availability display missing: "+phrase);
 }
 for(const phrase of ["cashPaymentEvents(db,ctx.tenantId,ctx.branchId)","Efectivo y transferencias","Movimientos de efectivo"]){
