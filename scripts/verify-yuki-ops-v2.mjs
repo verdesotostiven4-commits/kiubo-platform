@@ -18,7 +18,7 @@ for(const needle of ["salePaymentSummary","Pagado","Efectivo","Transferencia","P
 }
 
 const cash=text("components/CashClient.tsx");
-for(const needle of ["cashReconciliationEntries","Ver cómo se calcula el efectivo esperado","Las transferencias no se suman al cajón"]){
+for(const needle of ["cashReconciliationEntries","Ver detalle de efectivo","Las transferencias no se suman al cajón"]){
   assert.ok(cash.includes(needle),`cash explanation missing: ${needle}`);
 }
 
