@@ -1,6 +1,7 @@
 "use client";
+import { PageLoadingSkeleton } from "./PageLoadingSkeleton";
 import Link from "next/link";
-import { FormEvent,useEffect,useState } from "react";
+import { FormEvent,useLayoutEffect,useState } from "react";
 import { KiuboLocalDatabase,StockMovementRecord,getWorkspaceContext,loadLocalDatabase,makeId,saveLocalDatabase,type TenantProduct } from "@/lib/local-store";
 import { enqueueInventoryAdjustment } from "@/lib/inventory-transaction";
 import { asInventoryProduct,formatStock,inventoryOnly,lowStockThreshold,productRecipe,recipeReadiness,stockUnit,type InventoryProduct } from "@/lib/recipe-inventory";
@@ -17,8 +18,8 @@ const displayQty=(value:number)=>Math.abs(value-Math.round(value))<.0005?String(
 
 export function InventoryClient(){
   const[db,setDb]=useState<KiuboLocalDatabase|null>(null),[message,setMessage]=useState("Inventario listo"),[recipeProductId,setRecipeProductId]=useState(""),[recipeComponentId,setRecipeComponentId]=useState(""),[automationOpen,setAutomationOpen]=useState(false),[editIngredientId,setEditIngredientId]=useState("");
-  useEffect(()=>{const refresh=()=>setDb(loadLocalDatabase());refresh();window.addEventListener(KIUBO_DATA_REFRESHED,refresh);return()=>window.removeEventListener(KIUBO_DATA_REFRESHED,refresh)},[]);
-  if(!db)return <div className="loading-card">Preparando inventario…</div>;
+  useLayoutEffect(()=>{const refresh=()=>setDb(loadLocalDatabase());refresh();window.addEventListener(KIUBO_DATA_REFRESHED,refresh);return()=>window.removeEventListener(KIUBO_DATA_REFRESHED,refresh)},[]);
+  if(!db)return <PageLoadingSkeleton view="inventory"/>;
   const ctx=getWorkspaceContext(db),products=db.tenantProducts.filter(p=>p.tenantId===ctx.tenantId&&p.branchId===ctx.branchId&&p.active),ingredients=products.filter(inventoryOnly),sellableProducts=products.filter(isSellableProduct),trackedProducts=products.filter(p=>p.trackStock!==false),preparedProducts=sellableProducts.filter(p=>p.trackStock===false),configuredRecipes=sellableProducts.filter(p=>recipeReadiness(p,products)!=="missing").length,suppliers=db.suppliers.filter(s=>s.tenantId===ctx.tenantId),purchases=db.purchases.filter(p=>p.tenantId===ctx.tenantId&&p.branchId===ctx.branchId),movements=db.stockMovements.filter(m=>m.tenantId===ctx.tenantId&&m.branchId===ctx.branchId),metrics={units:trackedProducts.reduce((n,p)=>n+p.stock,0),value:trackedProducts.reduce((n,p)=>n+p.stock*p.cost,0),low:trackedProducts.filter(p=>p.stock<=lowStockThreshold(p)).length,prepared:preparedProducts.length};
   const availability=stockAvailability(db,ctx.tenantId,ctx.branchId),reservedKinds=[...availability.values()].filter(item=>item.reserved>.0005).length;
   const quantityStep="0.001",quantityMin="0.001";
