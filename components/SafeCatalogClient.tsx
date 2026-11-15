@@ -1,6 +1,7 @@
 "use client";
+import { PageLoadingSkeleton } from "./PageLoadingSkeleton";
 
-import { ChangeEvent, FormEvent, useEffect, useState } from "react";
+import { ChangeEvent, FormEvent, useLayoutEffect, useState } from "react";
 import {
   getTenantSettings,
   getWorkspaceContext,
@@ -74,9 +75,9 @@ export function SafeCatalogClient() {
   const [saving, setSaving] = useState(false);
   const [fileInputKey, setFileInputKey] = useState(0);
 
-  useEffect(() => setDb(loadLocalDatabase()), []);
+  useLayoutEffect(() => setDb(loadLocalDatabase()), []);
 
-  if (!db) return <div className="loading-card">Preparando tus productos…</div>;
+  if(!db)return <PageLoadingSkeleton view="products"/>;
 
   const ctx = getWorkspaceContext(db);
   const settings = getTenantSettings(db, ctx.tenantId);
